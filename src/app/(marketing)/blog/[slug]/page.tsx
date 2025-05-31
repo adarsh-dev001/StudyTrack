@@ -1,64 +1,130 @@
 
-import { getPostBySlug, type PostMeta } from '@/lib/blog.tsx'; // Updated import if file was renamed, or keep if it's now server-only
-import { notFound } from 'next/navigation';
-import type { Metadata, ResolvingMetadata } from 'next';
-import { format } from 'date-fns';
-import type React from 'react';
-import type { MDXRemoteSerializeResult } from 'next-mdx-remote';
-import MdxContentRenderer from '@/components/blog/mdx-content-renderer';
+'use client'; // Make this a client component
 
-type PageProps = {
-  params: { slug: string };
-};
+import type React from 'react';
+import { useEffect, useState } from 'react';
+import { getPostBySlug, type PostMeta } from '@/lib/blog.tsx';
+// import { notFound } from 'next/navigation'; // notFound hook only works in Server Components
+import { format } from 'date-fns';
+import type { MDXRemoteSerializeResult } from 'next-mdx-remote';
+import { MDXRemote } from 'next-mdx-remote';
+import { components } from '@/lib/mdx-components'; // Import custom components
+import { Skeleton } from '@/components/ui/skeleton';
+import { Button } from '@/components/ui/button';
+import Link from 'next/link';
 
 // Interface for the data structure returned by getPostBySlug
-interface BlogPostPageData {
+interface BlogPostData {
   mdxSource: MDXRemoteSerializeResult;
   metadata: PostMeta;
 }
 
-export async function generateMetadata(
-  { params }: PageProps,
-  parent: ResolvingMetadata
-): Promise<Metadata> {
-  // Ensure getPostBySlug is imported from the correct (server-side) file
-  const post: BlogPostPageData | null = await getPostBySlug(params.slug);
+// Dynamic metadata generation (generateMetadata) and generateStaticParams
+// work with Server Components. For a fully client-rendered page from a dynamic slug,
+// generateStaticParams can still suggest paths to Next.js for pre-rendering if possible,
+// but metadata would typically be set via document.title or a meta tag manager in useEffect.
 
-  if (!post) {
-    return {
-      title: 'Post Not Found',
+// For simplicity in this refactor, we'll focus on content rendering.
+// SEO-critical metadata should ideally be handled by server-rendering parts of the page
+// or by ensuring pre-rendering with generateStaticParams is effective.
+
+export default function BlogPostPage({ params }: { params: { slug: string } }) {
+  const [post, setPost] = useState<BlogPostData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    async function fetchPost() {
+      try {
+        setLoading(true);
+        setError(null);
+        const postData = await getPostBySlug(params.slug);
+        if (!postData) {
+          setError("Post not found.");
+          setPost(null);
+        } else {
+          setPost(postData);
+        }
+      } catch (e: any) {
+        console.error("Error fetching post:", e);
+        setError(e.message || "Failed to load post.");
+        setPost(null);
+      } finally {
+        setLoading(false);
+      }
+    }
+    if (params.slug) {
+      fetchPost();
+    }
+  }, [params.slug]);
+
+  useEffect(() => {
+    if (post?.metadata.title) {
+      document.title = `${post.metadata.title} - StudyTrack Blog`;
+    } else if (error === "Post not found.") {
+      document.title = "Post Not Found - StudyTrack Blog";
+    } else if (error) {
+      document.title = "Error - StudyTrack Blog";
+    } else if (loading) {
+      document.title = "Loading Post... - StudyTrack Blog";
+    }
+    // Cleanup function to reset title or set a default
+    return () => {
+      document.title = 'StudyTrack Blog';
     };
+  }, [post, error, loading]);
+
+
+  if (loading) {
+    return (
+      <article className="container mx-auto px-4 py-8 md:px-6 lg:px-8 max-w-3xl">
+        <header className="mb-8">
+          <Skeleton className="h-10 w-3/4 mb-3 md:h-12" />
+          <Skeleton className="h-4 w-1/2 md:h-5" />
+        </header>
+        <div className="space-y-4 mt-6">
+          <Skeleton className="h-5 w-full md:h-6" />
+          <Skeleton className="h-5 w-11/12 md:h-6" />
+          <Skeleton className="h-5 w-full md:h-6" />
+          <Skeleton className="h-5 w-5/6 md:h-6" />
+          <Skeleton className="h-40 w-full mt-4 md:h-48" />
+           <Skeleton className="h-5 w-full md:h-6 mt-4" />
+          <Skeleton className="h-5 w-11/12 md:h-6" />
+        </div>
+      </article>
+    );
   }
 
-  return {
-    title: post.metadata.title,
-    description: post.metadata.metaDescription,
-    openGraph: {
-      title: post.metadata.title,
-      description: post.metadata.metaDescription,
-      type: 'article',
-      publishedTime: post.metadata.date,
-      authors: [post.metadata.author],
-    },
-  };
-}
-
-export async function generateStaticParams() {
-  // Ensure getPostSlugs is imported from the correct (server-side) file if it's moved
-  // For now, assuming it's still in blog.tsx which is now server-only
-  const { getPostSlugs: getSlugs } = await import('@/lib/blog.tsx');
-  const slugs = getSlugs();
-  return slugs.map((slug) => ({
-    slug,
-  }));
-}
-
-export default async function BlogPostPage({ params }: PageProps) {
-  // Ensure getPostBySlug is imported from the correct (server-side) file
-  const post: BlogPostPageData | null = await getPostBySlug(params.slug);
+  if (error) {
+    return (
+        <div className="container mx-auto px-4 py-12 text-center flex flex-col items-center">
+            <h1 className="text-3xl font-bold text-destructive mb-4">
+                {error === "Post not found." ? "404 - Post Not Found" : "Error Loading Post"}
+            </h1>
+            <p className="text-muted-foreground mb-6">
+                {error === "Post not found."
+                ? "Sorry, the blog post you are looking for does not exist or could not be found."
+                : "An unexpected error occurred while trying to load the post. Please try again later."}
+            </p>
+            <Button asChild>
+                <Link href="/blog">Back to Blog</Link>
+            </Button>
+        </div>
+    );
+  }
 
   if (!post) {
-    notFound();
+    // This case should ideally be covered by loading or error states.
+    // If it's reached, it implies an unexpected state.
+    return (
+      <div className="container mx-auto px-4 py-12 text-center">
+        <h1 className="text-2xl font-bold">Post Unavailable</h1>
+        <p>The blog post data could not be loaded.</p>
+         <Button asChild className="mt-4">
+            <Link href="/blog">Back to Blog</Link>
+        </Button>
+      </div>
+    );
   }
 
   return (
@@ -73,8 +139,7 @@ export default async function BlogPostPage({ params }: PageProps) {
       </header>
       
       <div className="prose prose-lg max-w-none dark:prose-invert text-foreground">
-        {/* MdxContentRenderer will now import components from the client-safe mdx-components.tsx */}
-        <MdxContentRenderer source={post.mdxSource} />
+        <MDXRemote {...post.mdxSource} components={components} />
       </div>
     </article>
   );
