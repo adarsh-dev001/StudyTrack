@@ -85,29 +85,29 @@ export async function getPostBySlug(slug: string): Promise<Post | null> {
   }
 
   const fileContents = fs.readFileSync(fullPath, 'utf8');
-  const { data, content: mdxContent } = matter(fileContents);
+  // const { data, content: mdxContent } = matter(fileContents); // gray-matter parses frontmatter
 
-  const { content: compiledContent } = await compileMDX<PostMeta>({
-    source: mdxContent,
+  const { content: compiledContent, frontmatter } = await compileMDX<PostMeta>({
+    source: fileContents, // Pass the full file content, including frontmatter
     options: { 
-      parseFrontmatter: false, // frontmatter is already parsed by gray-matter
+      parseFrontmatter: true, // Tell next-mdx-remote to parse frontmatter
        mdxOptions: {
         // You can add remark/rehype plugins here if needed
         // remarkPlugins: [],
         // rehypePlugins: [],
       },
     },
-    components: components, // Reinstated this line
+    components: components,
   });
 
   return {
     slug: realSlug,
-    title: data.title || 'Untitled Post',
-    date: data.date || new Date().toISOString(),
-    category: data.category || 'Uncategorized',
-    metaDescription: data.metaDescription || '',
-    author: data.author || 'Anonymous',
-    ...data, // include any other frontmatter data
+    title: frontmatter.title || 'Untitled Post',
+    date: frontmatter.date || new Date().toISOString(),
+    category: frontmatter.category || 'Uncategorized',
+    metaDescription: frontmatter.metaDescription || '',
+    author: frontmatter.author || 'Anonymous',
+    ...frontmatter, // include any other frontmatter data
     content: compiledContent,
   };
 }
@@ -117,7 +117,7 @@ export async function getAllPostsMeta(): Promise<PostMeta[]> {
   const postsPromises = slugs.map(async (slug) => {
     const fullPath = path.join(postsDirectory, `${slug}.mdx`);
     const fileContents = fs.readFileSync(fullPath, 'utf8');
-    const { data } = matter(fileContents);
+    const { data } = matter(fileContents); // Use gray-matter here for efficiency
     return {
       slug,
       title: data.title || 'Untitled Post',
