@@ -2,7 +2,7 @@
 'use client';
 
 import type { ChartConfig } from "@/components/ui/chart";
-import { ChartContainer, ChartLegend, ChartTooltipContent } from "@/components/ui/chart";
+import { ChartContainer, ChartLegend, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { LineChart } from "lucide-react"; // Corrected import
 import { CartesianGrid, Line, LineChart as RechartsLineChart, XAxis, YAxis } from "recharts";
@@ -50,3 +50,4 @@ export default function WeeklyStudyHoursChart() {
     </Card>
   );
 }
+
