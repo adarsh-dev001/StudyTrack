@@ -1,5 +1,5 @@
 
-import { getAllPostsMeta, getAllCategories, type PostMeta } from '@/lib/blog.tsx';
+import { getAllPostsMeta, getAllCategories, type PostMeta } from '@/lib/blog.tsx'; // Should now correctly point to server-only logic
 import BlogPostsDisplayClient from '@/components/blog/blog-posts-display';
 
 export const metadata = {

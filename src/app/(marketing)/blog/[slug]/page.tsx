@@ -1,5 +1,5 @@
 
-import { getPostBySlug, type PostMeta } from '@/lib/blog.tsx'; 
+import { getPostBySlug, type PostMeta } from '@/lib/blog.tsx'; // Updated import if file was renamed, or keep if it's now server-only
 import { notFound } from 'next/navigation';
 import type { Metadata, ResolvingMetadata } from 'next';
 import { format } from 'date-fns';
@@ -11,6 +11,7 @@ type PageProps = {
   params: { slug: string };
 };
 
+// Interface for the data structure returned by getPostBySlug
 interface BlogPostPageData {
   mdxSource: MDXRemoteSerializeResult;
   metadata: PostMeta;
@@ -20,6 +21,7 @@ export async function generateMetadata(
   { params }: PageProps,
   parent: ResolvingMetadata
 ): Promise<Metadata> {
+  // Ensure getPostBySlug is imported from the correct (server-side) file
   const post: BlogPostPageData | null = await getPostBySlug(params.slug);
 
   if (!post) {
@@ -42,13 +44,17 @@ export async function generateMetadata(
 }
 
 export async function generateStaticParams() {
-  const slugs = getPostSlugs();
+  // Ensure getPostSlugs is imported from the correct (server-side) file if it's moved
+  // For now, assuming it's still in blog.tsx which is now server-only
+  const { getPostSlugs: getSlugs } = await import('@/lib/blog.tsx');
+  const slugs = getSlugs();
   return slugs.map((slug) => ({
     slug,
   }));
 }
 
 export default async function BlogPostPage({ params }: PageProps) {
+  // Ensure getPostBySlug is imported from the correct (server-side) file
   const post: BlogPostPageData | null = await getPostBySlug(params.slug);
 
   if (!post) {
@@ -67,6 +73,7 @@ export default async function BlogPostPage({ params }: PageProps) {
       </header>
       
       <div className="prose prose-lg max-w-none dark:prose-invert text-foreground">
+        {/* MdxContentRenderer will now import components from the client-safe mdx-components.tsx */}
         <MdxContentRenderer source={post.mdxSource} />
       </div>
     </article>

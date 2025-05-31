@@ -1,6 +1,6 @@
 
 import Link from 'next/link';
-import { getAllPostsMeta, type PostMeta } from '@/lib/blog.tsx';
+import { getAllPostsMeta, type PostMeta } from '@/lib/blog.tsx'; // Should now correctly point to server-only logic
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ArrowRight, BookCopy, CalendarDays, Tag } from 'lucide-react';
