@@ -57,7 +57,7 @@ export default function AppLayout({
     <SidebarProvider defaultOpen={true}>
       <div className="flex min-h-screen">
         <AppSidebar />
-        <SidebarInset className="flex flex-col flex-1">
+        <SidebarInset className="flex flex-col flex-1 min-w-0"> {/* Added min-w-0 here */}
           <header className="sticky top-0 z-40 flex h-16 items-center justify-between gap-4 border-b bg-background px-4 sm:px-6 shrink-0">
             <div className="flex items-center gap-2">
               <MobileSidebarTrigger className="lg:hidden" />
