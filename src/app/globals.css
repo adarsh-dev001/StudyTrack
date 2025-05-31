@@ -1,3 +1,4 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -105,5 +106,18 @@ body {
   }
   body {
     @apply bg-background text-foreground;
+  }
+  /* Basic table styling for MDX content if Tailwind Typography plugin isn't used */
+  .prose table {
+    @apply w-full my-6 text-left border-collapse;
+  }
+  .prose th, .prose td {
+    @apply border border-border px-4 py-2;
+  }
+  .prose th {
+    @apply font-semibold bg-muted;
+  }
+  .prose tr:nth-child(even) {
+    @apply bg-muted/50;
   }
 }
