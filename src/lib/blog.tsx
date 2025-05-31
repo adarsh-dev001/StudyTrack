@@ -27,8 +27,8 @@ export interface Post extends PostMeta {
   content: React.ReactElement; // Compiled MDX content
 }
 
-// Custom components to pass to MDX - temporarily not used for diagnostics
-const components_for_mdx = {
+// Custom components to pass to MDX
+const components = {
   table: (props: React.TableHTMLAttributes<HTMLTableElement>) => (
     <div className="my-6 w-full overflow-x-auto">
       <table className={cn("w-full my-0", props.className)} {...props} />
@@ -97,7 +97,7 @@ export async function getPostBySlug(slug: string): Promise<Post | null> {
         // rehypePlugins: [],
       },
     },
-    // components: components_for_mdx, // Temporarily remove custom components for diagnostics
+    components: components, 
   });
 
   return {
