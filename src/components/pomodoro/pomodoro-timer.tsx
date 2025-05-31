@@ -107,7 +107,7 @@ export function PomodoroTimer() {
   }, [timeRemaining, isRunning, mode]);
 
   return (
-    <Card className="w-full max-w-md mx-auto shadow-xl">
+    <Card className="w-full shadow-xl">
       <CardHeader className="text-center">
         <CardTitle className="font-headline text-2xl flex items-center justify-center">
           <TimerIcon className="mr-2 h-7 w-7 text-primary" />

@@ -58,7 +58,7 @@ export default function MaterialSummarizerPage() {
   };
 
   return (
-    <div className="w-full max-w-none px-0 mx-0 space-y-6">
+    <div className="w-full space-y-6">
       <div>
         <h1 className="text-3xl font-bold tracking-tight md:text-4xl flex items-center">
           <Wand2 className="mr-3 h-8 w-8 text-primary" /> Study Material Summarizer

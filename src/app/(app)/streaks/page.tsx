@@ -198,10 +198,10 @@ export default function StreaksPage() {
   // If not logged in, show a message prompting login.
   if (!currentUser?.uid) { 
     return (
-      <div className="w-full max-w-none px-0 mx-0 space-y-6">
+      <div className="w-full space-y-6">
         <h1 className="text-3xl font-bold tracking-tight md:text-4xl">Study Streaks</h1>
         <p className="text-lg text-muted-foreground">Log in to track your daily study consistency.</p>
-         <Card className="shadow-lg">
+         <Card className="w-full shadow-lg"> {/* Ensure full width for the login card */}
           <CardContent className="pt-6 text-center">
             <p className="text-muted-foreground">Please log in to view and manage your study streaks.</p>
           </CardContent>
@@ -215,14 +215,14 @@ export default function StreaksPage() {
   const lastCheckInDateDisplay = streakData?.lastCheckInDate ? streakData.lastCheckInDate.toDate().toLocaleDateString() : 'Never';
 
   return (
-    <div className="w-full max-w-none px-0 mx-0 space-y-6">
+    <div className="w-full space-y-6">
       <div>
         <h1 className="text-3xl font-bold tracking-tight md:text-4xl">Study Streaks</h1>
         <p className="text-lg text-muted-foreground">Track your daily study consistency and build strong habits!</p>
       </div>
 
       <div className="grid gap-6 md:grid-cols-2">
-        <Card className="shadow-xl transform hover:scale-105 transition-transform duration-300">
+        <Card className="w-full shadow-xl transform hover:scale-105 transition-transform duration-300"> {/* Ensure full width for Current Streak card */}
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-xl font-semibold">Current Streak</CardTitle>
             <Flame className="h-8 w-8 text-orange-500" />
@@ -234,7 +234,7 @@ export default function StreaksPage() {
             </p>
           </CardContent>
         </Card>
-        <Card className="shadow-lg">
+        <Card className="w-full shadow-lg"> {/* Ensure full width for Longest Streak card */}
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-xl font-semibold">Longest Streak</CardTitle>
             <Flame className="h-8 w-8 text-primary" />
@@ -248,7 +248,7 @@ export default function StreaksPage() {
         </Card>
       </div>
 
-      <Card className="shadow-lg">
+      <Card className="w-full shadow-lg"> {/* Ensure full width for Daily Check-in card */}
         <CardHeader>
           <CardTitle className="text-xl">Daily Check-in</CardTitle>
           <CardDescription>

@@ -162,7 +162,7 @@ export default function AnalyticsPage() {
   }, [currentUser, db]);
 
   return (
-    <div className="w-full max-w-none px-0 mx-0 space-y-6">
+    <div className="w-full space-y-6">
       <div>
         <h1 className="text-3xl font-bold tracking-tight md:text-4xl">Productivity Analytics</h1>
         <p className="text-lg text-muted-foreground">Visualize your study progress and gain insights into your habits.</p>
