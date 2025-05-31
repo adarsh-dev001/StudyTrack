@@ -2,18 +2,32 @@
 'use client';
 
 import { MDXRemote, type MDXRemoteSerializeResult } from 'next-mdx-remote';
-import { components } from '@/lib/mdx-components'; // Import custom components from the client-safe file
+import { components } from '@/lib/mdx-components'; // Import custom components
+import { useState, useEffect } from 'react';
+import { Skeleton } from '@/components/ui/skeleton'; // Optional: for a better loading state
 
 interface MdxContentRendererProps {
   source: MDXRemoteSerializeResult;
 }
 
 export default function MdxContentRenderer({ source }: MdxContentRendererProps) {
-  // If source is somehow undefined or null, render nothing or a fallback.
-  // This can happen if data fetching fails and isn't caught before reaching here.
-  if (!source) {
-    return <p>Error loading content.</p>;
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  if (!isMounted || !source) {
+    // Fallback loading state
+    return (
+      <div className="space-y-4">
+        <Skeleton className="h-8 w-3/4" />
+        <Skeleton className="h-6 w-1/2" />
+        <Skeleton className="h-20 w-full" />
+        <Skeleton className="h-20 w-full" />
+      </div>
+    );
   }
+
   return <MDXRemote {...source} components={components} />;
 }
-
