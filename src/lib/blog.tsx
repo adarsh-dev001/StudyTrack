@@ -90,10 +90,9 @@ export async function getPostBySlug(slug: string): Promise<{ content: React.Reac
     source: mdxSourceContent,
     options: {
       parseFrontmatter: false, // Tell compileMDX not to parse frontmatter again
-      // mdxOptions can be added here if you have remark/rehype plugins, e.g.
-      // mdxOptions: { remarkPlugins: [], rehypePlugins: [] }
+      // mdxOptions can be added here if you have remark/rehype plugins
     },
-    // components: components, // Temporarily removed for diagnostics
+    components: components,
   });
 
   const metadata: PostMeta = {
@@ -143,3 +142,4 @@ export async function getAllCategories(): Promise<string[]> {
   const categories = new Set(posts.map(post => post.category));
   return Array.from(categories).sort();
 }
+
