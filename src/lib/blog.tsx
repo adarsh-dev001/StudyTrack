@@ -93,7 +93,7 @@ export async function getPostBySlug(slug: string): Promise<{ content: React.Reac
       // mdxOptions can be added here if you have remark/rehype plugins, e.g.
       // mdxOptions: { remarkPlugins: [], rehypePlugins: [] }
     },
-    components: components, // Pass custom components
+    // components: components, // Temporarily removed for diagnostics
   });
 
   const metadata: PostMeta = {
