@@ -37,11 +37,17 @@ export async function getPostBySlug(slug: string): Promise<BlogPostPageData | nu
 
   if (!fs.existsSync(fullPath)) {
     console.warn(`Blog post not found at path: ${fullPath}`);
-    return null;
+    return null; // Page component will handle this with notFound()
   }
 
   const fileContents = fs.readFileSync(fullPath, 'utf8');
   const { data: frontmatterData, content: mdxSourceContent } = matter(fileContents);
+
+  // If title is missing in frontmatter, treat the post as non-existent/untitled
+  if (!frontmatterData.title) {
+    console.warn(`Blog post with slug '${realSlug}' has no title in frontmatter. Treating as not found.`);
+    return null; // This will lead to a 404 on the page using this function
+  }
 
   const mdxSource = await serialize(mdxSourceContent, {
     scope: frontmatterData,
@@ -54,7 +60,7 @@ export async function getPostBySlug(slug: string): Promise<BlogPostPageData | nu
 
   const metadata: PostMeta = {
     slug: realSlug,
-    title: (frontmatterData.title || 'Untitled Post') as string,
+    title: frontmatterData.title as string, // Title is guaranteed by the check above
     date: (frontmatterData.date || new Date().toISOString()) as string,
     category: (frontmatterData.category || 'Uncategorized') as string,
     metaDescription: (frontmatterData.metaDescription || '') as string,
@@ -70,7 +76,8 @@ export async function getPostBySlug(slug: string): Promise<BlogPostPageData | nu
 
 export async function getAllPostsMeta(): Promise<PostMeta[]> {
   const slugs = getPostSlugs();
-  const postsPromises = slugs.map(async (slug) => {
+  
+  const postsDataPromises = slugs.map(async (slug) => {
     const fullPath = path.join(postsDirectory, `${slug}.mdx`);
     if (!fs.existsSync(fullPath)) {
       console.warn(`File not found during getAllPostsMeta for slug: ${slug} at path ${fullPath}`);
@@ -78,23 +85,31 @@ export async function getAllPostsMeta(): Promise<PostMeta[]> {
     }
     const fileContents = fs.readFileSync(fullPath, 'utf8');
     const { data } = matter(fileContents);
+
+    // If title is missing, this post is considered "untitled" and should be filtered out
+    if (!data.title) {
+      console.warn(`Post with slug '${slug}' is missing a title. It will be excluded.`);
+      return null;
+    }
+
     return {
       slug,
-      title: data.title || 'Untitled Post',
-      date: data.date || new Date().toISOString(),
-      category: data.category || 'Uncategorized',
-      metaDescription: data.metaDescription || '',
-      author: data.author || 'Anonymous',
+      title: data.title as string, // Title is guaranteed
+      date: (data.date || new Date().toISOString()) as string,
+      category: (data.category || 'Uncategorized') as string,
+      metaDescription: (data.metaDescription || '') as string,
+      author: (data.author || 'Anonymous') as string,
       ...data,
     } as PostMeta;
   });
 
-  const posts = (await Promise.all(postsPromises)).filter(post => post !== null) as PostMeta[];
+  const posts = (await Promise.all(postsDataPromises)).filter(post => post !== null) as PostMeta[];
+  
   return posts.sort((post1, post2) => (post1.date > post2.date ? -1 : 1));
 }
 
 export async function getAllCategories(): Promise<string[]> {
-  const posts = await getAllPostsMeta();
+  const posts = await getAllPostsMeta(); // This will now use the filtered list
   const categories = new Set(posts.map(post => post.category));
   return Array.from(categories).sort();
 }
