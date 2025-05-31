@@ -1,17 +1,18 @@
 
-import { getPostBySlug, getPostSlugs, type PostMeta } from '@/lib/blog.tsx'; 
+import { getPostBySlug, type PostMeta } from '@/lib/blog.tsx'; 
 import { notFound } from 'next/navigation';
 import type { Metadata, ResolvingMetadata } from 'next';
 import { format } from 'date-fns';
 import type React from 'react';
+import type { MDXRemoteSerializeResult } from 'next-mdx-remote';
+import MdxContentRenderer from '@/components/blog/mdx-content-renderer';
 
 type PageProps = {
   params: { slug: string };
 };
 
-// Define the expected type for the post object received by the page and metadata function
 interface BlogPostPageData {
-  content: React.ReactElement;
+  mdxSource: MDXRemoteSerializeResult;
   metadata: PostMeta;
 }
 
@@ -36,9 +37,7 @@ export async function generateMetadata(
       type: 'article',
       publishedTime: post.metadata.date,
       authors: [post.metadata.author],
-      // images: post.metadata.featuredImage ? [post.metadata.featuredImage] : ((await parent).openGraph?.images || []),
     },
-    // Add more metadata as needed, like keywords (tags)
   };
 }
 
@@ -68,10 +67,8 @@ export default async function BlogPostPage({ params }: PageProps) {
       </header>
       
       <div className="prose prose-lg max-w-none dark:prose-invert text-foreground">
-        {post.content}
+        <MdxContentRenderer source={post.mdxSource} />
       </div>
-
-      {/* You can add related posts or a comment section here later */}
     </article>
   );
 }

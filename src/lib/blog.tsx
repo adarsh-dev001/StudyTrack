@@ -2,12 +2,13 @@
 import fs from 'fs';
 import path from 'path';
 import matter from 'gray-matter';
-import { compileMDX } from 'next-mdx-remote/rsc'; // RSC version for App Router
-import { type ClassValue, clsx } from "clsx" // For table styling
-import { twMerge } from "tailwind-merge" // For table styling
+import { serialize } from 'next-mdx-remote/serialize';
+import type { MDXRemoteSerializeResult } from 'next-mdx-remote';
+import { type ClassValue, clsx } from "clsx" 
+import { twMerge } from "tailwind-merge" 
 import type React from 'react';
 
-export function cn(...inputs: ClassValue[]) { // For table styling
+export function cn(...inputs: ClassValue[]) { 
   return twMerge(clsx(inputs))
 }
 
@@ -21,11 +22,11 @@ export interface PostMeta {
   category: string;
   metaDescription: string;
   author: string;
-  [key: string]: any; // For any other frontmatter properties
+  [key: string]: any; 
 }
 
 // Custom components to pass to MDX
-const components = {
+export const components = {
   table: (props: React.TableHTMLAttributes<HTMLTableElement>) => (
     <div className="my-6 w-full overflow-x-auto">
       <table className={cn("w-full my-0", props.className)} {...props} />
@@ -58,10 +59,6 @@ const components = {
       {...props}
     />
   ),
-  // Add other components like h1, p, a, etc. if you want to customize them
-  // Example:
-  // p: (props: React.HTMLAttributes<HTMLParagraphElement>) => <p className="mb-4 leading-relaxed" {...props} />,
-  // h2: (props: React.HTMLAttributes<HTMLHeadingElement>) => <h2 className="text-2xl font-bold mt-8 mb-4" {...props} />,
 };
 
 
@@ -72,7 +69,7 @@ export function getPostSlugs() {
   return fs.readdirSync(postsDirectory).map(fileName => fileName.replace(/\.mdx$/, ''));
 }
 
-export async function getPostBySlug(slug: string): Promise<{ content: React.ReactElement; metadata: PostMeta } | null> {
+export async function getPostBySlug(slug: string): Promise<{ mdxSource: MDXRemoteSerializeResult; metadata: PostMeta } | null> {
   const realSlug = slug.replace(/\.mdx$/, '');
   const fullPath = path.join(postsDirectory, `${realSlug}.mdx`);
 
@@ -82,20 +79,15 @@ export async function getPostBySlug(slug: string): Promise<{ content: React.Reac
   }
 
   const fileContents = fs.readFileSync(fullPath, 'utf8');
-  // Use gray-matter to parse frontmatter
   const { data: frontmatterData, content: mdxSourceContent } = matter(fileContents);
 
-  // Compile the MDX content
-  const { content: compiledMDXContent } = await compileMDX({
-    source: mdxSourceContent,
-    options: {
-      parseFrontmatter: false, // Tell compileMDX not to parse frontmatter again
-      mdxOptions: { // Explicitly provide mdxOptions structure
-        remarkPlugins: [],
-        rehypePlugins: [],
-      },
+  const mdxSource = await serialize(mdxSourceContent, {
+    scope: frontmatterData, 
+    mdxOptions: {
+      remarkPlugins: [],
+      rehypePlugins: [],
+      parseFrontmatter: false, 
     },
-    components: components, // Pass custom components here
   });
 
   const metadata: PostMeta = {
@@ -105,11 +97,11 @@ export async function getPostBySlug(slug: string): Promise<{ content: React.Reac
     category: (frontmatterData.category || 'Uncategorized') as string,
     metaDescription: (frontmatterData.metaDescription || '') as string,
     author: (frontmatterData.author || 'Anonymous') as string,
-    ...frontmatterData, // Spread any other frontmatter properties
+    ...frontmatterData, 
   };
 
   return {
-    content: compiledMDXContent,
+    mdxSource: mdxSource,
     metadata: metadata,
   };
 }
@@ -145,4 +137,3 @@ export async function getAllCategories(): Promise<string[]> {
   const categories = new Set(posts.map(post => post.category));
   return Array.from(categories).sort();
 }
-
