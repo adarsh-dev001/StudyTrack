@@ -90,9 +90,12 @@ export async function getPostBySlug(slug: string): Promise<{ content: React.Reac
     source: mdxSourceContent,
     options: {
       parseFrontmatter: false, // Tell compileMDX not to parse frontmatter again
-      // mdxOptions can be added here if you have remark/rehype plugins
+      mdxOptions: { // Explicitly provide mdxOptions structure
+        remarkPlugins: [],
+        rehypePlugins: [],
+      },
     },
-    components: components,
+    components: components, // Pass custom components here
   });
 
   const metadata: PostMeta = {
