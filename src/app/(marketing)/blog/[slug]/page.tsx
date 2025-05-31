@@ -1,18 +1,25 @@
 
-import { getPostBySlug, getPostSlugs } from '@/lib/blog'; // Updated import to be extension-less
+import { getPostBySlug, getPostSlugs, type PostMeta } from '@/lib/blog.tsx'; 
 import { notFound } from 'next/navigation';
 import type { Metadata, ResolvingMetadata } from 'next';
 import { format } from 'date-fns';
+import type React from 'react';
 
-type Props = {
+type PageProps = {
   params: { slug: string };
 };
 
+// Define the expected type for the post object received by the page and metadata function
+interface BlogPostPageData {
+  content: React.ReactElement;
+  metadata: PostMeta;
+}
+
 export async function generateMetadata(
-  { params }: Props,
+  { params }: PageProps,
   parent: ResolvingMetadata
 ): Promise<Metadata> {
-  const post = await getPostBySlug(params.slug);
+  const post: BlogPostPageData | null = await getPostBySlug(params.slug);
 
   if (!post) {
     return {
@@ -21,15 +28,15 @@ export async function generateMetadata(
   }
 
   return {
-    title: post.title,
-    description: post.metaDescription,
+    title: post.metadata.title,
+    description: post.metadata.metaDescription,
     openGraph: {
-      title: post.title,
-      description: post.metaDescription,
+      title: post.metadata.title,
+      description: post.metadata.metaDescription,
       type: 'article',
-      publishedTime: post.date,
-      authors: [post.author],
-      // images: post.featuredImage ? [post.featuredImage] : ((await parent).openGraph?.images || []),
+      publishedTime: post.metadata.date,
+      authors: [post.metadata.author],
+      // images: post.metadata.featuredImage ? [post.metadata.featuredImage] : ((await parent).openGraph?.images || []),
     },
     // Add more metadata as needed, like keywords (tags)
   };
@@ -42,8 +49,8 @@ export async function generateStaticParams() {
   }));
 }
 
-export default async function BlogPostPage({ params }: Props) {
-  const post = await getPostBySlug(params.slug);
+export default async function BlogPostPage({ params }: PageProps) {
+  const post: BlogPostPageData | null = await getPostBySlug(params.slug);
 
   if (!post) {
     notFound();
@@ -53,10 +60,10 @@ export default async function BlogPostPage({ params }: Props) {
     <article className="container mx-auto px-4 py-8 md:px-6 lg:px-8 max-w-3xl">
       <header className="mb-8">
         <h1 className="font-headline text-3xl font-bold tracking-tight text-foreground md:text-4xl lg:text-5xl mb-3">
-          {post.title}
+          {post.metadata.title}
         </h1>
         <div className="text-sm text-muted-foreground">
-          <span>By {post.author}</span> | <span>Published on {format(new Date(post.date), 'MMMM d, yyyy')}</span> | <span>Category: {post.category}</span>
+          <span>By {post.metadata.author}</span> | <span>Published on {format(new Date(post.metadata.date), 'MMMM d, yyyy')}</span> | <span>Category: {post.metadata.category}</span>
         </div>
       </header>
       

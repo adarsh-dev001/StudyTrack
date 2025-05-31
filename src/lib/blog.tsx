@@ -2,14 +2,15 @@
 import fs from 'fs';
 import path from 'path';
 import matter from 'gray-matter';
-import { compileMDX } from 'next-mdx-remote/rsc';
-import { type ClassValue, clsx } from "clsx"
-import { twMerge } from "tailwind-merge"
+import { compileMDX } from 'next-mdx-remote'; // RSC version for App Router, try main export
+import { type ClassValue, clsx } from "clsx" // For table styling
+import { twMerge } from "tailwind-merge" // For table styling
 import type React from 'react';
 
-export function cn(...inputs: ClassValue[]) {
+export function cn(...inputs: ClassValue[]) { // For table styling
   return twMerge(clsx(inputs))
 }
+
 
 const postsDirectory = path.join(process.cwd(), 'src', 'content', 'blog');
 
@@ -20,11 +21,7 @@ export interface PostMeta {
   category: string;
   metaDescription: string;
   author: string;
-  [key: string]: any;
-}
-
-export interface Post extends PostMeta {
-  content: React.ReactElement;
+  [key: string]: any; // For any other frontmatter properties
 }
 
 // Custom components to pass to MDX
@@ -63,6 +60,7 @@ const components = {
   ),
 };
 
+
 export function getPostSlugs() {
   if (!fs.existsSync(postsDirectory)) {
     return [];
@@ -70,38 +68,42 @@ export function getPostSlugs() {
   return fs.readdirSync(postsDirectory).map(fileName => fileName.replace(/\.mdx$/, ''));
 }
 
-export async function getPostBySlug(slug: string): Promise<Post | null> {
+export async function getPostBySlug(slug: string): Promise<{ content: React.ReactElement; metadata: PostMeta } | null> {
   const realSlug = slug.replace(/\.mdx$/, '');
   const fullPath = path.join(postsDirectory, `${realSlug}.mdx`);
-
+  
   if (!fs.existsSync(fullPath)) {
     console.warn(`Blog post not found at path: ${fullPath}`);
     return null;
   }
 
   const fileContents = fs.readFileSync(fullPath, 'utf8');
-  const { data, content: mdxSourceContent } = matter(fileContents); // Use gray-matter for frontmatter and content
+  const { data: frontmatterData, content: mdxSourceContent } = matter(fileContents);
 
-  const { content: compiledContent } = await compileMDX<Omit<PostMeta, 'slug'>>({ // Frontmatter type for compileMDX if needed, but data is already separate
-    source: mdxSourceContent, // Pass only the MDX content string
-    options: {
-      parseFrontmatter: false, // Tell compileMDX not to parse frontmatter again
-      mdxOptions: {
+  const { content: compiledMDXContent } = await compileMDX({
+    source: mdxSourceContent,
+    options: { 
+      parseFrontmatter: false, 
+       mdxOptions: {
         // You can add remark/rehype plugins here if needed
       },
     },
-    components: components, // Pass custom components here
+    components: components, 
   });
 
-  return {
+  const metadata: PostMeta = {
     slug: realSlug,
-    title: data.title || 'Untitled Post',
-    date: data.date || new Date().toISOString(),
-    category: data.category || 'Uncategorized',
-    metaDescription: data.metaDescription || '',
-    author: data.author || 'Anonymous',
-    ...data, // Spread the frontmatter data obtained from gray-matter
-    content: compiledContent,
+    title: frontmatterData.title || 'Untitled Post',
+    date: frontmatterData.date || new Date().toISOString(),
+    category: frontmatterData.category || 'Uncategorized',
+    metaDescription: frontmatterData.metaDescription || '',
+    author: frontmatterData.author || 'Anonymous',
+    ...frontmatterData,
+  };
+
+  return {
+    content: compiledMDXContent,
+    metadata: metadata,
   };
 }
 
@@ -109,7 +111,7 @@ export async function getAllPostsMeta(): Promise<PostMeta[]> {
   const slugs = getPostSlugs();
   const postsPromises = slugs.map(async (slug) => {
     const fullPath = path.join(postsDirectory, `${slug}.mdx`);
-    if (!fs.existsSync(fullPath)) {
+     if (!fs.existsSync(fullPath)) {
       console.warn(`File not found during getAllPostsMeta for slug: ${slug} at path ${fullPath}`);
       return null;
     }
@@ -125,10 +127,11 @@ export async function getAllPostsMeta(): Promise<PostMeta[]> {
       ...data,
     } as PostMeta;
   });
-
+  
   const posts = (await Promise.all(postsPromises)).filter(post => post !== null) as PostMeta[];
   return posts.sort((post1, post2) => (post1.date > post2.date ? -1 : 1));
 }
+
 
 export async function getAllCategories(): Promise<string[]> {
   const posts = await getAllPostsMeta();
