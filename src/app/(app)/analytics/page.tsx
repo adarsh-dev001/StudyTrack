@@ -1,14 +1,35 @@
 
 'use client';
 
+import React, { useState, useEffect } from 'react';
 import { Bar, Line, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend as RechartsLegend, ResponsiveContainer, LineChart as RechartsLineChart, BarChart as RechartsBarChart, PieChart as RechartsPieChart } from "recharts";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, type ChartConfig } from "@/components/ui/chart";
-import { LineChartIcon as LineIcon, BarChart3Icon, PieChartIcon as PieIcon, Lightbulb, ExternalLink } from "lucide-react"; // Renamed to avoid conflict
+import { LineChartIcon as LineIcon, BarChart3Icon, PieChartIcon as PieIcon, Lightbulb, ExternalLink, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
+import { useAuth } from '@/contexts/auth-context';
+import { db } from '@/lib/firebase';
+import { collection, query, where, onSnapshot, type DocumentData } from 'firebase/firestore';
 
-// Sample Data for Weekly Study Hours
+// Helper function to assign colors to subjects for the pie chart
+const subjectColors: Record<string, string> = {
+  physics: "hsl(var(--chart-1))",
+  chemistry: "hsl(var(--chart-2))",
+  biology: "hsl(var(--chart-3))",
+  mathematics: "hsl(var(--chart-4))", // Changed from 'math' for consistency if planner uses 'mathematics'
+  english: "hsl(var(--chart-5))",
+  history: "hsl(var(--chart-1))", // Re-using colors for more subjects
+  other: "hsl(var(--chart-2))", // Re-using colors
+};
+
+const getSubjectColor = (subjectKey: string) => {
+  const normalizedKey = subjectKey.toLowerCase();
+  return subjectColors[normalizedKey] || "hsl(var(--muted-foreground))"; // Fallback color
+}
+
+
+// Sample Data for Weekly Study Hours (remains sample for now)
 const weeklyStudyHoursData = [
   { week: "W1", planned: 10, actual: 8 },
   { week: "W2", planned: 12, actual: 11 },
@@ -23,7 +44,7 @@ const weeklyStudyHoursConfig = {
   actual: { label: "Actual Hours", color: "hsl(var(--chart-2))" },
 } satisfies ChartConfig;
 
-// Sample Data for Topics Completed
+// Sample Data for Topics Completed (remains sample for now)
 const topicsCompletedData = [
   { month: "Jan", target: 20, completed: 18 },
   { month: "Feb", target: 22, completed: 20 },
@@ -38,25 +59,77 @@ const topicsCompletedConfig = {
   completed: { label: "Completed Topics", color: "hsl(var(--chart-4))" },
 } satisfies ChartConfig;
 
-// Sample Data for Subject Time Distribution
-const subjectTimeData = [
-  { subject: "Physics", hours: 120, fill: "hsl(var(--chart-1))" },
-  { subject: "Chemistry", hours: 90, fill: "hsl(var(--chart-2))" },
-  { subject: "Biology", hours: 150, fill: "hsl(var(--chart-3))" },
-  { subject: "Math", hours: 100, fill: "hsl(var(--chart-4))" },
-  { subject: "Other", hours: 60, fill: "hsl(var(--chart-5))" },
-];
-const subjectTimeConfig = {
+// Initial static config for Subject Time Distribution (labels for legend)
+const subjectTimeConfigBase = {
   hours: { label: "Hours" },
-  physics: { label: "Physics", color: "hsl(var(--chart-1))" },
-  chemistry: { label: "Chemistry", color: "hsl(var(--chart-2))" },
-  biology: { label: "Biology", color: "hsl(var(--chart-3))" },
-  math: { label: "Math", color: "hsl(var(--chart-4))" },
-  other: { label: "Other", color: "hsl(var(--chart-5))" },
+  physics: { label: "Physics", color: getSubjectColor("physics") },
+  chemistry: { label: "Chemistry", color: getSubjectColor("chemistry") },
+  biology: { label: "Biology", color: getSubjectColor("biology") },
+  mathematics: { label: "Mathematics", color: getSubjectColor("mathematics") },
+  english: { label: "English", color: getSubjectColor("english") },
+  history: { label: "History", color: getSubjectColor("history") },
+  other: { label: "Other", color: getSubjectColor("other") },
 } satisfies ChartConfig;
 
 
 export default function AnalyticsPage() {
+  const { currentUser } = useAuth();
+  const [subjectTimeDataDynamic, setSubjectTimeDataDynamic] = useState<{ subject: string; hours: number; fill: string; }[]>([]);
+  const [loadingSubjectData, setLoadingSubjectData] = useState(true);
+  const [subjectTimeConfig, setSubjectTimeConfig] = useState<ChartConfig>(subjectTimeConfigBase);
+
+  useEffect(() => {
+    if (!currentUser || !db) {
+      setLoadingSubjectData(false);
+      setSubjectTimeDataDynamic([]);
+      return;
+    }
+
+    setLoadingSubjectData(true);
+    const tasksRef = collection(db, 'users', currentUser.uid, 'plannerTasks');
+    const q = query(tasksRef, where('status', '==', 'completed'));
+
+    const unsubscribe = onSnapshot(q, (querySnapshot) => {
+      const subjectHoursMap: Record<string, number> = {};
+      querySnapshot.forEach((doc) => {
+        const task = doc.data() as { subject: string; duration: number; title: string }; // Add title for debugging if needed
+        if (task.subject && typeof task.duration === 'number') {
+          const subjectKey = task.subject.toLowerCase(); // Ensure consistent keying
+          subjectHoursMap[subjectKey] = (subjectHoursMap[subjectKey] || 0) + task.duration;
+        }
+      });
+
+      const newDynamicData = Object.entries(subjectHoursMap).map(([subjectKey, hours]) => {
+        const subjectLabel = subjectKey.charAt(0).toUpperCase() + subjectKey.slice(1);
+        return {
+          subject: subjectLabel, // Use capitalized version for display
+          hours,
+          fill: getSubjectColor(subjectKey),
+        };
+      });
+      
+      setSubjectTimeDataDynamic(newDynamicData);
+
+      // Update chart config dynamically for legend labels
+      const newChartConfig: ChartConfig = { hours: { label: "Hours" } };
+      newDynamicData.forEach(item => {
+        const subjectKey = item.subject.toLowerCase();
+        if (!newChartConfig[subjectKey]) { // Avoid overwriting if multiple 'other' or similar keys
+             newChartConfig[subjectKey] = { label: item.subject, color: item.fill };
+        }
+      });
+      setSubjectTimeConfig(newChartConfig);
+
+      setLoadingSubjectData(false);
+    }, (error) => {
+      console.error("Error fetching completed tasks for analytics: ", error);
+      setLoadingSubjectData(false);
+      setSubjectTimeDataDynamic([]);
+    });
+
+    return () => unsubscribe();
+  }, [currentUser]);
+
   return (
     <div className="space-y-6">
       <div>
@@ -72,7 +145,7 @@ export default function AnalyticsPage() {
             </div>
             <div className="flex-1">
               <CardTitle className="font-headline text-xl">Weekly Study Hours</CardTitle>
-              <CardDescription>Track planned vs. actual study hours per week.</CardDescription>
+              <CardDescription>Track planned vs. actual study hours per week. (Sample Data)</CardDescription>
             </div>
           </CardHeader>
           <CardContent>
@@ -97,7 +170,7 @@ export default function AnalyticsPage() {
             </div>
             <div className="flex-1">
               <CardTitle className="font-headline text-xl">Topics Completed</CardTitle>
-              <CardDescription>Visualize target vs. completed topics per month.</CardDescription>
+              <CardDescription>Visualize target vs. completed topics per month. (Sample Data)</CardDescription>
             </div>
           </CardHeader>
           <CardContent>
@@ -116,7 +189,7 @@ export default function AnalyticsPage() {
         </Card>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-2"> {/* New row for Pie Chart and AI Insights */}
+      <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-2">
         <Card className="shadow-lg">
           <CardHeader className="flex flex-row items-center gap-4 space-y-0 pb-2">
             <div className="bg-primary/10 p-3 rounded-lg">
@@ -124,21 +197,32 @@ export default function AnalyticsPage() {
             </div>
             <div className="flex-1">
               <CardTitle className="font-headline text-xl">Subject Time Distribution</CardTitle>
-              <CardDescription>Hours spent on each subject (sample data).</CardDescription>
+              <CardDescription>Hours spent on each subject from completed tasks.</CardDescription>
             </div>
           </CardHeader>
-          <CardContent className="flex items-center justify-center">
-            <ChartContainer config={subjectTimeConfig} className="h-[250px] w-[300px]">
-              <RechartsPieChart>
-                <ChartTooltip cursor={false} content={<ChartTooltipContent hideLabel nameKey="subject" />} />
-                <Pie data={subjectTimeData} dataKey="hours" nameKey="subject" labelLine={false} label={({ subject, percent }) => `${subject}: ${(percent * 100).toFixed(0)}%`}>
-                  {subjectTimeData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.fill} />
-                  ))}
-                </Pie>
-                <ChartLegend content={<ChartLegend className="mt-4"/>} />
-              </RechartsPieChart>
-            </ChartContainer>
+          <CardContent className="flex items-center justify-center min-h-[298px]"> {/* Ensure min height for consistency */}
+            {loadingSubjectData && (
+              <div className="flex flex-col items-center justify-center text-muted-foreground">
+                <Loader2 className="h-8 w-8 animate-spin text-primary mb-2" />
+                <p>Loading subject data...</p>
+              </div>
+            )}
+            {!loadingSubjectData && subjectTimeDataDynamic.length === 0 && (
+              <p className="text-muted-foreground text-center">No completed tasks with subject data found. <br/>Complete some tasks in the planner to see this chart!</p>
+            )}
+            {!loadingSubjectData && subjectTimeDataDynamic.length > 0 && (
+              <ChartContainer config={subjectTimeConfig} className="h-[250px] w-[300px]">
+                <RechartsPieChart>
+                  <ChartTooltip cursor={false} content={<ChartTooltipContent hideLabel nameKey="subject" />} />
+                  <Pie data={subjectTimeDataDynamic} dataKey="hours" nameKey="subject" labelLine={false} label={({ subject, percent }) => `${subject}: ${(percent * 100).toFixed(0)}%`}>
+                    {subjectTimeDataDynamic.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.fill} />
+                    ))}
+                  </Pie>
+                  <ChartLegend content={<ChartLegend className="mt-4"/>} />
+                </RechartsPieChart>
+              </ChartContainer>
+            )}
           </CardContent>
         </Card>
 
@@ -168,13 +252,13 @@ export default function AnalyticsPage() {
       <div className="mt-8 p-6 rounded-xl border bg-card text-card-foreground shadow">
         <h2 className="text-xl font-semibold mb-3">Understanding Your Analytics</h2>
         <ul className="list-disc list-inside space-y-2 text-muted-foreground">
-          <li>Monitor your total study time and compare it weekly to build consistency.</li>
-          <li>Track how many topics you cover to ensure you're on pace with your syllabus.</li>
-          <li>Analyze time spent on each subject to identify areas needing more focus or where you're excelling.</li>
+          <li>Monitor your total study time and compare it weekly to build consistency. (Sample data for now)</li>
+          <li>Track how many topics you cover to ensure you're on pace with your syllabus. (Sample data for now)</li>
+          <li>Analyze time spent on each subject based on your completed tasks to identify areas needing more focus or where you're excelling.</li>
           <li>Leverage AI insights for tailored advice on improving your study effectiveness.</li>
         </ul>
       </div>
     </div>
   );
 }
-
+    
