@@ -55,7 +55,7 @@ export default function AppLayout({
 
   return (
     <SidebarProvider defaultOpen={true}>
-      <div className="flex min-h-screen">
+      <div className="flex min-h-screen w-full"> {/* Added w-full here */}
         <AppSidebar />
         <SidebarInset className="flex flex-col flex-1 min-w-0"> {/* Added min-w-0 here */}
           <header className="sticky top-0 z-40 flex h-16 items-center justify-between gap-4 border-b bg-background px-4 sm:px-6 shrink-0">
