@@ -17,6 +17,9 @@ const firebaseConfig = {
   measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID, // Optional
 };
 
+// Log the config object to help debug configuration issues
+console.log('Firebase Config Loaded:', firebaseConfig);
+
 // Initialize Firebase
 let app;
 if (!getApps().length) {
