@@ -10,14 +10,14 @@ import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { useAuth } from '@/contexts/auth-context';
 import { db } from '@/lib/firebase';
-import { collection, query, where, onSnapshot, type DocumentData } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, type DocumentData, type Unsubscribe } from 'firebase/firestore';
 
 // Helper function to assign colors to subjects for the pie chart
 const subjectColors: Record<string, string> = {
   physics: "hsl(var(--chart-1))",
   chemistry: "hsl(var(--chart-2))",
   biology: "hsl(var(--chart-3))",
-  mathematics: "hsl(var(--chart-4))", // Changed from 'math' for consistency if planner uses 'mathematics'
+  mathematics: "hsl(var(--chart-4))",
   english: "hsl(var(--chart-5))",
   history: "hsl(var(--chart-1))", // Re-using colors for more subjects
   other: "hsl(var(--chart-2))", // Re-using colors
@@ -89,46 +89,56 @@ export default function AnalyticsPage() {
     const tasksRef = collection(db, 'users', currentUser.uid, 'plannerTasks');
     const q = query(tasksRef, where('status', '==', 'completed'));
 
-    const unsubscribe = onSnapshot(q, (querySnapshot) => {
-      const subjectHoursMap: Record<string, number> = {};
-      querySnapshot.forEach((doc) => {
-        const task = doc.data() as { subject: string; duration: number; title: string }; // Add title for debugging if needed
-        if (task.subject && typeof task.duration === 'number') {
-          const subjectKey = task.subject.toLowerCase(); // Ensure consistent keying
-          subjectHoursMap[subjectKey] = (subjectHoursMap[subjectKey] || 0) + task.duration;
-        }
+    let unsubscribe: Unsubscribe | undefined;
+
+    try {
+      unsubscribe = onSnapshot(q, (querySnapshot) => {
+        const subjectHoursMap: Record<string, number> = {};
+        querySnapshot.forEach((doc) => {
+          const task = doc.data() as { subject: string; duration: number; title: string }; 
+          if (task.subject && typeof task.duration === 'number') {
+            const subjectKey = task.subject.toLowerCase(); 
+            subjectHoursMap[subjectKey] = (subjectHoursMap[subjectKey] || 0) + task.duration;
+          }
+        });
+
+        const newDynamicData = Object.entries(subjectHoursMap).map(([subjectKey, hours]) => {
+          const subjectLabel = subjectKey.charAt(0).toUpperCase() + subjectKey.slice(1);
+          return {
+            subject: subjectLabel, 
+            hours,
+            fill: getSubjectColor(subjectKey),
+          };
+        });
+        
+        setSubjectTimeDataDynamic(newDynamicData);
+
+        const newChartConfig: ChartConfig = { hours: { label: "Hours" } };
+        newDynamicData.forEach(item => {
+          const subjectKey = item.subject.toLowerCase();
+          if (!newChartConfig[subjectKey]) { 
+               newChartConfig[subjectKey] = { label: item.subject, color: item.fill };
+          }
+        });
+        setSubjectTimeConfig(newChartConfig);
+        setLoadingSubjectData(false);
+      }, (error) => {
+        console.error("Error fetching completed tasks for analytics: ", error);
+        setLoadingSubjectData(false);
+        setSubjectTimeDataDynamic([]);
       });
+    } catch (e) {
+        console.error("Error setting up onSnapshot listener for analytics: ", e);
+        setLoadingSubjectData(false);
+        setSubjectTimeDataDynamic([]);
+    }
 
-      const newDynamicData = Object.entries(subjectHoursMap).map(([subjectKey, hours]) => {
-        const subjectLabel = subjectKey.charAt(0).toUpperCase() + subjectKey.slice(1);
-        return {
-          subject: subjectLabel, // Use capitalized version for display
-          hours,
-          fill: getSubjectColor(subjectKey),
-        };
-      });
-      
-      setSubjectTimeDataDynamic(newDynamicData);
-
-      // Update chart config dynamically for legend labels
-      const newChartConfig: ChartConfig = { hours: { label: "Hours" } };
-      newDynamicData.forEach(item => {
-        const subjectKey = item.subject.toLowerCase();
-        if (!newChartConfig[subjectKey]) { // Avoid overwriting if multiple 'other' or similar keys
-             newChartConfig[subjectKey] = { label: item.subject, color: item.fill };
-        }
-      });
-      setSubjectTimeConfig(newChartConfig);
-
-      setLoadingSubjectData(false);
-    }, (error) => {
-      console.error("Error fetching completed tasks for analytics: ", error);
-      setLoadingSubjectData(false);
-      setSubjectTimeDataDynamic([]);
-    });
-
-    return () => unsubscribe();
-  }, [currentUser]);
+    return () => {
+      if (unsubscribe) {
+        unsubscribe();
+      }
+    };
+  }, [currentUser, db]); // Added db to dependency array
 
   return (
     <div className="space-y-6">
@@ -200,7 +210,7 @@ export default function AnalyticsPage() {
               <CardDescription>Hours spent on each subject from completed tasks.</CardDescription>
             </div>
           </CardHeader>
-          <CardContent className="flex items-center justify-center min-h-[298px]"> {/* Ensure min height for consistency */}
+          <CardContent className="flex items-center justify-center min-h-[298px]"> 
             {loadingSubjectData && (
               <div className="flex flex-col items-center justify-center text-muted-foreground">
                 <Loader2 className="h-8 w-8 animate-spin text-primary mb-2" />
@@ -214,7 +224,7 @@ export default function AnalyticsPage() {
               <ChartContainer config={subjectTimeConfig} className="h-[250px] w-[300px]">
                 <RechartsPieChart>
                   <ChartTooltip cursor={false} content={<ChartTooltipContent hideLabel nameKey="subject" />} />
-                  <Pie data={subjectTimeDataDynamic} dataKey="hours" nameKey="subject" labelLine={false} label={({ subject, percent }) => `${subject}: ${(percent * 100).toFixed(0)}%`}>
+                  <Pie data={subjectTimeDataDynamic} dataKey="hours" nameKey="subject" label={({ subject, percent }) => `${subject}: ${(percent * 100).toFixed(0)}%`}>
                     {subjectTimeDataDynamic.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={entry.fill} />
                     ))}
