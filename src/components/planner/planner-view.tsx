@@ -2,74 +2,69 @@
 "use client"
 
 import type { ChangeEvent } from "react";
-import React, { useState, useEffect } from "react"
+import React, { useState, useEffect, Suspense } from "react"
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { 
-  Plus, 
-  GripVertical, 
-  Clock, 
-  BookOpen, 
-  CheckCircle2, 
-  Trash2
+import {
+  Plus,
+  GripVertical,
+  Clock,
+  BookOpen,
+  CheckCircle2,
+  Trash2,
+  Loader2
 } from "lucide-react"
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogDescription, 
-  DialogFooter, 
-  DialogHeader, 
-  DialogTitle, 
-  DialogTrigger 
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger
 } from "@/components/ui/dialog"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
-import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
-} from "@/components/ui/select"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { cn } from "@/lib/utils"
 import { useAuth } from "@/contexts/auth-context"
 import { db } from "@/lib/firebase"
-import { 
-  collection, 
-  addDoc, 
-  doc, 
-  updateDoc, 
-  deleteDoc, 
-  query, 
-  where, // Added for filtering
+import {
+  collection,
+  addDoc,
+  doc,
+  updateDoc,
+  deleteDoc,
+  query,
+  where,
   onSnapshot,
-  Timestamp 
+  Timestamp
 } from "firebase/firestore"
+import { Skeleton } from "@/components/ui/skeleton";
+
+const NewTaskDialogContent = React.lazy(() => import('./new-task-dialog-content'));
+
 
 // Types
-type Priority = "low" | "medium" | "high"
-type TaskStatus = "pending" | "completed" | "missed" 
+export type Priority = "low" | "medium" | "high"
+export type TaskStatus = "pending" | "completed" | "missed"
 
-interface Task {
-  id: string 
-  userId?: string 
+export interface Task {
+  id: string
+  userId?: string
   title: string
   subject: string
   topic: string
   description?: string
-  duration: number 
+  duration: number
   priority: Priority
   status: TaskStatus
-  day: number 
-  startHour: number 
+  day: number
+  startHour: number
 }
 
 interface PlannerViewProps {
-  selectedDate?: Date; // For future use with day/month view
-  selectedSubjectFilter?: string | null; // null or undefined means all subjects
+  selectedDate?: Date;
+  selectedSubjectFilter?: string | null;
 }
 
 const subjects = [
@@ -99,6 +94,27 @@ const getSubjectInfo = (subjectId: string) => {
   return subjects.find(s => s.id === subjectId) || subjects.find(s => s.id === "other")!;
 }
 
+function NewTaskDialogFallback() {
+    return (
+        <div className="grid gap-4 py-4 max-h-[65vh] overflow-y-auto pr-3">
+            <Skeleton className="h-10 w-full" />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Skeleton className="h-10 w-full" />
+                <Skeleton className="h-10 w-full" />
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Skeleton className="h-10 w-full" />
+                <Skeleton className="h-10 w-full" />
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Skeleton className="h-10 w-full" />
+                <Skeleton className="h-10 w-full" />
+            </div>
+            <Skeleton className="h-20 w-full" />
+        </div>
+    );
+}
+
 
 export function PlannerView({ selectedDate, selectedSubjectFilter }: PlannerViewProps) {
   const { currentUser } = useAuth();
@@ -107,20 +123,20 @@ export function PlannerView({ selectedDate, selectedSubjectFilter }: PlannerView
     priority: "medium",
     status: "pending",
     duration: 1,
-    day: new Date().getDay(), 
+    day: new Date().getDay(),
     startHour: 9,
-    subject: subjects[0].id, 
+    subject: subjects[0].id,
   })
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [draggedTask, setDraggedTask] = useState<Task | null>(null)
   const [draggedOver, setDraggedOver] = useState<{ day: number, hour: number } | null>(null)
-  
+
   const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
-  const hours = Array.from({ length: 15 }, (_, i) => i + 8) 
+  const hours = Array.from({ length: 15 }, (_, i) => i + 8)
 
   useEffect(() => {
     if (!currentUser || !db) {
-      setTasks([]); // Clear tasks if user logs out or db not available
+      setTasks([]);
       return;
     }
 
@@ -132,7 +148,6 @@ export function PlannerView({ selectedDate, selectedSubjectFilter }: PlannerView
     } else {
       q = query(tasksCollectionRef);
     }
-    // TODO: Add filtering by selectedDate when day/month view is implemented
 
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
       const fetchedTasks: Task[] = [];
@@ -145,8 +160,8 @@ export function PlannerView({ selectedDate, selectedSubjectFilter }: PlannerView
     });
 
     return () => unsubscribe();
-  }, [currentUser, selectedSubjectFilter, selectedDate]); // Re-fetch if filter or date changes
-  
+  }, [currentUser, selectedSubjectFilter, selectedDate]);
+
   const handleInputChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setNewTask(prev => ({ ...prev, [name]: value }));
@@ -178,11 +193,11 @@ export function PlannerView({ selectedDate, selectedSubjectFilter }: PlannerView
       day: Number(newTask.day) || 0,
       startHour: Number(newTask.startHour) || 9,
     };
-    
+
     try {
       const tasksCollectionRef = collection(db, "users", currentUser.uid, "plannerTasks");
       await addDoc(tasksCollectionRef, taskToSave);
-      setNewTask({ 
+      setNewTask({
         title: "",
         topic: "",
         description: "",
@@ -198,17 +213,17 @@ export function PlannerView({ selectedDate, selectedSubjectFilter }: PlannerView
       console.error("Error creating task: ", error);
     }
   }
-  
+
   const handleDragStart = (task: Task, e: React.DragEvent) => {
     setDraggedTask(task);
     if (e.dataTransfer) {
       e.dataTransfer.effectAllowed = "move";
-      e.dataTransfer.setData("text/plain", task.id); 
+      e.dataTransfer.setData("text/plain", task.id);
     }
   }
-  
+
   const handleDragOver = (day: number, hour: number, e: React.DragEvent) => {
-    e.preventDefault() 
+    e.preventDefault()
     e.dataTransfer.dropEffect = "move";
     setDraggedOver({ day, hour })
   }
@@ -216,10 +231,10 @@ export function PlannerView({ selectedDate, selectedSubjectFilter }: PlannerView
   const handleDragLeave = (e: React.DragEvent) => {
     setDraggedOver(null);
   }
-  
+
   const handleDrop = async (day: number, hour: number) => {
     if (!currentUser || !db || !draggedTask || !draggedTask.id) return;
-    
+
     const taskDocRef = doc(db, "users", currentUser.uid, "plannerTasks", draggedTask.id);
     try {
       await updateDoc(taskDocRef, { day, startHour: hour });
@@ -229,7 +244,7 @@ export function PlannerView({ selectedDate, selectedSubjectFilter }: PlannerView
     setDraggedTask(null)
     setDraggedOver(null)
   }
-  
+
   const toggleTaskStatus = async (taskId: string) => {
     if (!currentUser || !db) return;
     const taskToUpdate = tasks.find(task => task.id === taskId);
@@ -255,10 +270,10 @@ export function PlannerView({ selectedDate, selectedSubjectFilter }: PlannerView
       console.error("Error deleting task: ", error);
     }
   }
-  
+
   const renderTask = (task: Task) => {
     const subjectInfo = getSubjectInfo(task.subject);
-    
+
     return (
       <div
         key={task.id}
@@ -270,7 +285,7 @@ export function PlannerView({ selectedDate, selectedSubjectFilter }: PlannerView
           subjectInfo.color,
           "hover:shadow-md transition-shadow"
         )}
-        style={{ minHeight: `${Math.max(1, task.duration) * 2.0}rem` }} 
+        style={{ minHeight: `${Math.max(1, task.duration) * 2.0}rem` }}
       >
         <div className="flex items-start justify-between">
           <div className="flex-1 overflow-hidden pr-1">
@@ -288,7 +303,7 @@ export function PlannerView({ selectedDate, selectedSubjectFilter }: PlannerView
             </div>
           </div>
           <div className="flex flex-col items-center ml-1 space-y-0.5">
-            <button 
+            <button
               onClick={() => toggleTaskStatus(task.id)}
               className="p-0.5 rounded-full hover:bg-black/10 dark:hover:bg-white/10 transition-colors"
               title={task.status === "completed" ? "Mark as pending" : "Mark as completed"}
@@ -340,7 +355,7 @@ export function PlannerView({ selectedDate, selectedSubjectFilter }: PlannerView
             </div>
             <h3 className="text-lg font-medium mb-2">No Tasks Yet</h3>
             <p className="text-muted-foreground mb-4">
-              {selectedSubjectFilter && selectedSubjectFilter !== "all" 
+              {selectedSubjectFilter && selectedSubjectFilter !== "all"
                 ? `No tasks found for ${getSubjectInfo(selectedSubjectFilter).name}. Try a different filter or add a new task.`
                 : "Click 'Add Task' to organize your study schedule."
               }
@@ -351,12 +366,12 @@ export function PlannerView({ selectedDate, selectedSubjectFilter }: PlannerView
           </CardContent>
         </Card>
       )}
-      
+
       {currentUser && (tasks.length > 0 || (selectedSubjectFilter && selectedSubjectFilter !== "all")) && (
         <div className="overflow-auto flex-grow pb-2 -mx-1">
           <div className="grid grid-cols-[auto_repeat(7,minmax(130px,1fr))] gap-1 min-w-[950px]">
             <div className="sticky left-0 bg-background z-10">
-              <div className="h-10"></div> 
+              <div className="h-10"></div>
               {hours.map(hour => (
                 <div key={`time-${hour}`} className="h-20 flex items-center justify-center border-r pr-1 text-xs font-medium text-muted-foreground">
                   <span>
@@ -365,7 +380,7 @@ export function PlannerView({ selectedDate, selectedSubjectFilter }: PlannerView
                 </div>
               ))}
             </div>
-            
+
             {days.map((dayLabel, dayIndex) => (
               <div key={dayLabel}>
                 <div className="h-10 flex items-center justify-center font-semibold text-sm sticky top-0 bg-background z-10 border-b">
@@ -376,7 +391,7 @@ export function PlannerView({ selectedDate, selectedSubjectFilter }: PlannerView
                     task => task.day === dayIndex && task.startHour === hour
                   );
                   const isOver = draggedOver?.day === dayIndex && draggedOver?.hour === hour;
-                  
+
                   return (
                     <div
                       key={`${dayIndex}-${hour}`}
@@ -390,8 +405,8 @@ export function PlannerView({ selectedDate, selectedSubjectFilter }: PlannerView
                       onDrop={() => handleDrop(dayIndex, hour)}
                     >
                       <ScrollArea className="h-full">
-                        <div className="p-0.5"> 
-                        {tasksInSlot.length > 0 ? 
+                        <div className="p-0.5">
+                        {tasksInSlot.length > 0 ?
                           tasksInSlot.map(task => renderTask(task)) :
                           (isOver && draggedTask) && (
                             <div className="h-full flex items-center justify-center text-muted-foreground text-xs opacity-70">
@@ -409,7 +424,7 @@ export function PlannerView({ selectedDate, selectedSubjectFilter }: PlannerView
           </div>
         </div>
       )}
-      
+
       <div className="flex justify-end mt-2 shrink-0">
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
@@ -424,128 +439,13 @@ export function PlannerView({ selectedDate, selectedSubjectFilter }: PlannerView
                 Fill in the details for your new study task.
               </DialogDescription>
             </DialogHeader>
-            <div className="grid gap-4 py-4 max-h-[65vh] overflow-y-auto pr-3">
-              <div className="grid gap-2">
-                <Label htmlFor="title">Task Title <span className="text-destructive">*</span></Label>
-                <Input
-                  id="title" name="title"
-                  placeholder="e.g., Quantum Mechanics Ch. 3"
-                  value={newTask.title || ""}
-                  onChange={handleInputChange}
+            <Suspense fallback={<NewTaskDialogFallback />}>
+                <NewTaskDialogContent
+                    newTask={newTask}
+                    onInputChange={handleInputChange}
+                    onSelectChange={handleSelectChange}
                 />
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="grid gap-2">
-                  <Label htmlFor="subject">Subject <span className="text-destructive">*</span></Label>
-                  <Select
-                    value={newTask.subject}
-                    onValueChange={(value) => handleSelectChange("subject", value)}
-                  >
-                    <SelectTrigger id="subject">
-                      <SelectValue placeholder="Select subject" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {subjects.map((subject) => (
-                        <SelectItem key={subject.id} value={subject.id}>
-                          {subject.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="topic">Topic / Chapter</Label>
-                  <Input
-                    id="topic" name="topic"
-                    placeholder="e.g., Wave Functions"
-                    value={newTask.topic || ""}
-                    onChange={handleInputChange}
-                  />
-                </div>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="grid gap-2">
-                  <Label htmlFor="day">Day <span className="text-destructive">*</span></Label>
-                  <Select
-                    value={newTask.day?.toString()}
-                    onValueChange={(value) => handleSelectChange("day", parseInt(value))}
-                  >
-                    <SelectTrigger id="day">
-                      <SelectValue placeholder="Select day" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {days.map((day, index) => (
-                        <SelectItem key={index} value={index.toString()}>
-                          {day}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="startHour">Start Time <span className="text-destructive">*</span></Label>
-                  <Select
-                    value={newTask.startHour?.toString()}
-                    onValueChange={(value) => handleSelectChange("startHour", parseInt(value))}
-                  >
-                    <SelectTrigger id="startHour">
-                      <SelectValue placeholder="Select time" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {hours.map((hour) => (
-                        <SelectItem key={hour} value={hour.toString()}>
-                          {hour % 12 === 0 ? 12 : hour % 12} {hour >= 12 ? 'PM' : 'AM'}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="grid gap-2">
-                  <Label htmlFor="duration">Duration (hours) <span className="text-destructive">*</span></Label>
-                  <Select
-                    value={newTask.duration?.toString()}
-                    onValueChange={(value) => handleSelectChange("duration", parseFloat(value))}
-                  >
-                    <SelectTrigger id="duration">
-                      <SelectValue placeholder="Select duration" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {[0.5, 1, 1.5, 2, 2.5, 3, 4].map(d => (
-                        <SelectItem key={d} value={d.toString()}>{d}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="priority">Priority <span className="text-destructive">*</span></Label>
-                  <Select
-                    value={newTask.priority}
-                    onValueChange={(value) => handleSelectChange("priority", value as Priority)}
-                  >
-                    <SelectTrigger id="priority">
-                      <SelectValue placeholder="Select priority" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="low">Low</SelectItem>
-                      <SelectItem value="medium">Medium</SelectItem>
-                      <SelectItem value="high">High</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="description">Description (Optional)</Label>
-                <Textarea
-                  id="description" name="description"
-                  placeholder="Add more details, notes, or specific goals..."
-                  value={newTask.description || ""}
-                  onChange={handleInputChange}
-                  rows={3}
-                />
-              </div>
-            </div>
+            </Suspense>
             <DialogFooter className="mt-2 pt-4 border-t">
               <Button variant="outline" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
               <Button onClick={handleCreateTask} disabled={!currentUser || !newTask.title || !newTask.subject}>Save Task</Button>
@@ -553,7 +453,7 @@ export function PlannerView({ selectedDate, selectedSubjectFilter }: PlannerView
           </DialogContent>
         </Dialog>
       </div>
-      
+
       {currentUser && tasks.length > 0 && (
         <Card className="mt-4 shrink-0">
           <CardHeader className="pb-2 pt-4">
@@ -562,10 +462,10 @@ export function PlannerView({ selectedDate, selectedSubjectFilter }: PlannerView
           <CardContent className="pb-4">
             <div className="flex flex-wrap gap-x-3 gap-y-2">
               {subjects.map(subject => (
-                <div 
+                <div
                   key={subject.id}
                   className={cn(
-                    "px-2 py-0.5 rounded-full text-xs flex items-center border text-center", 
+                    "px-2 py-0.5 rounded-full text-xs flex items-center border text-center",
                     subject.color
                   )}
                 >
