@@ -27,8 +27,8 @@ export default function AiToolsPage() {
       description: "Receive AI-driven insights and recommendations based on your study habits.",
       icon: <BarChartBig className="h-8 w-8 text-primary" />,
       link: "/ai-tools/productivity-analyzer",
-      status: "Coming Soon",
-      actionText: "Analyze (Soon)"
+      status: "Active",
+      actionText: "Analyze Data"
     },
     // Add more AI tools here as planned
   ];
@@ -78,3 +78,4 @@ export default function AiToolsPage() {
     </div>
   );
 }
+    
