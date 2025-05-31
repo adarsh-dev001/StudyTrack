@@ -75,34 +75,35 @@ export function getPostSlugs() {
 export async function getPostBySlug(slug: string): Promise<{ content: React.ReactElement; metadata: PostMeta } | null> {
   const realSlug = slug.replace(/\.mdx$/, '');
   const fullPath = path.join(postsDirectory, `${realSlug}.mdx`);
-  
+
   if (!fs.existsSync(fullPath)) {
     console.warn(`Blog post not found at path: ${fullPath}`);
     return null;
   }
 
   const fileContents = fs.readFileSync(fullPath, 'utf8');
+  // Use gray-matter to parse frontmatter
   const { data: frontmatterData, content: mdxSourceContent } = matter(fileContents);
 
+  // Compile the MDX content
   const { content: compiledMDXContent } = await compileMDX({
     source: mdxSourceContent,
-    options: { 
-      parseFrontmatter: false, 
-       mdxOptions: {
-        // You can add remark/rehype plugins here if needed
-      },
+    options: {
+      parseFrontmatter: false, // Tell compileMDX not to parse frontmatter again
+      // mdxOptions can be added here if you have remark/rehype plugins, e.g.
+      // mdxOptions: { remarkPlugins: [], rehypePlugins: [] }
     },
-    components: components, 
+    components: components, // Pass custom components
   });
 
   const metadata: PostMeta = {
     slug: realSlug,
-    title: frontmatterData.title || 'Untitled Post',
-    date: frontmatterData.date || new Date().toISOString(),
-    category: frontmatterData.category || 'Uncategorized',
-    metaDescription: frontmatterData.metaDescription || '',
-    author: frontmatterData.author || 'Anonymous',
-    ...frontmatterData,
+    title: (frontmatterData.title || 'Untitled Post') as string,
+    date: (frontmatterData.date || new Date().toISOString()) as string,
+    category: (frontmatterData.category || 'Uncategorized') as string,
+    metaDescription: (frontmatterData.metaDescription || '') as string,
+    author: (frontmatterData.author || 'Anonymous') as string,
+    ...frontmatterData, // Spread any other frontmatter properties
   };
 
   return {
@@ -131,7 +132,7 @@ export async function getAllPostsMeta(): Promise<PostMeta[]> {
       ...data,
     } as PostMeta;
   });
-  
+
   const posts = (await Promise.all(postsPromises)).filter(post => post !== null) as PostMeta[];
   return posts.sort((post1, post2) => (post1.date > post2.date ? -1 : 1));
 }
@@ -142,4 +143,3 @@ export async function getAllCategories(): Promise<string[]> {
   const categories = new Set(posts.map(post => post.category));
   return Array.from(categories).sort();
 }
-
