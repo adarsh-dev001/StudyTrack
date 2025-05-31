@@ -1,3 +1,4 @@
+
 import Link from 'next/link';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
@@ -6,7 +7,7 @@ import { ArrowRight } from 'lucide-react';
 export function HeroSection() {
   return (
     <section className="w-full py-12 md:py-24 lg:py-32 xl:py-40 bg-gradient-to-b from-background to-secondary/30">
-      <div className="container px-4 md:px-6">
+      <div className="px-4 md:px-6"> {/* Removed 'container' class */}
         <div className="grid gap-6 lg:grid-cols-[1fr_550px] lg:gap-12 xl:grid-cols-[1fr_650px]">
           <div className="flex flex-col justify-center space-y-6">
             <div className="space-y-4">

@@ -1,3 +1,4 @@
+
 import { FeatureCard } from './feature-card';
 import { CalendarDays, ClipboardCheck, Palette, BrainCircuit, Timer, Flame, BarChart3 } from 'lucide-react';
 
@@ -40,7 +41,7 @@ const featuresRow2 = [
 export function FeaturesSection() {
   return (
     <section id="features" className="w-full py-12 md:py-24 lg:py-32 bg-background">
-      <div className="container px-4 md:px-6">
+      <div className="px-4 md:px-6"> {/* Removed 'container' class */}
         <div className="flex flex-col items-center justify-center space-y-4 text-center mb-12">
           <div className="inline-block rounded-lg bg-secondary px-3 py-1 text-sm text-secondary-foreground">Key Features</div>
           <h2 className="font-headline text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl text-foreground">

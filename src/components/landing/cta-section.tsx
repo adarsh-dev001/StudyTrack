@@ -1,3 +1,4 @@
+
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Rocket } from 'lucide-react';
@@ -5,7 +6,7 @@ import { Rocket } from 'lucide-react';
 export function CtaSection() {
   return (
     <section id="cta" className="w-full py-12 md:py-24 lg:py-32 bg-gradient-to-t from-background to-secondary/30">
-      <div className="container grid items-center justify-center gap-6 px-4 md:px-6 text-center">
+      <div className="grid items-center justify-center gap-6 px-4 md:px-6 text-center"> {/* Removed 'container' class */}
         <div className="space-y-4">
             <div className="inline-block rounded-lg bg-primary/10 px-3 py-1 text-sm text-primary font-medium">
                 Get Started

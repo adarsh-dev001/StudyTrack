@@ -1,3 +1,4 @@
+
 import { Header } from '@/components/landing/header';
 import { Footer } from '@/components/landing/footer';
 
@@ -6,7 +7,7 @@ export default function PrivacyPolicyPage() {
     <div className="flex min-h-screen flex-col">
       <Header />
       <main className="flex-1 py-12 md:py-16 lg:py-20">
-        <div className="container px-4 md:px-6">
+        <div className="px-4 md:px-6"> {/* Removed 'container' class */}
           <h1 className="font-headline text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl mb-8">
             Privacy Policy
           </h1>
