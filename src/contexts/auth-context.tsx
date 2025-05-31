@@ -83,11 +83,19 @@ export function AuthProvider({ children }: AuthProviderProps) {
       console.error("Signup Error Code:", err.code);
       console.error("Signup Error Message:", err.message);
       setError(err.message);
-      toast({
-        title: 'Signup Failed',
-        description: err.message,
-        variant: 'destructive',
-      });
+      if (err.code === 'auth/email-already-in-use') {
+        toast({
+          title: 'Signup Failed',
+          description: 'This email address is already registered. Please use a different email or try logging in.',
+          variant: 'destructive',
+        });
+      } else {
+        toast({
+          title: 'Signup Failed',
+          description: err.message,
+          variant: 'destructive',
+        });
+      }
     } finally {
       setLoading(false);
     }
