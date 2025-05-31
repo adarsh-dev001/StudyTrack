@@ -3,13 +3,13 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/contexts/auth-context';
-import { db } from '@/lib/firebase';
-import { doc, getDoc, setDoc, Timestamp, onSnapshot } from 'firebase/firestore';
+import { db } from '@/lib/firebase'; // db can be null if Firebase fails to initialize
+import { doc, getDoc, setDoc, Timestamp, onSnapshot, DocumentReference } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Flame, Loader2, CalendarCheck2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { isToday, isYesterday, startOfDay, differenceInCalendarDays } from 'date-fns';
+import { isToday, isYesterday } from 'date-fns';
 
 interface StreakData {
   currentStreak: number;
@@ -31,18 +31,19 @@ export default function StreaksPage() {
   const [isCheckingIn, setIsCheckingIn] = useState(false);
   const [alreadyCheckedInToday, setAlreadyCheckedInToday] = useState(false);
 
-  const streakDocRef = currentUser ? doc(db, 'users', currentUser.uid, 'streaksData', 'main') : null;
-
   useEffect(() => {
-    if (!currentUser || !streakDocRef) {
+    if (!currentUser || !db) { // Ensure db is available
       setLoading(false);
-      setStreakData(null); // Reset if user logs out
+      setStreakData(null);
+      setAlreadyCheckedInToday(false);
       return;
     }
 
     setLoading(true);
+    const userStreakDocRef = doc(db, 'users', currentUser.uid, 'streaksData', 'main');
+
     const unsubscribe = onSnapshot(
-      streakDocRef,
+      userStreakDocRef,
       (docSnap) => {
         if (docSnap.exists()) {
           const data = docSnap.data() as StreakData;
@@ -53,11 +54,8 @@ export default function StreaksPage() {
             setAlreadyCheckedInToday(false);
           }
         } else {
-          // Initialize streak data if it doesn't exist
           setStreakData(initialStreakData);
           setAlreadyCheckedInToday(false);
-          // Optionally, create the initial document here or let check-in handle it
-          // setDoc(streakDocRef, initialStreakData);
         }
         setLoading(false);
       },
@@ -73,44 +71,52 @@ export default function StreaksPage() {
     );
 
     return () => unsubscribe();
-  }, [currentUser, streakDocRef, toast]);
+  }, [currentUser, toast]); // db is not needed as a dependency here because if it changes,
+                           // currentUser would likely be null or app would re-initialize.
+                           // toast is stable.
 
   const handleCheckIn = useCallback(async () => {
-    if (!currentUser || !streakDocRef) {
-      toast({ title: 'Error', description: 'You must be logged in.', variant: 'destructive' });
+    if (!currentUser || !db) {
+      toast({ title: 'Error', description: 'You must be logged in and database available.', variant: 'destructive' });
       return;
     }
+    // Use the current state of alreadyCheckedInToday, which is derived from onSnapshot
     if (alreadyCheckedInToday) {
       toast({ title: 'Already Checked In', description: 'You have already checked in for today!' });
       return;
     }
 
     setIsCheckingIn(true);
+    const userStreakDocRef = doc(db, 'users', currentUser.uid, 'streaksData', 'main');
+
     try {
       const today = new Date();
       const todayTimestamp = Timestamp.fromDate(today);
       
       let newCurrentStreak = 1;
-      let newLongestStreak = streakData?.longestStreak || 0;
+      let newLongestStreak = 0; // Will be derived from DB or current data
 
-      const docSnap = await getDoc(streakDocRef);
-      let currentData = initialStreakData;
+      const docSnap = await getDoc(userStreakDocRef); // Get the latest data before writing
+      let currentDbData = initialStreakData;
 
       if (docSnap.exists()) {
-        currentData = docSnap.data() as StreakData;
+        currentDbData = docSnap.data() as StreakData;
       }
       
-      if (currentData.lastCheckInDate) {
-        const lastCheckIn = currentData.lastCheckInDate.toDate();
+      newLongestStreak = currentDbData.longestStreak || 0; // Initialize with DB longest streak
+
+      if (currentDbData.lastCheckInDate) {
+        const lastCheckIn = currentDbData.lastCheckInDate.toDate();
         if (isYesterday(lastCheckIn)) {
-          newCurrentStreak = (currentData.currentStreak || 0) + 1;
+          newCurrentStreak = (currentDbData.currentStreak || 0) + 1;
         } else if (isToday(lastCheckIn)) {
-          // This case should be caught by alreadyCheckedInToday, but as a safeguard:
-          toast({ title: 'Already Checked In', description: 'You have already checked in today.' });
+          // This case should ideally be caught by the `alreadyCheckedInToday` check at the start.
+          // If reached, onSnapshot might not have updated the local state yet.
+          toast({ title: 'Already Checked In', description: 'You have already checked in for today (verified from DB).' });
           setIsCheckingIn(false);
           return;
         }
-        // If last check-in was before yesterday, streak resets to 1 (already handled by newCurrentStreak = 1)
+        // If last check-in was before yesterday, streak resets to 1 (default newCurrentStreak = 1)
       }
 
       if (newCurrentStreak > newLongestStreak) {
@@ -123,26 +129,26 @@ export default function StreaksPage() {
         lastCheckInDate: todayTimestamp,
       };
 
-      await setDoc(streakDocRef, updatedData, { merge: true }); // Use setDoc with merge for robust creation/update
+      await setDoc(userStreakDocRef, updatedData, { merge: true });
       
-      setStreakData(updatedData); // Optimistic update for UI
-      setAlreadyCheckedInToday(true); // Optimistic update
+      // UI updates (setStreakData, setAlreadyCheckedInToday) will be handled by the onSnapshot listener.
+      // This avoids race conditions.
 
       toast({
         title: 'Checked In!',
         description: `Your current streak is ${newCurrentStreak} ${newCurrentStreak === 1 ? 'day' : 'days'}. Keep it up!`,
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error during check-in:', error);
       toast({
         title: 'Check-in Failed',
-        description: 'Could not process your check-in. Please try again.',
+        description: `Could not process your check-in: ${error.message}`,
         variant: 'destructive',
       });
     } finally {
       setIsCheckingIn(false);
     }
-  }, [currentUser, streakDocRef, streakData, toast, alreadyCheckedInToday]);
+  }, [currentUser, toast, alreadyCheckedInToday]); // streakData removed as direct source for newLongestStreak calculation start
 
   if (loading) {
     return (
@@ -215,7 +221,7 @@ export default function StreaksPage() {
         <CardContent>
           <Button 
             onClick={handleCheckIn} 
-            disabled={alreadyCheckedInToday || isCheckingIn}
+            disabled={alreadyCheckedInToday || isCheckingIn || !db} // Disable if db not available
             className="w-full text-lg py-6"
             size="lg"
           >
@@ -237,6 +243,9 @@ export default function StreaksPage() {
                 Last check-in: {streakData.lastCheckInDate.toDate().toLocaleDateString()}
              </p>
           )}
+           {!db && (
+            <p className="text-xs text-destructive mt-2 text-center">Database not available. Check-in disabled.</p>
+           )}
         </CardContent>
       </Card>
        <div className="mt-8 p-6 rounded-xl border bg-card text-card-foreground shadow">
