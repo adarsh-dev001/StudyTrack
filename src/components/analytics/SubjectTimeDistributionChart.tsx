@@ -47,11 +47,9 @@ export default function SubjectTimeDistributionChart() {
 
   useEffect(() => {
     if (!currentUser || !db) {
-      setTimeout(() => {
-        setLoadingSubjectData(false);
-        setSubjectTimeDataDynamic([]);
-        setSubjectTimeConfig(subjectTimeConfigBase);
-      }, 0);
+      setLoadingSubjectData(false);
+      setSubjectTimeDataDynamic([]);
+      setSubjectTimeConfig(subjectTimeConfigBase);
       if (unsubscribeRef.current) {
         unsubscribeRef.current();
         unsubscribeRef.current = null;
@@ -59,9 +57,18 @@ export default function SubjectTimeDistributionChart() {
       return;
     }
 
-    setTimeout(() => setLoadingSubjectData(true),0);
+    setLoadingSubjectData(true);
     const tasksRef = collection(db, 'users', currentUser.uid, 'plannerTasks');
-    const q = query(tasksRef, where('status', '==', 'completed'));
+    let q;
+
+    if (selectedSubjectFilter && selectedSubjectFilter !== "all") {
+       // If a subject filter is applied, ensure the query includes it along with the status.
+       // Firestore might require a composite index for this: (subject, status).
+      q = query(tasksRef, where('subject', '==', selectedSubjectFilter), where('status', '==', 'completed'));
+    } else {
+      q = query(tasksRef, where('status', '==', 'completed'));
+    }
+
 
     if (unsubscribeRef.current) {
       unsubscribeRef.current();
@@ -71,7 +78,7 @@ export default function SubjectTimeDistributionChart() {
       const processingStartTime = performance.now();
       const subjectHoursMap: Record<string, number> = {};
       querySnapshot.forEach((doc) => {
-        const task = doc.data() as { subject: string; duration: number; title: string };
+        const task = doc.data() as { subject: string; duration: number; title: string }; // Assume title might exist for context
         if (task.subject && typeof task.subject === 'string' && typeof task.duration === 'number' && task.duration > 0) {
           const subjectKey = task.subject.toLowerCase();
           subjectHoursMap[subjectKey] = (subjectHoursMap[subjectKey] || 0) + task.duration;
@@ -97,19 +104,15 @@ export default function SubjectTimeDistributionChart() {
         }
       });
       
-      setTimeout(() => {
-        setSubjectTimeDataDynamic(newDynamicData);
-        setSubjectTimeConfig(newChartConfig);
-        setLoadingSubjectData(false);
-      }, 0);
+      setSubjectTimeDataDynamic(newDynamicData);
+      setSubjectTimeConfig(newChartConfig);
+      setLoadingSubjectData(false);
 
     }, (error) => {
       console.error("Error fetching completed tasks for SubjectTimeDistributionChart: ", error);
-      setTimeout(() => {
-        setLoadingSubjectData(false);
-        setSubjectTimeDataDynamic([]);
-        setSubjectTimeConfig(subjectTimeConfigBase);
-      }, 0);
+      setLoadingSubjectData(false);
+      setSubjectTimeDataDynamic([]);
+      setSubjectTimeConfig(subjectTimeConfigBase);
     });
 
     return () => {
@@ -118,7 +121,7 @@ export default function SubjectTimeDistributionChart() {
         unsubscribeRef.current = null;
       }
     };
-  }, [currentUser?.uid, db]);
+  }, [currentUser?.uid, db, selectedSubjectFilter]); // Added selectedSubjectFilter dependency
 
   return (
     <Card className="shadow-lg">
