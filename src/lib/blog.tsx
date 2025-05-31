@@ -2,7 +2,7 @@
 import fs from 'fs';
 import path from 'path';
 import matter from 'gray-matter';
-import { compileMDX } from 'next-mdx-remote'; // RSC version for App Router, try main export
+import { compileMDX } from 'next-mdx-remote/rsc'; // RSC version for App Router
 import { type ClassValue, clsx } from "clsx" // For table styling
 import { twMerge } from "tailwind-merge" // For table styling
 import type React from 'react';
@@ -58,6 +58,10 @@ const components = {
       {...props}
     />
   ),
+  // Add other components like h1, p, a, etc. if you want to customize them
+  // Example:
+  // p: (props: React.HTMLAttributes<HTMLParagraphElement>) => <p className="mb-4 leading-relaxed" {...props} />,
+  // h2: (props: React.HTMLAttributes<HTMLHeadingElement>) => <h2 className="text-2xl font-bold mt-8 mb-4" {...props} />,
 };
 
 
@@ -138,3 +142,4 @@ export async function getAllCategories(): Promise<string[]> {
   const categories = new Set(posts.map(post => post.category));
   return Array.from(categories).sort();
 }
+
