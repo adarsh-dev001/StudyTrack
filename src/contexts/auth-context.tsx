@@ -79,6 +79,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
       });
       router.push('/dashboard');
     } catch (err: any) {
+      console.error("Signup Error Code:", err.code);
+      console.error("Signup Error Message:", err.message);
       setError(err.message);
       toast({
         title: 'Signup Failed',
