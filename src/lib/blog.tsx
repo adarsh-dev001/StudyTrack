@@ -80,15 +80,17 @@ export async function getPostBySlug(slug: string): Promise<Post | null> {
   }
 
   const fileContents = fs.readFileSync(fullPath, 'utf8');
-  const { data, content: mdxContent } = matter(fileContents); // Use gray-matter for frontmatter
+  const { data, content: mdxSourceContent } = matter(fileContents); // Use gray-matter for frontmatter and content
 
-  const { content: compiledContent } = await compileMDX<PostMeta>({
-    source: mdxContent, // Pass content only
+  const { content: compiledContent } = await compileMDX<Omit<PostMeta, 'slug'>>({ // Frontmatter type for compileMDX if needed, but data is already separate
+    source: mdxSourceContent, // Pass only the MDX content string
     options: {
-      parseFrontmatter: false, // We already parsed it
-      // mdxOptions: { /* ... */ },
+      parseFrontmatter: false, // Tell compileMDX not to parse frontmatter again
+      mdxOptions: {
+        // You can add remark/rehype plugins here if needed
+      },
     },
-    components: components, // Ensure custom components are passed
+    components: components, // Pass custom components here
   });
 
   return {
@@ -98,7 +100,7 @@ export async function getPostBySlug(slug: string): Promise<Post | null> {
     category: data.category || 'Uncategorized',
     metaDescription: data.metaDescription || '',
     author: data.author || 'Anonymous',
-    ...data, // include any other frontmatter data from gray-matter
+    ...data, // Spread the frontmatter data obtained from gray-matter
     content: compiledContent,
   };
 }
