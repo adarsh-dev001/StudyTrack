@@ -89,7 +89,7 @@ export async function getPostBySlug(slug: string): Promise<Post | null> {
         // rehypePlugins: [],
       },
     },
-    // components: components, // Temporarily removed for diagnostics
+    components: components, 
   });
 
   return {
@@ -108,6 +108,11 @@ export async function getAllPostsMeta(): Promise<PostMeta[]> {
   const slugs = getPostSlugs();
   const postsPromises = slugs.map(async (slug) => {
     const fullPath = path.join(postsDirectory, `${slug}.mdx`);
+    if (!fs.existsSync(fullPath)) {
+      // Should not happen if getPostSlugs is accurate, but good for robustness
+      console.warn(`File not found during getAllPostsMeta for slug: ${slug} at path ${fullPath}`);
+      return null; 
+    }
     const fileContents = fs.readFileSync(fullPath, 'utf8');
     const { data } = matter(fileContents);
     return {
@@ -118,9 +123,16 @@ export async function getAllPostsMeta(): Promise<PostMeta[]> {
       metaDescription: data.metaDescription || '',
       author: data.author || 'Anonymous',
       ...data,
-    };
+    } as PostMeta; // Ensure type conformity
   });
   
-  const posts = await Promise.all(postsPromises);
+  const posts = (await Promise.all(postsPromises)).filter(post => post !== null) as PostMeta[];
   return posts.sort((post1, post2) => (post1.date > post2.date ? -1 : 1));
 }
+
+export async function getAllCategories(): Promise<string[]> {
+  const posts = await getAllPostsMeta();
+  const categories = new Set(posts.map(post => post.category));
+  return Array.from(categories).sort();
+}
+

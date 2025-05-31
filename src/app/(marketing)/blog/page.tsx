@@ -1,10 +1,6 @@
 
-import Link from 'next/link';
-import { getAllPostsMeta, type PostMeta } from '@/lib/blog.tsx';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { ArrowRight, CalendarDays, Tag } from 'lucide-react';
-import { format } from 'date-fns';
+import { getAllPostsMeta, getAllCategories, type PostMeta } from '@/lib/blog.tsx';
+import BlogPostsDisplayClient from '@/components/blog/blog-posts-display';
 
 export const metadata = {
   title: 'StudyTrack Blog - Tips, Guides, and Strategies',
@@ -12,7 +8,8 @@ export const metadata = {
 };
 
 export default async function BlogIndexPage() {
-  const posts = await getAllPostsMeta(); // Already sorted by date descending
+  const posts = await getAllPostsMeta();
+  const categories = await getAllCategories();
 
   return (
     <div className="container mx-auto px-4 py-8 md:px-6 lg:px-8">
@@ -25,37 +22,8 @@ export default async function BlogIndexPage() {
         </p>
       </header>
 
-      {posts.length === 0 ? (
-        <p className="text-center text-muted-foreground">No blog posts yet. Check back soon!</p>
-      ) : (
-        <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
-          {posts.map((post) => (
-            <Card key={post.slug} className="flex flex-col overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-300">
-              <CardHeader>
-                <CardTitle className="font-headline text-xl hover:text-primary transition-colors">
-                  <Link href={`/blog/${post.slug}`}>
-                    {post.title}
-                  </Link>
-                </CardTitle>
-                <div className="text-xs text-muted-foreground space-x-2 flex items-center pt-1">
-                  <span className="flex items-center"><CalendarDays className="mr-1 h-3 w-3" /> {format(new Date(post.date), 'MMM d, yyyy')}</span>
-                  <span className="flex items-center"><Tag className="mr-1 h-3 w-3" /> {post.category}</span>
-                </div>
-              </CardHeader>
-              <CardContent className="flex-grow">
-                <CardDescription>{post.metaDescription}</CardDescription>
-              </CardContent>
-              <CardFooter>
-                <Button variant="link" asChild className="p-0 h-auto text-primary hover:underline">
-                  <Link href={`/blog/${post.slug}`}>
-                    Read More <ArrowRight className="ml-2 h-4 w-4" />
-                  </Link>
-                </Button>
-              </CardFooter>
-            </Card>
-          ))}
-        </div>
-      )}
+      <BlogPostsDisplayClient posts={posts} categories={categories} />
+      
     </div>
   );
 }
