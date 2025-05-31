@@ -1,6 +1,8 @@
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { BrainCircuit, BookText, BarChartBig } from "lucide-react";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import Link from "next/link";
+import { BrainCircuit, BookText, BarChartBig, Sparkles } from "lucide-react";
 
 export default function AiToolsPage() {
   const aiTools = [
@@ -8,22 +10,25 @@ export default function AiToolsPage() {
       title: "AI Syllabus Suggester",
       description: "Get personalized syllabus suggestions for your exams (NEET, UPSC, JEE, etc.).",
       icon: <BookText className="h-8 w-8 text-primary" />,
-      link: "/ai-tools/syllabus-suggester", // Example link, adjust as needed
-      status: "Coming Soon"
+      link: "/ai-tools/syllabus-suggester",
+      status: "Coming Soon",
+      actionText: "Explore (Soon)"
     },
     {
       title: "Study Material Summarizer",
       description: "Quickly grasp key concepts by summarizing your study materials.",
-      icon: <BrainCircuit className="h-8 w-8 text-primary" />,
+      icon: <Sparkles className="h-8 w-8 text-primary" />, // Changed icon for variety
       link: "/ai-tools/material-summarizer",
-      status: "Coming Soon"
+      status: "Active",
+      actionText: "Use Summarizer"
     },
     {
       title: "Productivity Analysis AI",
       description: "Receive AI-driven insights and recommendations based on your study habits.",
       icon: <BarChartBig className="h-8 w-8 text-primary" />,
-      link: "/ai-tools/productivity-analyzer", // Or link to analytics page if more suitable
-      status: "Coming Soon"
+      link: "/ai-tools/productivity-analyzer",
+      status: "Coming Soon",
+      actionText: "Analyze (Soon)"
     },
     // Add more AI tools here as planned
   ];
@@ -31,7 +36,9 @@ export default function AiToolsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight md:text-4xl">AI Tools</h1>
+        <h1 className="text-3xl font-bold tracking-tight md:text-4xl flex items-center">
+         <BrainCircuit className="mr-3 h-8 w-8 text-primary" /> AI Powered Tools
+        </h1>
         <p className="text-lg text-muted-foreground">Leverage artificial intelligence for smarter studying and enhanced productivity.</p>
       </div>
 
@@ -49,18 +56,13 @@ export default function AiToolsPage() {
             <CardContent className="flex-grow">
               <CardDescription>{tool.description}</CardDescription>
             </CardContent>
-            <CardContent className="pt-0">
-               {/* In a real scenario, this would be a Link component from Next.js
-                   <Button asChild variant="outline" className="w-full" disabled={tool.status === "Coming Soon"}>
-                     <Link href={tool.link || "#"}>
-                       {tool.status === "Coming Soon" ? "Coming Soon" : "Use Tool"}
-                     </Link>
-                   </Button>
-               */}
-               <div className="text-sm text-center text-muted-foreground font-medium p-2 bg-secondary rounded-md">
-                 {tool.status}
-               </div>
-            </CardContent>
+            <CardFooter>
+              <Button asChild variant="outline" className="w-full" disabled={tool.status === "Coming Soon"}>
+                <Link href={tool.link || "#"}>
+                  {tool.actionText}
+                </Link>
+              </Button>
+            </CardFooter>
           </Card>
         ))}
       </div>
