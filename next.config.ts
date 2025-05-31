@@ -1,6 +1,5 @@
 
 import type {NextConfig} from 'next';
-// Removed: import createMDX from '@next/mdx'
 
 /** @type {import('next').NextConfig} */
 const nextConfig: NextConfig = {
@@ -21,14 +20,10 @@ const nextConfig: NextConfig = {
       },
     ],
   },
-  // pageExtensions are still needed if you use .mdx files with next-mdx-remote
-  // or might plan to use .mdx files as pages directly later.
-  // If you are *sure* you only use next-mdx-remote and it doesn't require 'mdx' here,
-  // you could remove 'md', 'mdx'. For safety, keeping them is usually fine.
-  pageExtensions: ['js', 'jsx', 'ts', 'tsx', 'md', 'mdx'],
+  // If you are sure you only use next-mdx-remote for MDX content (e.g., from /content)
+  // and don't intend to use .mdx files as pages directly in the /app or /pages directory,
+  // you can remove 'md' and 'mdx' from pageExtensions.
+  pageExtensions: ['js', 'jsx', 'ts', 'tsx'],
 };
  
-// Removed: const withMDX = createMDX(...)
-// Removed: export default withMDX(nextConfig);
-
 export default nextConfig;
