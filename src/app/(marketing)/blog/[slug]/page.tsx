@@ -1,5 +1,5 @@
 
-import { getPostBySlug, getPostSlugs } from '@/lib/blog';
+import { getPostBySlug, getPostSlugs } from '@/lib/blog'; // Updated import to be extension-less
 import { notFound } from 'next/navigation';
 import type { Metadata, ResolvingMetadata } from 'next';
 import { format } from 'date-fns';
