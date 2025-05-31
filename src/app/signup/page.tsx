@@ -36,7 +36,9 @@ export default function SignupPage() {
           </div>
         </CardContent>
         <CardFooter className="flex flex-col gap-4">
-          <Button className="w-full">Sign Up</Button>
+          <Button className="w-full" asChild>
+            <Link href="/dashboard">Sign Up</Link>
+          </Button>
           <p className="text-center text-sm text-muted-foreground">
             Already have an account?{' '}
             <Link href="/login" className="font-medium text-primary hover:underline">
