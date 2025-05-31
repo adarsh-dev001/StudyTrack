@@ -86,7 +86,7 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="w-full space-y-6">
+    <div className="w-full max-w-none px-0 mx-0 space-y-6">
       <div>
         <h1 className="text-3xl font-bold tracking-tight md:text-4xl">Settings</h1>
         <p className="text-lg text-muted-foreground">Manage your account and application preferences.</p>

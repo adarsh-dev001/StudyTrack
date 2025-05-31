@@ -17,7 +17,7 @@ export default function StudyPlannerPage() {
   const [selectedSubject, setSelectedSubject] = useState<string>(ALL_SUBJECTS_FILTER_VALUE);
 
   return (
-    <div className="w-full flex h-full flex-col space-y-4">
+    <div className="w-full max-w-none px-0 mx-0 flex h-full flex-col space-y-4">
       <PlannerHeader
         currentView={currentView}
         onViewChange={setCurrentView}
