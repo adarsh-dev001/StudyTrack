@@ -38,7 +38,11 @@ const subjectTimeConfigBase = {
   other: { label: "Other", color: getSubjectColor("other") },
 } satisfies ChartConfig;
 
-export default function SubjectTimeDistributionChart() {
+interface SubjectTimeDistributionChartProps {
+  selectedSubjectFilter?: string | null;
+}
+
+export default function SubjectTimeDistributionChart({ selectedSubjectFilter = null }: SubjectTimeDistributionChartProps) {
   const { currentUser } = useAuth();
   const [subjectTimeDataDynamic, setSubjectTimeDataDynamic] = useState<{ subject: string; hours: number; fill: string; }[]>([]);
   const [loadingSubjectData, setLoadingSubjectData] = useState(true);
@@ -121,7 +125,7 @@ export default function SubjectTimeDistributionChart() {
         unsubscribeRef.current = null;
       }
     };
-  }, [currentUser?.uid, db, selectedSubjectFilter]); // Added selectedSubjectFilter dependency
+  }, [currentUser?.uid, db, selectedSubjectFilter]);
 
   return (
     <Card className="shadow-lg">
