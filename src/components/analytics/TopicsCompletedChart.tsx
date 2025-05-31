@@ -2,7 +2,7 @@
 'use client';
 
 import type { ChartConfig } from "@/components/ui/chart";
-import { ChartContainer, ChartLegend, ChartTooltipContent } from "@/components/ui/chart";
+import { ChartContainer, ChartLegend, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { BarChart3Icon } from "lucide-react";
 import { Bar, BarChart as RechartsBarChart, CartesianGrid, XAxis, YAxis } from "recharts";
