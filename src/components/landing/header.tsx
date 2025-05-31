@@ -7,9 +7,8 @@ import { Menu, BookOpenText } from 'lucide-react';
 export function Header() {
   const navLinks = [
     { href: '/#features', label: 'Features' },
-    { href: '/blog/topper-study-routine-neet-2025', label: 'Blog' }, // Example direct link, ideally a /blog index
-    // { href: '#pricing', label: 'Pricing' }, // Pricing and FAQ can be added later
-    // { href: '#faq', label: 'FAQ' },
+    { href: '/blog', label: 'Blog' },
+    // { href: '#faq', label: 'FAQ' }, // FAQ can be added later
   ];
 
   return (
