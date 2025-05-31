@@ -34,12 +34,13 @@ export default function StreaksPage() {
   const unsubscribeRef = useRef<Unsubscribe | null>(null);
 
   useEffect(() => {
+    // Clear previous listener if it exists
     if (unsubscribeRef.current) {
-      console.log('StreaksPage: Unsubscribing previous listener due to effect re-run or component unmount.');
+      console.log('StreaksPage: Unsubscribing previous listener on effect re-run or unmount.');
       unsubscribeRef.current();
       unsubscribeRef.current = null;
     }
-
+  
     if (!currentUser?.uid || !db) {
       console.log('StreaksPage: No current user or db instance. Resetting state and skipping listener setup.');
       setLoading(false);
@@ -47,12 +48,12 @@ export default function StreaksPage() {
       setAlreadyCheckedInToday(false);
       return; 
     }
-
-    setLoading(true);
-    console.log(`StreaksPage: Attempting to set up snapshot listener for user ${currentUser.uid}`);
+  
+    setLoading(true); // Set loading true when we start fetching or listening.
+    console.log(`StreaksPage: Setting up snapshot listener for user ${currentUser.uid}`);
     
     const userStreakDocRef = doc(db, 'users', currentUser.uid, 'streaksData', 'main');
-
+  
     unsubscribeRef.current = onSnapshot(
       userStreakDocRef,
       (docSnap) => {
@@ -75,16 +76,8 @@ export default function StreaksPage() {
           console.log('StreaksPage: Streak document does not exist. Using initial data.');
           setStreakData(initialStreakData);
           setAlreadyCheckedInToday(false);
-          // Optionally, create the document if it doesn't exist with initial data
-          // async function initializeStreakDoc() {
-          //   try {
-          //     await setDoc(userStreakDocRef, initialStreakData);
-          //     console.log("StreaksPage: Initialized streak document.");
-          //   } catch (error) {
-          //     console.error("StreaksPage: Failed to initialize streak document:", error);
-          //   }
-          // }
-          // initializeStreakDoc();
+          // Consider creating the document if it's crucial for it to exist.
+          // For now, let check-in handle creation.
         }
         setLoading(false);
       },
@@ -92,53 +85,51 @@ export default function StreaksPage() {
         console.error('StreaksPage: Error fetching streak data with onSnapshot:', error);
         toast({
           title: 'Error Loading Streaks',
-          description: 'Could not load your streak data in real-time. Please try refreshing.',
+          description: 'Could not load your streak data. Please try refreshing.',
           variant: 'destructive',
         });
-        setLoading(false);
-        setStreakData(initialStreakData); 
+        setLoading(false); // Ensure loading is false on error.
+        setStreakData(initialStreakData); // Reset to initial on error to avoid showing stale/incorrect data.
         setAlreadyCheckedInToday(false);
       }
     );
-    console.log('StreaksPage: Snapshot listener set up.');
-
+    console.log('StreaksPage: Snapshot listener is now set up.');
+  
+    // Cleanup function for this effect
     return () => {
       if (unsubscribeRef.current) {
         console.log('StreaksPage: useEffect cleanup - unsubscribing current listener.');
         unsubscribeRef.current();
-        unsubscribeRef.current = null; 
+        unsubscribeRef.current = null; // Important to nullify after unsubscribing
       }
     };
-  }, [currentUser?.uid, db, toast]);
+  }, [currentUser?.uid, db, toast]); // db and toast are stable references, currentUser.uid ensures re-run only on user change.
+  
 
   const handleCheckIn = useCallback(async () => {
-    const currentUserId = currentUser?.uid;
+    const currentUserId = currentUser?.uid; // Use a local const for stability if currentUser object changes
     if (!currentUserId || !db) {
       toast({ title: 'Error', description: 'You must be logged in to check in.', variant: 'destructive' });
       return;
     }
     
-    // Initial UI check using state, but DB check is more robust
+    // UI check based on current state
     if (streakData.lastCheckInDate && isToday(streakData.lastCheckInDate.toDate())) {
         toast({ title: 'Already Checked In', description: 'You have already checked in for today!' });
-        return;
+        return; // Avoid proceeding if already checked in based on current state
     }
     
     setIsCheckingIn(true);
     const userStreakDocRef = doc(db, 'users', currentUserId, 'streaksData', 'main');
 
     try {
-      const today = new Date();
-      const todayTimestamp = Timestamp.fromDate(today);
-      
-      let newCurrentStreak = 1;
-      let newLongestStreak = 0;
-
+      // Fetch the latest data before writing to avoid race conditions or stale data overwrites.
       const docSnap = await getDoc(userStreakDocRef);
       let currentDbData: StreakData = initialStreakData;
 
       if (docSnap.exists()) {
         const rawData = docSnap.data();
+        // Defensive parsing for data from getDoc
         currentDbData = {
             currentStreak: typeof rawData.currentStreak === 'number' ? rawData.currentStreak : 0,
             longestStreak: typeof rawData.longestStreak === 'number' ? rawData.longestStreak : 0,
@@ -146,22 +137,26 @@ export default function StreaksPage() {
         };
       }
       
-      newLongestStreak = currentDbData.longestStreak;
-
-      if (currentDbData.lastCheckInDate) {
-        const lastCheckInDateFromDb = currentDbData.lastCheckInDate.toDate();
-        if (isToday(lastCheckInDateFromDb)) {
-          toast({ title: 'Already Checked In', description: 'You have already checked in today (verified from DB).' });
-          setIsCheckingIn(false);
-          return;
-        } else if (isYesterday(lastCheckInDateFromDb)) {
-          newCurrentStreak = currentDbData.currentStreak + 1;
-        }
+      // Double-check if already checked in based on fresh DB data
+      if (currentDbData.lastCheckInDate && isToday(currentDbData.lastCheckInDate.toDate())) {
+        toast({ title: 'Already Checked In', description: 'You have already checked in today (verified from DB).' });
+        // Sync local state if it was somehow out of sync, though onSnapshot should handle this.
+        setStreakData(currentDbData); 
+        setAlreadyCheckedInToday(true);
+        setIsCheckingIn(false);
+        return;
       }
 
-      if (newCurrentStreak > newLongestStreak) {
-        newLongestStreak = newCurrentStreak;
+      const today = new Date();
+      const todayTimestamp = Timestamp.fromDate(today);
+      
+      let newCurrentStreak = 1; // Default to 1 if no prior streak or broken streak
+      if (currentDbData.lastCheckInDate && isYesterday(currentDbData.lastCheckInDate.toDate())) {
+        newCurrentStreak = currentDbData.currentStreak + 1;
       }
+      // If lastCheckInDate is null or older than yesterday, streak resets to 1.
+
+      const newLongestStreak = Math.max(currentDbData.longestStreak, newCurrentStreak);
 
       const updatedData: StreakData = {
         currentStreak: newCurrentStreak,
@@ -169,8 +164,12 @@ export default function StreaksPage() {
         lastCheckInDate: todayTimestamp,
       };
 
-      await setDoc(userStreakDocRef, updatedData, { merge: true }); 
+      await setDoc(userStreakDocRef, updatedData, { merge: true }); // Use merge:true if creating or partially updating
       
+      // No need to call setStreakData here if onSnapshot is working correctly,
+      // as it will pick up the change and update the state.
+      // setAlreadyCheckedInToday(true); // This will also be handled by onSnapshot via setStreakData
+
       toast({
         title: 'Checked In!',
         description: `Your current streak is ${newCurrentStreak} ${newCurrentStreak === 1 ? 'day' : 'days'}. Keep it up!`,
@@ -185,8 +184,9 @@ export default function StreaksPage() {
     } finally {
       setIsCheckingIn(false);
     }
-  }, [currentUser?.uid, db, toast, streakData]); 
+  }, [currentUser?.uid, db, toast, streakData]); // Added streakData as it's used for an initial check
 
+  // Show loader only if it's the initial load and we don't have any streak data yet.
   if (loading && !streakData.lastCheckInDate && currentUser?.uid) {
     return (
       <div className="flex h-full items-center justify-center">
@@ -195,9 +195,10 @@ export default function StreaksPage() {
     );
   }
 
+  // If not logged in, show a message prompting login.
   if (!currentUser?.uid) { 
     return (
-      <div className="w-full max-w-none px-0 space-y-6">
+      <div className="w-full max-w-none px-0 mx-0 space-y-6">
         <h1 className="text-3xl font-bold tracking-tight md:text-4xl">Study Streaks</h1>
         <p className="text-lg text-muted-foreground">Log in to track your daily study consistency.</p>
          <Card className="shadow-lg">
@@ -214,7 +215,7 @@ export default function StreaksPage() {
   const lastCheckInDateDisplay = streakData?.lastCheckInDate ? streakData.lastCheckInDate.toDate().toLocaleDateString() : 'Never';
 
   return (
-    <div className="w-full max-w-none px-0 space-y-6">
+    <div className="w-full max-w-none px-0 mx-0 space-y-6">
       <div>
         <h1 className="text-3xl font-bold tracking-tight md:text-4xl">Study Streaks</h1>
         <p className="text-lg text-muted-foreground">Track your daily study consistency and build strong habits!</p>
@@ -259,7 +260,7 @@ export default function StreaksPage() {
         <CardContent>
           <Button 
             onClick={handleCheckIn} 
-            disabled={alreadyCheckedInToday || isCheckingIn || !db}
+            disabled={alreadyCheckedInToday || isCheckingIn || !db} // db check is a safeguard
             className="w-full text-lg py-6"
             size="lg"
           >
@@ -279,7 +280,7 @@ export default function StreaksPage() {
            <p className="text-sm text-muted-foreground mt-3 text-center">
               Last check-in: {lastCheckInDateDisplay}
            </p>
-           {!db && (
+           {!db && ( // Show if db is not available
             <p className="text-xs text-destructive mt-2 text-center">Database connection not available. Check-in disabled.</p>
            )}
         </CardContent>
