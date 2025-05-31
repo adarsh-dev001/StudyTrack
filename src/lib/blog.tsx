@@ -2,14 +2,14 @@
 import fs from 'fs';
 import path from 'path';
 import matter from 'gray-matter';
-import { compileMDX } from 'next-mdx-remote/rsc'; // RSC version for App Router
-import { type ClassValue, clsx } from "clsx" // For table styling
-import { twMerge } from "tailwind-merge" // For table styling
+import { compileMDX } from 'next-mdx-remote/rsc';
+import { type ClassValue, clsx } from "clsx"
+import { twMerge } from "tailwind-merge"
+import type React from 'react';
 
-export function cn(...inputs: ClassValue[]) { // For table styling
+export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
-
 
 const postsDirectory = path.join(process.cwd(), 'src', 'content', 'blog');
 
@@ -20,14 +20,13 @@ export interface PostMeta {
   category: string;
   metaDescription: string;
   author: string;
-  [key: string]: any; // For any other frontmatter properties
+  [key: string]: any; 
 }
 
 export interface Post extends PostMeta {
-  content: React.ReactElement; // Compiled MDX content
+  content: React.ReactElement; 
 }
 
-// Custom components to pass to MDX
 const components = {
   table: (props: React.TableHTMLAttributes<HTMLTableElement>) => (
     <div className="my-6 w-full overflow-x-auto">
@@ -61,12 +60,7 @@ const components = {
       {...props}
     />
   ),
-  // Add other components like h1, p, a, etc. if you want to customize them
-  // Example:
-  // p: (props: React.HTMLAttributes<HTMLParagraphElement>) => <p className="mb-4 leading-relaxed" {...props} />,
-  // h2: (props: React.HTMLAttributes<HTMLHeadingElement>) => <h2 className="text-2xl font-bold mt-8 mb-4" {...props} />,
 };
-
 
 export function getPostSlugs() {
   if (!fs.existsSync(postsDirectory)) {
@@ -85,19 +79,17 @@ export async function getPostBySlug(slug: string): Promise<Post | null> {
   }
 
   const fileContents = fs.readFileSync(fullPath, 'utf8');
-  // const { data, content: mdxContent } = matter(fileContents); // gray-matter parses frontmatter
 
   const { content: compiledContent, frontmatter } = await compileMDX<PostMeta>({
-    source: fileContents, // Pass the full file content, including frontmatter
+    source: fileContents,
     options: { 
-      parseFrontmatter: true, // Tell next-mdx-remote to parse frontmatter
-       mdxOptions: {
-        // You can add remark/rehype plugins here if needed
+      parseFrontmatter: true,
+      mdxOptions: {
         // remarkPlugins: [],
         // rehypePlugins: [],
       },
     },
-    components: components,
+    // components: components, // Temporarily removed for diagnostics
   });
 
   return {
@@ -107,7 +99,7 @@ export async function getPostBySlug(slug: string): Promise<Post | null> {
     category: frontmatter.category || 'Uncategorized',
     metaDescription: frontmatter.metaDescription || '',
     author: frontmatter.author || 'Anonymous',
-    ...frontmatter, // include any other frontmatter data
+    ...frontmatter,
     content: compiledContent,
   };
 }
@@ -117,7 +109,7 @@ export async function getAllPostsMeta(): Promise<PostMeta[]> {
   const postsPromises = slugs.map(async (slug) => {
     const fullPath = path.join(postsDirectory, `${slug}.mdx`);
     const fileContents = fs.readFileSync(fullPath, 'utf8');
-    const { data } = matter(fileContents); // Use gray-matter here for efficiency
+    const { data } = matter(fileContents);
     return {
       slug,
       title: data.title || 'Untitled Post',
@@ -130,6 +122,5 @@ export async function getAllPostsMeta(): Promise<PostMeta[]> {
   });
   
   const posts = await Promise.all(postsPromises);
-  // Sort posts by date in descending order
   return posts.sort((post1, post2) => (post1.date > post2.date ? -1 : 1));
 }
