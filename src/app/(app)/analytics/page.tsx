@@ -1,16 +1,17 @@
 
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { Bar, Line, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend as RechartsLegend, ResponsiveContainer, LineChart as RechartsLineChart, BarChart as RechartsBarChart, PieChart as RechartsPieChart } from "recharts";
+import type { ChartConfig } from "@/components/ui/chart";
+import { ChartContainer, ChartLegend, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, type ChartConfig } from "@/components/ui/chart";
-import { LineChartIcon as LineIcon, BarChart3Icon, PieChartIcon as PieIcon, Lightbulb, ExternalLink, Loader2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import Link from "next/link";
 import { useAuth } from '@/contexts/auth-context';
 import { db } from '@/lib/firebase';
-import { collection, query, where, onSnapshot, type DocumentData, type Unsubscribe } from 'firebase/firestore';
+import { collection, onSnapshot, query, where, type DocumentData, type Unsubscribe } from 'firebase/firestore';
+import { BarChart3Icon, ExternalLink, Lightbulb, LineChartIcon as LineIcon, Loader2, PieChartIcon as PieIcon } from "lucide-react";
+import Link from "next/link";
+import React, { useEffect, useRef, useState } from 'react';
+import { Bar, BarChart as RechartsBarChart, CartesianGrid, Cell, Legend as RechartsLegend, Line, LineChart as RechartsLineChart, Pie, PieChart as RechartsPieChart, ResponsiveContainer, Tooltip as RechartsTooltip, XAxis, YAxis } from "recharts";
+import { Button } from "@/components/ui/button";
 
 // Helper function to assign colors to subjects for the pie chart
 const subjectColors: Record<string, string> = {
@@ -77,68 +78,88 @@ export default function AnalyticsPage() {
   const [subjectTimeDataDynamic, setSubjectTimeDataDynamic] = useState<{ subject: string; hours: number; fill: string; }[]>([]);
   const [loadingSubjectData, setLoadingSubjectData] = useState(true);
   const [subjectTimeConfig, setSubjectTimeConfig] = useState<ChartConfig>(subjectTimeConfigBase);
+  const unsubscribeRef = useRef<Unsubscribe | null>(null);
+
 
   useEffect(() => {
+    console.log("AnalyticsPage useEffect triggered. Current user:", currentUser?.uid, "DB available:", !!db);
     if (!currentUser || !db) {
+      console.log("AnalyticsPage: No current user or db, clearing data and returning.");
       setLoadingSubjectData(false);
       setSubjectTimeDataDynamic([]);
+      setSubjectTimeConfig(subjectTimeConfigBase);
+      if (unsubscribeRef.current) {
+        console.log("AnalyticsPage: Unsubscribing from previous listener (no user/db).");
+        unsubscribeRef.current();
+        unsubscribeRef.current = null;
+      }
       return;
     }
 
     setLoadingSubjectData(true);
+    console.log(`AnalyticsPage: Setting up listener for user ${currentUser.uid}`);
     const tasksRef = collection(db, 'users', currentUser.uid, 'plannerTasks');
     const q = query(tasksRef, where('status', '==', 'completed'));
 
-    let unsubscribe: Unsubscribe | undefined;
-
-    try {
-      unsubscribe = onSnapshot(q, (querySnapshot) => {
-        const subjectHoursMap: Record<string, number> = {};
-        querySnapshot.forEach((doc) => {
-          const task = doc.data() as { subject: string; duration: number; title: string }; 
-          if (task.subject && typeof task.duration === 'number') {
-            const subjectKey = task.subject.toLowerCase(); 
-            subjectHoursMap[subjectKey] = (subjectHoursMap[subjectKey] || 0) + task.duration;
-          }
-        });
-
-        const newDynamicData = Object.entries(subjectHoursMap).map(([subjectKey, hours]) => {
-          const subjectLabel = subjectKey.charAt(0).toUpperCase() + subjectKey.slice(1);
-          return {
-            subject: subjectLabel, 
-            hours,
-            fill: getSubjectColor(subjectKey),
-          };
-        });
-        
-        setSubjectTimeDataDynamic(newDynamicData);
-
-        const newChartConfig: ChartConfig = { hours: { label: "Hours" } };
-        newDynamicData.forEach(item => {
-          const subjectKey = item.subject.toLowerCase();
-          if (!newChartConfig[subjectKey]) { 
-               newChartConfig[subjectKey] = { label: item.subject, color: item.fill };
-          }
-        });
-        setSubjectTimeConfig(newChartConfig);
-        setLoadingSubjectData(false);
-      }, (error) => {
-        console.error("Error fetching completed tasks for analytics: ", error);
-        setLoadingSubjectData(false);
-        setSubjectTimeDataDynamic([]);
-      });
-    } catch (e) {
-        console.error("Error setting up onSnapshot listener for analytics: ", e);
-        setLoadingSubjectData(false);
-        setSubjectTimeDataDynamic([]);
+    if (unsubscribeRef.current) {
+      console.log("AnalyticsPage: Unsubscribing from previous listener before new setup.");
+      unsubscribeRef.current();
     }
 
+    unsubscribeRef.current = onSnapshot(q, (querySnapshot) => {
+      console.log(`AnalyticsPage: onSnapshot callback triggered. Docs count: ${querySnapshot.size}`);
+      const subjectHoursMap: Record<string, number> = {};
+      querySnapshot.forEach((doc) => {
+        const task = doc.data() as { subject: string; duration: number; title: string };
+        if (task.subject && typeof task.duration === 'number') {
+          const subjectKey = task.subject.toLowerCase();
+          subjectHoursMap[subjectKey] = (subjectHoursMap[subjectKey] || 0) + task.duration;
+        }
+      });
+
+      const newDynamicData = Object.entries(subjectHoursMap).map(([subjectKey, hours]) => {
+        const subjectLabel = subjectKey.charAt(0).toUpperCase() + subjectKey.slice(1);
+        return {
+          subject: subjectLabel,
+          hours,
+          fill: getSubjectColor(subjectKey),
+        };
+      });
+
+      const newChartConfig: ChartConfig = { hours: { label: "Hours" } };
+      newDynamicData.forEach(item => {
+        const subjectKey = item.subject.toLowerCase();
+        if (!newChartConfig[subjectKey]) {
+          newChartConfig[subjectKey] = { label: item.subject, color: item.fill };
+        }
+      });
+      
+      // Defer state updates to prevent blocking the main thread
+      setTimeout(() => {
+        setSubjectTimeDataDynamic(newDynamicData);
+        setSubjectTimeConfig(newChartConfig);
+        setLoadingSubjectData(false);
+        console.log("AnalyticsPage: State updates applied after deferral.");
+      }, 0);
+
+    }, (error) => {
+      console.error("Error fetching completed tasks for analytics: ", error);
+      // Defer error state updates as well
+      setTimeout(() => {
+        setLoadingSubjectData(false);
+        setSubjectTimeDataDynamic([]);
+        setSubjectTimeConfig(subjectTimeConfigBase);
+      }, 0);
+    });
+
     return () => {
-      if (unsubscribe) {
-        unsubscribe();
+      if (unsubscribeRef.current) {
+        console.log("AnalyticsPage: useEffect cleanup - unsubscribing.");
+        unsubscribeRef.current();
+        unsubscribeRef.current = null;
       }
     };
-  }, [currentUser, db]); // Added db to dependency array
+  }, [currentUser, db]);
 
   return (
     <div className="space-y-6">
@@ -210,7 +231,7 @@ export default function AnalyticsPage() {
               <CardDescription>Hours spent on each subject from completed tasks.</CardDescription>
             </div>
           </CardHeader>
-          <CardContent className="flex items-center justify-center min-h-[298px]"> 
+          <CardContent className="flex items-center justify-center min-h-[298px]">
             {loadingSubjectData && (
               <div className="flex flex-col items-center justify-center text-muted-foreground">
                 <Loader2 className="h-8 w-8 animate-spin text-primary mb-2" />
@@ -218,7 +239,7 @@ export default function AnalyticsPage() {
               </div>
             )}
             {!loadingSubjectData && subjectTimeDataDynamic.length === 0 && (
-              <p className="text-muted-foreground text-center">No completed tasks with subject data found. <br/>Complete some tasks in the planner to see this chart!</p>
+              <p className="text-muted-foreground text-center">No completed tasks with subject data found. <br />Complete some tasks in the planner to see this chart!</p>
             )}
             {!loadingSubjectData && subjectTimeDataDynamic.length > 0 && (
               <ChartContainer config={subjectTimeConfig} className="h-[250px] w-[300px]">
@@ -229,7 +250,7 @@ export default function AnalyticsPage() {
                       <Cell key={`cell-${index}`} fill={entry.fill} />
                     ))}
                   </Pie>
-                  <ChartLegend content={<ChartLegend className="mt-4"/>} />
+                  <ChartLegend content={<ChartLegend className="mt-4" />} />
                 </RechartsPieChart>
               </ChartContainer>
             )}
@@ -271,4 +292,3 @@ export default function AnalyticsPage() {
     </div>
   );
 }
-    
