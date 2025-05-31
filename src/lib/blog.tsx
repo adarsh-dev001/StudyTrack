@@ -20,13 +20,14 @@ export interface PostMeta {
   category: string;
   metaDescription: string;
   author: string;
-  [key: string]: any; 
+  [key: string]: any;
 }
 
 export interface Post extends PostMeta {
-  content: React.ReactElement; 
+  content: React.ReactElement;
 }
 
+// Custom components to pass to MDX - temporarily not used for debugging
 const components = {
   table: (props: React.TableHTMLAttributes<HTMLTableElement>) => (
     <div className="my-6 w-full overflow-x-auto">
@@ -72,7 +73,7 @@ export function getPostSlugs() {
 export async function getPostBySlug(slug: string): Promise<Post | null> {
   const realSlug = slug.replace(/\.mdx$/, '');
   const fullPath = path.join(postsDirectory, `${realSlug}.mdx`);
-  
+
   if (!fs.existsSync(fullPath)) {
     console.warn(`Blog post not found at path: ${fullPath}`);
     return null;
@@ -80,16 +81,18 @@ export async function getPostBySlug(slug: string): Promise<Post | null> {
 
   const fileContents = fs.readFileSync(fullPath, 'utf8');
 
+  // Let next-mdx-remote handle frontmatter parsing
   const { content: compiledContent, frontmatter } = await compileMDX<PostMeta>({
     source: fileContents,
-    options: { 
+    options: {
       parseFrontmatter: true,
-      mdxOptions: {
-        // remarkPlugins: [],
-        // rehypePlugins: [],
-      },
+      // mdxOptions: {
+      // You can add remark/rehype plugins here if needed
+      // remarkPlugins: [],
+      // rehypePlugins: [],
+      // },
     },
-    components: components, 
+    // components: components, // Temporarily commented out for debugging
   });
 
   return {
@@ -99,7 +102,7 @@ export async function getPostBySlug(slug: string): Promise<Post | null> {
     category: frontmatter.category || 'Uncategorized',
     metaDescription: frontmatter.metaDescription || '',
     author: frontmatter.author || 'Anonymous',
-    ...frontmatter,
+    ...frontmatter, // include any other frontmatter data
     content: compiledContent,
   };
 }
@@ -109,12 +112,11 @@ export async function getAllPostsMeta(): Promise<PostMeta[]> {
   const postsPromises = slugs.map(async (slug) => {
     const fullPath = path.join(postsDirectory, `${slug}.mdx`);
     if (!fs.existsSync(fullPath)) {
-      // Should not happen if getPostSlugs is accurate, but good for robustness
       console.warn(`File not found during getAllPostsMeta for slug: ${slug} at path ${fullPath}`);
-      return null; 
+      return null;
     }
     const fileContents = fs.readFileSync(fullPath, 'utf8');
-    const { data } = matter(fileContents);
+    const { data } = matter(fileContents); // gray-matter is fine for just metadata extraction
     return {
       slug,
       title: data.title || 'Untitled Post',
@@ -123,9 +125,9 @@ export async function getAllPostsMeta(): Promise<PostMeta[]> {
       metaDescription: data.metaDescription || '',
       author: data.author || 'Anonymous',
       ...data,
-    } as PostMeta; // Ensure type conformity
+    } as PostMeta;
   });
-  
+
   const posts = (await Promise.all(postsPromises)).filter(post => post !== null) as PostMeta[];
   return posts.sort((post1, post2) => (post1.date > post2.date ? -1 : 1));
 }
@@ -135,4 +137,3 @@ export async function getAllCategories(): Promise<string[]> {
   const categories = new Set(posts.map(post => post.category));
   return Array.from(categories).sort();
 }
-
