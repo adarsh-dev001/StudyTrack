@@ -1,4 +1,6 @@
 
+import 'server-only'; // Ensures this module is only used on the server
+
 import fs from 'fs';
 import path from 'path';
 import matter from 'gray-matter';
@@ -17,8 +19,8 @@ export interface PostMeta {
   [key: string]: any;
 }
 
-interface BlogPostPageData {
-  mdxSource: MDXRemoteSerializeResult;
+export interface BlogPostPageData {
+  mdxSource: MDXRemoteSerializeResult; // This is the correct type from serialize
   metadata: PostMeta;
 }
 
@@ -41,9 +43,8 @@ export async function getPostBySlug(slug: string): Promise<BlogPostPageData | nu
   const fileContents = fs.readFileSync(fullPath, 'utf8');
   const { data: frontmatterData, content: mdxSourceContent } = matter(fileContents);
 
-  // For next-mdx-remote v4, use serialize
   const mdxSource = await serialize(mdxSourceContent, {
-    scope: frontmatterData, // Pass frontmatter data to be available in MDX
+    scope: frontmatterData,
     mdxOptions: {
       remarkPlugins: [],
       rehypePlugins: [],
@@ -62,7 +63,7 @@ export async function getPostBySlug(slug: string): Promise<BlogPostPageData | nu
   };
 
   return {
-    mdxSource: mdxSource, // This is the MDXRemoteSerializeResult
+    mdxSource: mdxSource,
     metadata: metadata,
   };
 }
