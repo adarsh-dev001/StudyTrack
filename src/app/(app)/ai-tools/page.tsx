@@ -2,22 +2,22 @@
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { BrainCircuit, BookText, BarChartBig, Sparkles } from "lucide-react";
+import { BrainCircuit, BookText, BarChartBig, Sparkles, ListTree } from "lucide-react";
 
 export default function AiToolsPage() {
   const aiTools = [
     {
       title: "AI Syllabus Suggester",
       description: "Get personalized syllabus suggestions for your exams (NEET, UPSC, JEE, etc.).",
-      icon: <BookText className="h-8 w-8 text-primary" />,
+      icon: <ListTree className="h-8 w-8 text-primary" />,
       link: "/ai-tools/syllabus-suggester",
-      status: "Coming Soon",
-      actionText: "Explore (Soon)"
+      status: "Active",
+      actionText: "Use Suggester"
     },
     {
       title: "Study Material Summarizer",
       description: "Quickly grasp key concepts by summarizing your study materials.",
-      icon: <Sparkles className="h-8 w-8 text-primary" />, // Changed icon for variety
+      icon: <Sparkles className="h-8 w-8 text-primary" />,
       link: "/ai-tools/material-summarizer",
       status: "Active",
       actionText: "Use Summarizer"
@@ -57,7 +57,7 @@ export default function AiToolsPage() {
               <CardDescription>{tool.description}</CardDescription>
             </CardContent>
             <CardFooter>
-              <Button asChild variant="outline" className="w-full" disabled={tool.status === "Coming Soon"}>
+              <Button asChild variant={tool.status === "Active" ? "default" : "outline"} className="w-full" disabled={tool.status === "Coming Soon"}>
                 <Link href={tool.link || "#"}>
                   {tool.actionText}
                 </Link>
