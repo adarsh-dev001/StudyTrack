@@ -4,7 +4,7 @@
 import type { ChartConfig } from "@/components/ui/chart";
 import { ChartContainer, ChartLegend, ChartTooltipContent } from "@/components/ui/chart";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { LineIcon } from "lucide-react";
+import { LineChart } from "lucide-react"; // Changed from LineIcon
 import { CartesianGrid, Line, LineChart as RechartsLineChart, XAxis, YAxis } from "recharts";
 
 // Sample Data for Weekly Study Hours (remains sample for now)
@@ -27,7 +27,7 @@ export default function WeeklyStudyHoursChart() {
     <Card className="shadow-lg">
       <CardHeader className="flex flex-row items-center gap-4 space-y-0 pb-2">
         <div className="bg-primary/10 p-3 rounded-lg">
-          <LineIcon className="h-7 w-7 text-primary" />
+          <LineChart className="h-7 w-7 text-primary" /> {/* Changed from LineIcon */}
         </div>
         <div className="flex-1">
           <CardTitle className="font-headline text-xl">Weekly Study Hours</CardTitle>
@@ -50,3 +50,4 @@ export default function WeeklyStudyHoursChart() {
     </Card>
   );
 }
+
