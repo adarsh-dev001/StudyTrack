@@ -198,7 +198,7 @@ export default function StreaksPage() {
   // If not logged in, show a message prompting login.
   if (!currentUser?.uid) { 
     return (
-      <div className="w-full max-w-none px-0 mx-0 space-y-6">
+      <div className="w-full space-y-6">
         <h1 className="text-3xl font-bold tracking-tight md:text-4xl">Study Streaks</h1>
         <p className="text-lg text-muted-foreground">Log in to track your daily study consistency.</p>
          <Card className="shadow-lg">
@@ -215,7 +215,7 @@ export default function StreaksPage() {
   const lastCheckInDateDisplay = streakData?.lastCheckInDate ? streakData.lastCheckInDate.toDate().toLocaleDateString() : 'Never';
 
   return (
-    <div className="w-full max-w-none px-0 mx-0 space-y-6">
+    <div className="w-full space-y-6">
       <div>
         <h1 className="text-3xl font-bold tracking-tight md:text-4xl">Study Streaks</h1>
         <p className="text-lg text-muted-foreground">Track your daily study consistency and build strong habits!</p>

@@ -34,7 +34,7 @@ export default function AiToolsPage() {
   ];
 
   return (
-    <div className="space-y-6">
+    <div className="w-full space-y-6">
       <div>
         <h1 className="text-3xl font-bold tracking-tight md:text-4xl flex items-center">
          <BrainCircuit className="mr-3 h-8 w-8 text-primary" /> AI Powered Tools
