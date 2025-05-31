@@ -27,7 +27,7 @@ export interface Post extends PostMeta {
   content: React.ReactElement;
 }
 
-// Custom components to pass to MDX - temporarily not used for debugging
+// Custom components to pass to MDX
 const components = {
   table: (props: React.TableHTMLAttributes<HTMLTableElement>) => (
     <div className="my-6 w-full overflow-x-auto">
@@ -80,29 +80,25 @@ export async function getPostBySlug(slug: string): Promise<Post | null> {
   }
 
   const fileContents = fs.readFileSync(fullPath, 'utf8');
+  const { data, content: mdxContent } = matter(fileContents); // Use gray-matter for frontmatter
 
-  // Let next-mdx-remote handle frontmatter parsing
-  const { content: compiledContent, frontmatter } = await compileMDX<PostMeta>({
-    source: fileContents,
+  const { content: compiledContent } = await compileMDX<PostMeta>({
+    source: mdxContent, // Pass content only
     options: {
-      parseFrontmatter: true,
-      // mdxOptions: {
-      // You can add remark/rehype plugins here if needed
-      // remarkPlugins: [],
-      // rehypePlugins: [],
-      // },
+      parseFrontmatter: false, // We already parsed it
+      // mdxOptions: { /* ... */ },
     },
-    // components: components, // Temporarily commented out for debugging
+    components: components, // Ensure custom components are passed
   });
 
   return {
     slug: realSlug,
-    title: frontmatter.title || 'Untitled Post',
-    date: frontmatter.date || new Date().toISOString(),
-    category: frontmatter.category || 'Uncategorized',
-    metaDescription: frontmatter.metaDescription || '',
-    author: frontmatter.author || 'Anonymous',
-    ...frontmatter, // include any other frontmatter data
+    title: data.title || 'Untitled Post',
+    date: data.date || new Date().toISOString(),
+    category: data.category || 'Uncategorized',
+    metaDescription: data.metaDescription || '',
+    author: data.author || 'Anonymous',
+    ...data, // include any other frontmatter data from gray-matter
     content: compiledContent,
   };
 }
@@ -116,7 +112,7 @@ export async function getAllPostsMeta(): Promise<PostMeta[]> {
       return null;
     }
     const fileContents = fs.readFileSync(fullPath, 'utf8');
-    const { data } = matter(fileContents); // gray-matter is fine for just metadata extraction
+    const { data } = matter(fileContents);
     return {
       slug,
       title: data.title || 'Untitled Post',
