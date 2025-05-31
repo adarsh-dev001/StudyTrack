@@ -85,9 +85,12 @@ export default function AnalyticsPage() {
     console.log("AnalyticsPage useEffect triggered. Current user:", currentUser?.uid, "DB available:", !!db);
     if (!currentUser || !db) {
       console.log("AnalyticsPage: No current user or db, clearing data and returning.");
-      setLoadingSubjectData(false);
-      setSubjectTimeDataDynamic([]);
-      setSubjectTimeConfig(subjectTimeConfigBase);
+      // Defer state updates to ensure responsiveness even when clearing data
+      setTimeout(() => {
+        setLoadingSubjectData(false);
+        setSubjectTimeDataDynamic([]);
+        setSubjectTimeConfig(subjectTimeConfigBase);
+      }, 0);
       if (unsubscribeRef.current) {
         console.log("AnalyticsPage: Unsubscribing from previous listener (no user/db).");
         unsubscribeRef.current();
@@ -96,7 +99,8 @@ export default function AnalyticsPage() {
       return;
     }
 
-    setLoadingSubjectData(true);
+    // Defer setting loading to true to avoid immediate potentially blocking operations
+    setTimeout(() => setLoadingSubjectData(true), 0);
     console.log(`AnalyticsPage: Setting up listener for user ${currentUser.uid}`);
     const tasksRef = collection(db, 'users', currentUser.uid, 'plannerTasks');
     const q = query(tasksRef, where('status', '==', 'completed'));
@@ -108,14 +112,24 @@ export default function AnalyticsPage() {
 
     unsubscribeRef.current = onSnapshot(q, (querySnapshot) => {
       console.log(`AnalyticsPage: onSnapshot callback triggered. Docs count: ${querySnapshot.size}`);
+      const processingStartTime = performance.now();
+
       const subjectHoursMap: Record<string, number> = {};
       querySnapshot.forEach((doc) => {
-        const task = doc.data() as { subject: string; duration: number; title: string };
-        if (task.subject && typeof task.duration === 'number') {
+        const task = doc.data() as { subject: string; duration: number; title: string }; // Added title for potential debugging
+        // Basic validation for task data
+        if (task.subject && typeof task.subject === 'string' && typeof task.duration === 'number' && task.duration > 0) {
           const subjectKey = task.subject.toLowerCase();
           subjectHoursMap[subjectKey] = (subjectHoursMap[subjectKey] || 0) + task.duration;
+        } else {
+          // console.warn("AnalyticsPage: Skipping task with missing/invalid subject or duration:", task.title || doc.id);
         }
       });
+      
+      const dataProcessingTime = performance.now() - processingStartTime;
+      console.log(`AnalyticsPage: Data processing (forEach loop) took ${dataProcessingTime.toFixed(2)}ms for ${querySnapshot.size} documents.`);
+      console.log("AnalyticsPage: subjectHoursMap created:", subjectHoursMap);
+
 
       const newDynamicData = Object.entries(subjectHoursMap).map(([subjectKey, hours]) => {
         const subjectLabel = subjectKey.charAt(0).toUpperCase() + subjectKey.slice(1);
@@ -125,6 +139,7 @@ export default function AnalyticsPage() {
           fill: getSubjectColor(subjectKey),
         };
       });
+       console.log("AnalyticsPage: newDynamicData created:", newDynamicData);
 
       const newChartConfig: ChartConfig = { hours: { label: "Hours" } };
       newDynamicData.forEach(item => {
@@ -133,13 +148,14 @@ export default function AnalyticsPage() {
           newChartConfig[subjectKey] = { label: item.subject, color: item.fill };
         }
       });
+      console.log("AnalyticsPage: newChartConfig created:", newChartConfig);
       
       // Defer state updates to prevent blocking the main thread
       setTimeout(() => {
         setSubjectTimeDataDynamic(newDynamicData);
         setSubjectTimeConfig(newChartConfig);
         setLoadingSubjectData(false);
-        console.log("AnalyticsPage: State updates applied after deferral.");
+        console.log("AnalyticsPage: State updates applied after deferral inside onSnapshot.");
       }, 0);
 
     }, (error) => {
@@ -149,6 +165,7 @@ export default function AnalyticsPage() {
         setLoadingSubjectData(false);
         setSubjectTimeDataDynamic([]);
         setSubjectTimeConfig(subjectTimeConfigBase);
+        console.error("AnalyticsPage: Error state updates applied after deferral.");
       }, 0);
     });
 
@@ -159,7 +176,7 @@ export default function AnalyticsPage() {
         unsubscribeRef.current = null;
       }
     };
-  }, [currentUser, db]);
+  }, [currentUser?.uid, db]); // Added db to dependencies
 
   return (
     <div className="w-full space-y-6">
