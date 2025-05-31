@@ -44,30 +44,34 @@ import {
   updateDoc, 
   deleteDoc, 
   query, 
+  where, // Added for filtering
   onSnapshot,
-  Timestamp // Added for potential future use with specific dates
+  Timestamp 
 } from "firebase/firestore"
 
 // Types
 type Priority = "low" | "medium" | "high"
-type TaskStatus = "pending" | "completed" | "missed" // Missed status not fully used yet
+type TaskStatus = "pending" | "completed" | "missed" 
 
 interface Task {
-  id: string // Firestore document ID
-  userId?: string // To associate task with user
+  id: string 
+  userId?: string 
   title: string
   subject: string
   topic: string
   description?: string
-  duration: number // in hours
+  duration: number 
   priority: Priority
   status: TaskStatus
-  day: number // 0-6 (Sunday to Saturday for generic week view)
-  startHour: number // 0-23
-  // taskDate?: Timestamp; // For specific date planning - future enhancement
+  day: number 
+  startHour: number 
 }
 
-// Sample subject data with colors - can be moved to a config file or fetched
+interface PlannerViewProps {
+  selectedDate?: Date; // For future use with day/month view
+  selectedSubjectFilter?: string | null; // null or undefined means all subjects
+}
+
 const subjects = [
   { id: "physics", name: "Physics", color: "bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-100 border-blue-300 dark:border-blue-700" },
   { id: "chemistry", name: "Chemistry", color: "bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-100 border-green-300 dark:border-green-700" },
@@ -76,19 +80,18 @@ const subjects = [
   { id: "english", name: "English", color: "bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-100 border-yellow-300 dark:border-yellow-700" },
   { id: "history", name: "History", color: "bg-orange-100 dark:bg-orange-900 text-orange-800 dark:text-orange-100 border-orange-300 dark:border-orange-700" },
   { id: "other", name: "Other", color: "bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-100 border-gray-300 dark:border-gray-600" },
-]
+];
 
-// Helper functions
 const getPriorityBadge = (priority: Priority) => {
   switch (priority) {
     case "high":
-      return <Badge variant="destructive" className="bg-red-500 hover:bg-red-600 text-white">High Priority</Badge>
+      return <Badge variant="destructive" className="bg-red-500 hover:bg-red-600 text-white">High</Badge>
     case "medium":
-      return <Badge className="bg-yellow-500 hover:bg-yellow-600 text-white">Medium Priority</Badge>
+      return <Badge className="bg-yellow-500 hover:bg-yellow-600 text-white">Medium</Badge>
     case "low":
-      return <Badge variant="outline" className="bg-green-500 hover:bg-green-600 text-white border-green-600">Low Priority</Badge>
+      return <Badge variant="outline" className="bg-green-500 hover:bg-green-600 text-white border-green-600">Low</Badge>
     default:
-      return <Badge variant="secondary">Unknown Priority</Badge>;
+      return <Badge variant="secondary">Unknown</Badge>;
   }
 }
 
@@ -97,29 +100,39 @@ const getSubjectInfo = (subjectId: string) => {
 }
 
 
-export function PlannerView() {
+export function PlannerView({ selectedDate, selectedSubjectFilter }: PlannerViewProps) {
   const { currentUser } = useAuth();
   const [tasks, setTasks] = useState<Task[]>([])
   const [newTask, setNewTask] = useState<Partial<Omit<Task, 'id'>>>({
     priority: "medium",
     status: "pending",
     duration: 1,
-    day: new Date().getDay(), // Default to current day of week
+    day: new Date().getDay(), 
     startHour: 9,
-    subject: subjects[0].id, // Default to first subject
+    subject: subjects[0].id, 
   })
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [draggedTask, setDraggedTask] = useState<Task | null>(null)
   const [draggedOver, setDraggedOver] = useState<{ day: number, hour: number } | null>(null)
   
   const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
-  const hours = Array.from({ length: 15 }, (_, i) => i + 8) // 8 AM to 10 PM (22:00)
+  const hours = Array.from({ length: 15 }, (_, i) => i + 8) 
 
   useEffect(() => {
-    if (!currentUser || !db) return;
+    if (!currentUser || !db) {
+      setTasks([]); // Clear tasks if user logs out or db not available
+      return;
+    }
 
     const tasksCollectionRef = collection(db, "users", currentUser.uid, "plannerTasks");
-    const q = query(tasksCollectionRef); // Add orderBy here if needed, e.g., orderBy("startHour")
+    let q;
+
+    if (selectedSubjectFilter && selectedSubjectFilter !== "all") {
+      q = query(tasksCollectionRef, where("subject", "==", selectedSubjectFilter));
+    } else {
+      q = query(tasksCollectionRef);
+    }
+    // TODO: Add filtering by selectedDate when day/month view is implemented
 
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
       const fetchedTasks: Task[] = [];
@@ -129,11 +142,10 @@ export function PlannerView() {
       setTasks(fetchedTasks);
     }, (error) => {
       console.error("Error fetching tasks: ", error);
-      // Handle error appropriately, e.g., show a toast
     });
 
-    return () => unsubscribe(); // Cleanup subscription on component unmount
-  }, [currentUser]);
+    return () => unsubscribe();
+  }, [currentUser, selectedSubjectFilter, selectedDate]); // Re-fetch if filter or date changes
   
   const handleInputChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -147,12 +159,10 @@ export function PlannerView() {
   const handleCreateTask = async () => {
     if (!currentUser || !db) {
       console.error("User not logged in or DB not available");
-      // Show toast: "You must be logged in to create tasks."
       return;
     }
     if (!newTask.title || !newTask.subject) {
       console.error("Title and subject are required");
-      // Show toast: "Title and subject are required."
       return;
     }
 
@@ -167,13 +177,12 @@ export function PlannerView() {
       status: "pending",
       day: Number(newTask.day) || 0,
       startHour: Number(newTask.startHour) || 9,
-      // taskDate: newTask.taskDate || Timestamp.now() // Example for future date-specific tasks
     };
     
     try {
       const tasksCollectionRef = collection(db, "users", currentUser.uid, "plannerTasks");
       await addDoc(tasksCollectionRef, taskToSave);
-      setNewTask({ // Reset form
+      setNewTask({ 
         title: "",
         topic: "",
         description: "",
@@ -187,7 +196,6 @@ export function PlannerView() {
       setIsDialogOpen(false)
     } catch (error) {
       console.error("Error creating task: ", error);
-      // Show toast: "Failed to create task."
     }
   }
   
@@ -195,12 +203,12 @@ export function PlannerView() {
     setDraggedTask(task);
     if (e.dataTransfer) {
       e.dataTransfer.effectAllowed = "move";
-      e.dataTransfer.setData("text/plain", task.id); // Necessary for Firefox
+      e.dataTransfer.setData("text/plain", task.id); 
     }
   }
   
   const handleDragOver = (day: number, hour: number, e: React.DragEvent) => {
-    e.preventDefault() // Allow drop
+    e.preventDefault() 
     e.dataTransfer.dropEffect = "move";
     setDraggedOver({ day, hour })
   }
@@ -215,13 +223,8 @@ export function PlannerView() {
     const taskDocRef = doc(db, "users", currentUser.uid, "plannerTasks", draggedTask.id);
     try {
       await updateDoc(taskDocRef, { day, startHour: hour });
-      // Optimistic update handled by onSnapshot, or:
-      // setTasks(prevTasks => prevTasks.map(task => 
-      //   task.id === draggedTask.id ? { ...task, day, startHour: hour } : task
-      // ));
     } catch (error) {
       console.error("Error updating task position: ", error);
-      // Show toast
     }
     setDraggedTask(null)
     setDraggedOver(null)
@@ -238,7 +241,6 @@ export function PlannerView() {
       await updateDoc(taskDocRef, { status: newStatus });
     } catch (error) {
       console.error("Error updating task status: ", error);
-      // Show toast
     }
   }
 
@@ -251,7 +253,6 @@ export function PlannerView() {
       await deleteDoc(taskDocRef);
     } catch (error) {
       console.error("Error deleting task: ", error);
-      // Show toast
     }
   }
   
@@ -264,17 +265,17 @@ export function PlannerView() {
         draggable
         onDragStart={(e) => handleDragStart(task, e)}
         className={cn(
-          "rounded-md p-2.5 mb-1.5 cursor-move shadow-sm border relative",
+          "rounded-md p-2 mb-1.5 cursor-move shadow-sm border relative group",
           task.status === "completed" ? "opacity-60 bg-opacity-70" : "opacity-100",
           subjectInfo.color,
           "hover:shadow-md transition-shadow"
         )}
-        style={{ minHeight: `${Math.max(1, task.duration) * 2.5}rem` }} // Basic height based on duration
+        style={{ minHeight: `${Math.max(1, task.duration) * 2.0}rem` }} 
       >
         <div className="flex items-start justify-between">
-          <div className="flex-1 overflow-hidden">
+          <div className="flex-1 overflow-hidden pr-1">
             <div className="flex items-center">
-              <GripVertical className="h-4 w-4 mr-1 opacity-50 shrink-0" />
+              <GripVertical className="h-4 w-4 mr-1 opacity-50 shrink-0 group-hover:opacity-70" />
               <h4 className="font-semibold text-sm truncate" title={task.title}>{task.title}</h4>
             </div>
             <div className="text-xs mt-0.5 mb-1 opacity-80">
@@ -286,7 +287,7 @@ export function PlannerView() {
               <span>{task.duration} {task.duration === 1 ? 'hr' : 'hrs'}</span>
             </div>
           </div>
-          <div className="flex flex-col items-center ml-1 space-y-1">
+          <div className="flex flex-col items-center ml-1 space-y-0.5">
             <button 
               onClick={() => toggleTaskStatus(task.id)}
               className="p-0.5 rounded-full hover:bg-black/10 dark:hover:bg-white/10 transition-colors"
@@ -308,7 +309,7 @@ export function PlannerView() {
           </div>
         </div>
         {task.priority && (
-          <div className="mt-1.5">
+          <div className="mt-1">
             {getPriorityBadge(task.priority)}
           </div>
         )}
@@ -317,10 +318,10 @@ export function PlannerView() {
   }
 
   return (
-    <div className="space-y-6 p-1">
-      {tasks.length === 0 && !currentUser && (
-         <Card className="border-dashed">
-          <CardContent className="pt-6 text-center">
+    <div className="space-y-4 p-1 h-full flex flex-col">
+      {!currentUser && (
+         <Card className="border-dashed flex-grow">
+          <CardContent className="pt-6 text-center flex flex-col justify-center items-center h-full">
             <div className="mx-auto rounded-full bg-primary/10 p-3 w-12 h-12 flex items-center justify-center mb-4">
               <BookOpen className="h-6 w-6 text-primary" />
             </div>
@@ -331,31 +332,33 @@ export function PlannerView() {
           </CardContent>
         </Card>
       )}
-      {tasks.length === 0 && currentUser && (
-        <Card className="border-dashed">
-          <CardContent className="pt-6 text-center">
+      {currentUser && tasks.length === 0 && (
+        <Card className="border-dashed flex-grow">
+          <CardContent className="pt-6 text-center flex flex-col justify-center items-center h-full">
             <div className="mx-auto rounded-full bg-primary/10 p-3 w-12 h-12 flex items-center justify-center mb-4">
               <BookOpen className="h-6 w-6 text-primary" />
             </div>
-            <h3 className="text-lg font-medium mb-2">Start Planning Your Study Sessions</h3>
+            <h3 className="text-lg font-medium mb-2">No Tasks Yet</h3>
             <p className="text-muted-foreground mb-4">
-              Click "Add Task" to organize your study schedule and track your progress.
+              {selectedSubjectFilter && selectedSubjectFilter !== "all" 
+                ? `No tasks found for ${getSubjectInfo(selectedSubjectFilter).name}. Try a different filter or add a new task.`
+                : "Click 'Add Task' to organize your study schedule."
+              }
             </p>
             <Button onClick={() => setIsDialogOpen(true)}>
-              <Plus className="mr-2 h-4 w-4" /> Add Your First Task
+              <Plus className="mr-2 h-4 w-4" /> Add Task
             </Button>
           </CardContent>
         </Card>
       )}
       
-      {currentUser && (
-        <div className="overflow-x-auto pb-4 -mx-1">
-          <div className="grid grid-cols-[auto_repeat(7,minmax(120px,1fr))] gap-1.5 min-w-[900px]">
-            {/* Time column */}
+      {currentUser && (tasks.length > 0 || (selectedSubjectFilter && selectedSubjectFilter !== "all")) && (
+        <div className="overflow-auto flex-grow pb-2 -mx-1">
+          <div className="grid grid-cols-[auto_repeat(7,minmax(130px,1fr))] gap-1 min-w-[950px]">
             <div className="sticky left-0 bg-background z-10">
-              <div className="h-10"></div> {/* Empty cell for alignment */}
+              <div className="h-10"></div> 
               {hours.map(hour => (
-                <div key={`time-${hour}`} className="h-24 flex items-center justify-center border-r pr-1 text-xs font-medium text-muted-foreground">
+                <div key={`time-${hour}`} className="h-20 flex items-center justify-center border-r pr-1 text-xs font-medium text-muted-foreground">
                   <span>
                     {hour % 12 === 0 ? 12 : hour % 12}{hour < 12 ? 'am' : 'pm'}
                   </span>
@@ -378,31 +381,26 @@ export function PlannerView() {
                     <div
                       key={`${dayIndex}-${hour}`}
                       className={cn(
-                        "h-24 border rounded-md p-0.5 relative overflow-hidden", // Changed p-1 to p-0.5
-                        isOver ? "bg-accent ring-2 ring-primary" : "bg-muted/20 hover:bg-muted/50",
-                        tasksInSlot.length > 0 ? "border-border" : "border-dashed border-border/50"
+                        "h-20 border rounded-md p-0.5 relative overflow-hidden",
+                        isOver ? "bg-accent/70 ring-1 ring-primary" : "bg-muted/20 hover:bg-muted/40",
+                        tasksInSlot.length > 0 ? "border-border/60" : "border-dashed border-border/40"
                       )}
                       onDragOver={(e) => handleDragOver(dayIndex, hour, e)}
                       onDragLeave={handleDragLeave}
                       onDrop={() => handleDrop(dayIndex, hour)}
                     >
                       <ScrollArea className="h-full">
-                        <div className="p-0.5"> {/* Added padding for ScrollArea content */}
+                        <div className="p-0.5"> 
                         {tasksInSlot.length > 0 ? 
                           tasksInSlot.map(task => renderTask(task)) :
                           (isOver && draggedTask) && (
-                            <div className="h-full flex items-center justify-center text-muted-foreground text-xs">
+                            <div className="h-full flex items-center justify-center text-muted-foreground text-xs opacity-70">
                               Drop here
                             </div>
                           )
                         }
                         </div>
                       </ScrollArea>
-                       {tasksInSlot.length === 0 && !isOver && (
-                        <div className="absolute inset-0 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
-                           {/* Can add a subtle + icon here if needed for empty slots */}
-                        </div>
-                      )}
                     </div>
                   )
                 })}
@@ -412,7 +410,7 @@ export function PlannerView() {
         </div>
       )}
       
-      <div className="flex justify-end mt-4">
+      <div className="flex justify-end mt-2 shrink-0">
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
             <Button disabled={!currentUser}>
@@ -426,7 +424,7 @@ export function PlannerView() {
                 Fill in the details for your new study task.
               </DialogDescription>
             </DialogHeader>
-            <div className="grid gap-4 py-4 max-h-[70vh] overflow-y-auto pr-2">
+            <div className="grid gap-4 py-4 max-h-[65vh] overflow-y-auto pr-3">
               <div className="grid gap-2">
                 <Label htmlFor="title">Task Title <span className="text-destructive">*</span></Label>
                 <Input
@@ -550,16 +548,16 @@ export function PlannerView() {
             </div>
             <DialogFooter className="mt-2 pt-4 border-t">
               <Button variant="outline" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
-              <Button onClick={handleCreateTask} disabled={!currentUser}>Save Task</Button>
+              <Button onClick={handleCreateTask} disabled={!currentUser || !newTask.title || !newTask.subject}>Save Task</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
       </div>
       
       {currentUser && tasks.length > 0 && (
-        <Card className="mt-6">
+        <Card className="mt-4 shrink-0">
           <CardHeader className="pb-2 pt-4">
-            <CardTitle className="text-base font-semibold">Subject Color Legend</CardTitle>
+            <CardTitle className="text-sm font-semibold">Subject Color Legend</CardTitle>
           </CardHeader>
           <CardContent className="pb-4">
             <div className="flex flex-wrap gap-x-3 gap-y-2">
@@ -567,7 +565,7 @@ export function PlannerView() {
                 <div 
                   key={subject.id}
                   className={cn(
-                    "px-2.5 py-1 rounded-full text-xs flex items-center border", // ensure border is applied
+                    "px-2 py-0.5 rounded-full text-xs flex items-center border text-center", 
                     subject.color
                   )}
                 >
@@ -581,4 +579,3 @@ export function PlannerView() {
     </div>
   )
 }
-
