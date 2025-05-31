@@ -97,7 +97,7 @@ export async function getPostBySlug(slug: string): Promise<Post | null> {
         // rehypePlugins: [],
       },
     },
-    components: components, 
+    // components: components, // Temporarily removed for diagnostics
   });
 
   return {
