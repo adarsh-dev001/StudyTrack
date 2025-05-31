@@ -11,7 +11,7 @@ import {
 } from 'firebase/auth';
 import { useRouter } from 'next/navigation';
 import type { ReactNode } from 'react';
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState, useCallback, useMemo } from 'react';
 import { auth } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
 
@@ -64,15 +64,16 @@ export function AuthProvider({ children }: AuthProviderProps) {
       }
     );
     return unsubscribe;
-  }, [toast]);
+  }, [toast]); // auth should be stable, toast is from a hook
 
-  const signUp = async (email_param: string, password_param: string, fullName_param: string) => {
+  const signUp = useCallback(async (email_param: string, password_param: string, fullName_param: string) => {
     setLoading(true);
     setError(null);
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email_param, password_param);
       await updateProfile(userCredential.user, { displayName: fullName_param });
-      setCurrentUser(userCredential.user); // Manually update currentUser state
+      // onAuthStateChanged should pick this up, but to be safe for immediate UI updates:
+      setCurrentUser(userCredential.user); 
       toast({
         title: 'Signup Successful!',
         description: 'Welcome to StudyTrack!',
@@ -90,9 +91,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [auth, router, toast]); // setLoading, setError, setCurrentUser are stable
 
-  const signIn = async (email_param: string, password_param: string) => {
+  const signIn = useCallback(async (email_param: string, password_param: string) => {
     setLoading(true);
     setError(null);
     try {
@@ -112,9 +113,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [auth, router, toast]); // setLoading, setError are stable
 
-  const logOut = async () => {
+  const logOut = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
@@ -134,16 +135,16 @@ export function AuthProvider({ children }: AuthProviderProps) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [auth, router, toast]); // setLoading, setError are stable
 
-  const value = {
+  const value = useMemo(() => ({
     currentUser,
     loading,
     error,
     signUp,
     signIn,
     logOut,
-  };
+  }), [currentUser, loading, error, signUp, signIn, logOut]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
