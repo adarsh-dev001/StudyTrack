@@ -1,6 +1,6 @@
 
 import { initializeApp, getApp, getApps } from 'firebase/app';
-import { getAuth } from 'firebase/auth';
+import { getAuth, browserLocalPersistence, setPersistence, onAuthStateChanged } from 'firebase/auth'; // Added browserLocalPersistence, setPersistence
 import { getFirestore } from 'firebase/firestore';
 // import { getStorage } from 'firebase/storage'; // Uncomment if you need Firebase Storage
 // import { getFunctions } from 'firebase/functions'; // Uncomment if you need Firebase Functions
@@ -64,13 +64,19 @@ if (!getApps().length) {
 }
 
 // Ensure app is defined before trying to get Auth or Firestore
-const auth = app ? getAuth(app) : null;
+const authInstance = app ? getAuth(app) : null;
 const db = app ? getFirestore(app) : null;
 // const storage = app ? getStorage(app) : null; // Uncomment if you need Firebase Storage
 // const functions = app ? getFunctions(app) : null; // Uncomment if you need Firebase Functions
 
-if (!auth || !db) {
-    console.warn("Firebase Auth or Firestore could not be initialized. This is likely due to the configuration error mentioned above.")
+if (authInstance) {
+  setPersistence(authInstance, browserLocalPersistence)
+    .catch((error) => {
+      console.error("Firebase: Error setting auth persistence:", error);
+    });
+} else if (!authInstance && app) { // Only log this specific warning if app was initialized but auth failed
+    console.warn("Firebase Auth could not be initialized. This is likely due to the configuration error mentioned above, or setPersistence failed.");
 }
 
-export { app, auth, db /*, storage, functions */ };
+
+export { app, authInstance as auth, db /*, storage, functions */ };
