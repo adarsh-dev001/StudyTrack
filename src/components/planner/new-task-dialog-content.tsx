@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/select";
 import type { Priority, Task } from "./planner-types"; 
 import { subjects } from "./planner-utils"; 
+import { cn } from "@/lib/utils"; // Added missing import
 
 const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const hours = Array.from({ length: 15 }, (_, i) => i + 8); // 8 AM to 10 PM
