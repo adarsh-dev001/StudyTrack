@@ -4,7 +4,7 @@ import withPWAInit from 'next-pwa';
 
 const withPWA = withPWAInit({
   dest: 'public',
-  register: true,
+  register: false, // Temporarily disable service worker registration for testing
   skipWaiting: true,
   disable: process.env.NODE_ENV === 'development',
   // You can add more PWA configurations here if needed
