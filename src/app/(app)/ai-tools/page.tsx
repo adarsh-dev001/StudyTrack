@@ -2,7 +2,7 @@
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { BrainCircuit, BookText, BarChartBig, Sparkles, ListTree } from "lucide-react";
+import { BrainCircuit, BookText, BarChartBig, Sparkles, ListTree, Brain } from "lucide-react"; // Added Brain
 
 export default function AiToolsPage() {
   const aiTools = [
@@ -25,7 +25,7 @@ export default function AiToolsPage() {
     {
       title: "Productivity Analysis AI",
       description: "Receive AI-driven insights and recommendations based on your study habits.",
-      icon: <BarChartBig className="h-8 w-8 text-primary" />,
+      icon: <Brain className="h-8 w-8 text-primary" />, // Changed icon to Brain
       link: "/ai-tools/productivity-analyzer",
       status: "Active",
       actionText: "Analyze Data"

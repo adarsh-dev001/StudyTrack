@@ -1,3 +1,4 @@
+
 'use server';
 
 /**
@@ -24,7 +25,7 @@ export type AnalyzeProductivityDataInput = z.infer<typeof AnalyzeProductivityDat
 
 const AnalyzeProductivityDataOutputSchema = z.object({
   insights: z.array(
-    z.string().describe('Personalized insights on how to improve learning efficiency, based on the provided data.')
+    z.string().describe('Personalized insights on how to improve learning efficiency, based on the provided data. These should highlight strong/weak subjects or detect drops in streaks/burnout signs.')
   ),
   overallAssessment: z
     .string()
@@ -33,7 +34,7 @@ const AnalyzeProductivityDataOutputSchema = z.object({
     z
       .string()
       .describe(
-        'Specific, actionable recommendations for improving study efficiency, such as time management tips or subject focus adjustments.'
+        'Specific, actionable recommendations for improving study efficiency, such as time management tips, subject focus adjustments, or pomodoro session adjustments (e.g., "Try 3 Pomodoros instead of 5 today").'
       )
   ),
 });
@@ -49,22 +50,26 @@ const prompt = ai.definePrompt({
   name: 'analyzeProductivityDataPrompt',
   input: {schema: AnalyzeProductivityDataInputSchema},
   output: {schema: AnalyzeProductivityDataOutputSchema},
-  prompt: `You are an AI study coach that specializes in student productivity and study habit analysis. Analyze the student's productivity data and provide personalized insights and recommendations for improving their learning efficiency.
+  prompt: `You are an AI study coach that specializes in student productivity and study habit analysis.
+Analyze the student's productivity data from the last 7 days and provide personalized insights, an overall assessment, and actionable recommendations for improving their learning efficiency.
 
-Here is the student's productivity data:
-
-Study Hours: {{{studyHours}}}
-Topics Completed: {{{topicsCompleted}}}
-Subject-wise Time Distribution: {{#each (lookup subjectWiseTimeDistribution)}}
-  {{@key}}: {{{this}}}
+Student's Data:
+- Total Study Hours: {{{studyHours}}}
+- Topics Completed: {{{topicsCompleted}}}
+- Subject-wise Time Distribution (Hours):
+{{#each subjectWiseTimeDistribution}}
+  - {{@key}}: {{{this}}}
 {{/each}}
-Streak Length: {{{streakLength}}}
-Weekly Goals Completed: {{{weeklyGoalsCompleted}}}
+- Current Study Streak (Days): {{{streakLength}}}
+- Weekly Goals Completed: {{{weeklyGoalsCompleted}}}
 
-Provide the insights, overall assessment, and recommendations based on the above data. Focus on actionable advice for improved study habits and efficiency.  List each insight and recommendation as a separate bullet point.
+Based on this data:
+1.  **Insights**: Identify patterns. Highlight strong subjects (where time spent aligns with topics completed or goals) and weak subjects (where time spent might be disproportionate to outcomes, or low time is allocated). Detect potential burnout signals like a significant drop in study hours compared to previous trends (if implied by low hours for a full week) or a broken streak (if streak is 0 or very low after being higher). Frame these as bullet points.
+2.  **Overall Assessment**: Give a brief summary of the student's productivity for the week.
+3.  **Recommendations**: Provide specific, actionable tips. For example, suggest revising a particular subject if it seems weak, or adjusting study session length (e.g., "Try 3 Pomodoros instead of 5 today" if hours are low or focus seems to be an issue). List these as bullet points.
 
-
-Output must be a JSON object conforming to the AnalyzeProductivityDataOutputSchema schema.  The insights and recommendations should be specific and actionable, not generic.
+Output must be a JSON object strictly conforming to the AnalyzeProductivityDataOutputSchema.
+Ensure insights and recommendations are distinct and helpful.
 `,
 });
 
@@ -76,6 +81,10 @@ const analyzeProductivityDataFlow = ai.defineFlow(
   },
   async input => {
     const {output} = await prompt(input);
-    return output!;
+    if (!output) {
+        throw new Error('The AI model did not return valid data. Please try again.');
+    }
+    return output;
   }
 );
+
