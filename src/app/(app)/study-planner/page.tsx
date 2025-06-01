@@ -74,29 +74,19 @@ export default function StudyPlannerPage() {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date()); 
   const [selectedSubject, setSelectedSubject] = useState<string>(ALL_SUBJECTS_FILTER_VALUE);
 
-  const handleDateChange = (date: Date | undefined) => { // Calendar onSelect can return undefined
-    if (date instanceof Date) { // Check if date is a valid Date object
+  const handleDateChange = (date: Date | undefined) => { 
+    if (date instanceof Date) { 
       setSelectedDate(date);
-    } else if (date === undefined) {
-      // Handle case where user deselects date in calendar, if applicable
-      // For now, we might not want to allow undefined if a date is always expected.
-      // Or set to new Date() as a fallback.
-      setSelectedDate(new Date()); // Or keep previous, or handle as error
     }
   };
   
-  const handleMonthViewDateChange = (date: Date) => { // Specific handler for month view clicks
-    setSelectedDate(date);
-  };
-
-
   return (
     <div className="w-full flex h-full flex-col space-y-4">
       <PlannerHeader
         currentView={currentView}
         onViewChange={setCurrentView}
         selectedDate={selectedDate}
-        onDateChange={handleDateChange}
+        onDateChange={handleDateChange} // Pass the state setter correctly
         selectedSubject={selectedSubject}
         onSubjectChange={setSelectedSubject}
         allSubjectsValue={ALL_SUBJECTS_FILTER_VALUE}
@@ -107,6 +97,8 @@ export default function StudyPlannerPage() {
             <PlannerView
               selectedDate={selectedDate}
               selectedSubjectFilter={selectedSubject === ALL_SUBJECTS_FILTER_VALUE ? null : selectedSubject}
+              onDateChange={setSelectedDate} // Pass setSelectedDate for navigation
+              onViewChange={setCurrentView}  // Pass setCurrentView for navigation
             />
           </Suspense>
         )}
@@ -122,7 +114,7 @@ export default function StudyPlannerPage() {
           <Suspense fallback={<MonthViewFallback />}>
             <MonthView
                 selectedDate={selectedDate}
-                onDateChange={handleMonthViewDateChange} // Use the specific handler
+                onDateChange={setSelectedDate} 
                 onViewChange={setCurrentView}
                 selectedSubjectFilter={selectedSubject === ALL_SUBJECTS_FILTER_VALUE ? null : selectedSubject}
             />
@@ -132,5 +124,4 @@ export default function StudyPlannerPage() {
     </div>
   );
 }
-
     

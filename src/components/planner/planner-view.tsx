@@ -12,7 +12,8 @@ import {
   BookOpen,
   CheckCircle2,
   Trash2,
-  Loader2
+  Loader2,
+  CalendarDays
 } from "lucide-react"
 import {
   Dialog,
@@ -40,13 +41,16 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import type { Task, Priority } from "./planner-types"; 
 import { subjects, getPriorityBadgeInfo, getSubjectInfo } from "./planner-utils"; 
-import { Badge } from "@/components/ui/badge"; // Import Badge component
+import { Badge } from "@/components/ui/badge"; 
+import { startOfWeek, addDays, format } from "date-fns";
 
 const NewTaskDialogContent = React.lazy(() => import('./new-task-dialog-content'));
 
 interface PlannerViewProps {
-  selectedDate?: Date;
+  selectedDate: Date; // Keep as Date, parent will ensure it's valid
   selectedSubjectFilter?: string | null;
+  onDateChange: (date: Date) => void;
+  onViewChange: (view: 'day' | 'week' | 'month') => void;
 }
 
 function NewTaskDialogFallback() {
@@ -71,7 +75,7 @@ function NewTaskDialogFallback() {
 }
 
 
-export function PlannerView({ selectedDate, selectedSubjectFilter }: PlannerViewProps) {
+export function PlannerView({ selectedDate, selectedSubjectFilter, onDateChange, onViewChange }: PlannerViewProps) {
   const { currentUser } = useAuth();
   const [tasks, setTasks] = useState<Task[]>([])
   const [isLoadingTasks, setIsLoadingTasks] = useState(true);
@@ -79,7 +83,7 @@ export function PlannerView({ selectedDate, selectedSubjectFilter }: PlannerView
     priority: "medium",
     status: "pending",
     duration: 1,
-    day: selectedDate ? selectedDate.getDay() : new Date().getDay(), // Initialize day with selectedDate
+    day: selectedDate.getDay(),
     startHour: 9,
     subject: subjects[0].id,
   })
@@ -91,7 +95,6 @@ export function PlannerView({ selectedDate, selectedSubjectFilter }: PlannerView
   const hours = Array.from({ length: 15 }, (_, i) => i + 8) // 8 AM to 10 PM (22:00)
 
   useEffect(() => {
-    // When selectedDate changes, update the default day for new tasks
     if (selectedDate) {
       setNewTask(prev => ({ ...prev, day: selectedDate.getDay() }));
     }
@@ -171,7 +174,7 @@ export function PlannerView({ selectedDate, selectedSubjectFilter }: PlannerView
         priority: "medium",
         status: "pending",
         duration: 1,
-        day: selectedDate ? selectedDate.getDay() : new Date().getDay(),
+        day: selectedDate.getDay(),
         startHour: 9,
         subject: subjects[0].id,
       })
@@ -238,6 +241,14 @@ export function PlannerView({ selectedDate, selectedSubjectFilter }: PlannerView
       console.error("Error deleting task: ", error);
     }
   }
+  
+  const handleDayHeaderClick = (dayIndexInWeek: number) => {
+    const weekStart = startOfWeek(selectedDate, { weekStartsOn: 0 }); // Assuming week starts on Sunday (0)
+    const clickedDayDate = addDays(weekStart, dayIndexInWeek);
+    onDateChange(clickedDayDate);
+    onViewChange('day');
+  };
+
 
   const renderTask = (task: Task) => {
     const subjectInfo = getSubjectInfo(task.subject);
@@ -344,14 +355,17 @@ export function PlannerView({ selectedDate, selectedSubjectFilter }: PlannerView
         </Card>
       );
     }
+    
+    const currentWeekStartDate = startOfWeek(selectedDate, { weekStartsOn: 0 });
+
 
     return (
       <div className="overflow-auto flex-grow pb-2 -mx-1">
-        <div className="grid grid-cols-[auto_repeat(7,minmax(150px,1fr))] gap-1 min-w-[1100px]"> 
-          <div className="sticky left-0 bg-background z-10">
-            <div className="h-10"></div> 
+        <div className="grid grid-cols-[auto_repeat(7,minmax(160px,1fr))] min-w-[1180px]"> 
+          <div className="sticky left-0 bg-background z-10 border-r border-border">
+            <div className="h-12 border-b border-border"></div> {/* Spacer for day headers */}
             {hours.map(hour => (
-              <div key={`time-${hour}`} className="h-24 flex items-center justify-center border-r pr-1 text-xs font-medium text-muted-foreground"> 
+              <div key={`time-${hour}`} className="h-24 flex items-center justify-center pr-2 text-xs font-medium text-muted-foreground border-b border-border"> 
                 <span>
                   {hour % 12 === 0 ? 12 : hour % 12}{hour < 12 ? 'am' : 'pm'}
                 </span>
@@ -359,10 +373,16 @@ export function PlannerView({ selectedDate, selectedSubjectFilter }: PlannerView
             ))}
           </div>
 
-          {days.map((dayLabel, dayIndex) => (
-            <div key={dayLabel}>
-              <div className="h-10 flex items-center justify-center font-semibold text-sm sticky top-0 bg-background z-10 border-b">
-                {dayLabel}
+          {days.map((dayLabel, dayIndex) => {
+            const dayDate = addDays(currentWeekStartDate, dayIndex);
+            return (
+            <div key={dayLabel} className="border-l border-border first:border-l-0">
+              <div
+                onClick={() => handleDayHeaderClick(dayIndex)}
+                className="h-12 flex flex-col items-center justify-center font-semibold text-sm sticky top-0 bg-background z-10 border-b border-border hover:bg-muted/60 transition-colors cursor-pointer px-1 text-center"
+              >
+                <span>{dayLabel}</span>
+                <span className="text-xs text-muted-foreground font-normal">{format(dayDate, 'd')}</span>
               </div>
               {hours.map(hour => {
                 const tasksInSlot = tasksForCurrentWeekView.filter(
@@ -374,16 +394,16 @@ export function PlannerView({ selectedDate, selectedSubjectFilter }: PlannerView
                   <div
                     key={`${dayIndex}-${hour}`}
                     className={cn(
-                      "h-24 border rounded-md p-0.5 relative overflow-hidden", 
+                      "h-24 p-1 relative border-b border-border", 
                       isOver ? "bg-accent/70 ring-1 ring-primary" : "bg-muted/20 hover:bg-muted/40",
-                      tasksInSlot.length > 0 ? "border-border/60" : "border-dashed border-border/40"
+                      tasksInSlot.length > 0 ? "" : "border-dashed border-border/60"
                     )}
                     onDragOver={(e) => handleDragOver(dayIndex, hour, e)}
                     onDragLeave={handleDragLeave}
                     onDrop={() => handleDrop(dayIndex, hour)}
                   >
                     <ScrollArea className="h-full">
-                      <div className="p-0.5">
+                      <div className="p-px">
                       {tasksInSlot.length > 0 ?
                         tasksInSlot.map(task => renderTask(task)) :
                         (isOver && draggedTask) && (
@@ -398,7 +418,7 @@ export function PlannerView({ selectedDate, selectedSubjectFilter }: PlannerView
                 )
               })}
             </div>
-          ))}
+          )})}
         </div>
       </div>
     );
@@ -411,7 +431,7 @@ export function PlannerView({ selectedDate, selectedSubjectFilter }: PlannerView
          <Card className="border-dashed flex-grow flex flex-col items-center justify-center min-h-[400px] bg-muted/20">
           <CardContent className="pt-6 text-center p-6">
             <div className="mx-auto rounded-full bg-primary/10 p-4 w-16 h-16 flex items-center justify-center mb-4">
-              <BookOpen className="h-8 w-8 text-primary" />
+              <CalendarDays className="h-8 w-8 text-primary" />
             </div>
             <h3 className="text-xl font-semibold mb-2 text-foreground">Login to Plan Your Studies</h3>
             <p className="text-muted-foreground mb-6">
@@ -444,7 +464,7 @@ export function PlannerView({ selectedDate, selectedSubjectFilter }: PlannerView
                         newTask={newTask}
                         onInputChange={handleInputChange}
                         onSelectChange={handleSelectChange}
-                        isDayView={false} // Indicate it's for WeekView or general planner
+                        isDayView={false} 
                     />
                 </Suspense>
                 <DialogFooter className="mt-2 pt-4 border-t">
@@ -482,3 +502,4 @@ export function PlannerView({ selectedDate, selectedSubjectFilter }: PlannerView
     </div>
   )
 }
+
