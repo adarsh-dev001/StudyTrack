@@ -315,12 +315,12 @@ export default function SyllabusSuggesterPage() {
                     <p className="text-sm text-muted-foreground mb-3 italic">{subjectSyllabus.summary}</p>
                 )}
                 <div className="space-y-3">
-                  {Object.entries(subjectSyllabus.schedule).map(([week, topics]) => (
-                    <div key={week}>
-                      <h4 className="font-medium text-md text-foreground/90">{week}:</h4>
-                      {topics.length > 0 ? (
+                  {subjectSyllabus.schedule.map((weeklyItem, weekIndex) => (
+                    <div key={`${subjectSyllabus.subject}-week-${weekIndex}`}>
+                      <h4 className="font-medium text-md text-foreground/90">{weeklyItem.weekLabel}:</h4>
+                      {weeklyItem.topics.length > 0 ? (
                         <ul className="list-disc space-y-1 pl-5 text-sm text-foreground/80">
-                          {topics.map((topic, topicIndex) => (
+                          {weeklyItem.topics.map((topic, topicIndex) => (
                             <li key={topicIndex}>{topic}</li>
                           ))}
                         </ul>
@@ -349,3 +349,4 @@ export default function SyllabusSuggesterPage() {
     </div>
   );
 }
+

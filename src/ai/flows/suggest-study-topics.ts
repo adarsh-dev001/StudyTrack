@@ -35,9 +35,14 @@ const SuggestStudyTopicsPromptInputSchema = SuggestStudyTopicsInputSchema.extend
     currentDate: z.string().describe("The current date in YYYY-MM-DD format, used as a reference for planning by the AI.")
 });
 
+const WeeklyScheduleItemSchema = z.object({
+  weekLabel: z.string().describe("The label for the week, e.g., 'Week 1', 'Week 2'."),
+  topics: z.array(z.string().describe("Topic for this week. Include estimated hours if feasible, e.g., 'Topic X (4h)' or ensure weekly load matches time constraints.")),
+});
+
 const SubjectSyllabusSchema = z.object({
   subject: z.string().describe("The name of the subject."),
-  schedule: z.record(z.string(), z.array(z.string().describe("Topic for the week. Include estimated hours if feasible, e.g., 'Topic X (4h)' or ensure weekly load matches time constraints."))).describe("A weekly breakdown of topics. Keys should be 'Week 1', 'Week 2', etc."),
+  schedule: z.array(WeeklyScheduleItemSchema).describe("A weekly breakdown of topics as an array of weekly plans."),
   summary: z.string().optional().describe("A brief summary or key focus areas for this subject's plan, or any important notes regarding the schedule.")
 });
 
@@ -61,23 +66,23 @@ They have approximately {{{timeAvailablePerDay}}} hours available for study each
 
 Based on this information, please generate a detailed, topic-wise weekly study plan for EACH selected subject.
 Prioritize high-weightage topics first based on typical patterns for the {{{examType}}} exam.
-The schedule for each subject should be broken down into weeks (e.g., "Week 1", "Week 2", ...).
-For each week, list the topics to be covered for that subject. If possible, indicate an estimated study time for topics or ensure the weekly load is reasonable given the daily study hours and target date.
+The schedule for each subject should be an array of weekly plan objects. Each object in this array must have a 'weekLabel' (string, e.g., "Week 1", "Week 2") and a 'topics' (array of strings) property.
+For each week, list the topics to be covered for that subject under the 'topics' array. If possible, indicate an estimated study time for topics or ensure the weekly load is reasonable given the daily study hours and target date.
 The number of weeks should be realistic based on the target date and average daily study time.
 Calculate the total number of days available from today (assume today is {{{currentDate}}}) until the targetDate. Then calculate total study weeks.
 
 Output a JSON object strictly conforming to the SuggestStudyTopicsOutputSchema.
 The 'generatedSyllabus' array must contain one object for each subject listed by the user.
-Each object in 'generatedSyllabus' must have a 'subject' (string) and a 'schedule' (object where keys are "Week X" and values are arrays of topic strings).
+Each object in 'generatedSyllabus' must have a 'subject' (string) and a 'schedule' (array of objects, where each object has 'weekLabel' and 'topics' array).
 Optionally, include a 'summary' for each subject's plan and 'overallFeedback' for the entire plan.
 
 Example for a single subject in the 'generatedSyllabus' array:
 {
   "subject": "Physics",
-  "schedule": {
-    "Week 1": ["Kinematics (10h)", "Units & Measurement (5h)"],
-    "Week 2": ["Laws of Motion (12h)", "Work, Energy, Power (8h)"]
-  },
+  "schedule": [
+    { "weekLabel": "Week 1", "topics": ["Kinematics (10h)", "Units & Measurement (5h)"] },
+    { "weekLabel": "Week 2", "topics": ["Laws of Motion (12h)", "Work, Energy, Power (8h)"] }
+  ],
   "summary": "Focus on conceptual understanding and problem-solving for mechanics first."
 }
 
@@ -102,4 +107,3 @@ const suggestStudyTopicsFlow = ai.defineFlow(
     return output!;
   }
 );
-
