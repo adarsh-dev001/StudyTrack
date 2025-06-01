@@ -119,6 +119,7 @@ function NewTaskDialogFallback() {
 export function PlannerView({ selectedDate, selectedSubjectFilter }: PlannerViewProps) {
   const { currentUser } = useAuth();
   const [tasks, setTasks] = useState<Task[]>([])
+  const [isLoadingTasks, setIsLoadingTasks] = useState(true);
   const [newTask, setNewTask] = useState<Partial<Omit<Task, 'id'>>>({
     priority: "medium",
     status: "pending",
@@ -132,22 +133,31 @@ export function PlannerView({ selectedDate, selectedSubjectFilter }: PlannerView
   const [draggedOver, setDraggedOver] = useState<{ day: number, hour: number } | null>(null)
 
   const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
-  const hours = Array.from({ length: 15 }, (_, i) => i + 8)
+  const hours = Array.from({ length: 15 }, (_, i) => i + 8) // 8 AM to 10 PM (22:00)
 
   useEffect(() => {
     if (!currentUser || !db) {
       setTasks([]);
+      setIsLoadingTasks(false);
       return;
     }
 
+    setIsLoadingTasks(true);
     const tasksCollectionRef = collection(db, "users", currentUser.uid, "plannerTasks");
     let q;
 
+    // Filtering logic remains the same
     if (selectedSubjectFilter && selectedSubjectFilter !== "all") {
       q = query(tasksCollectionRef, where("subject", "==", selectedSubjectFilter));
     } else {
       q = query(tasksCollectionRef);
     }
+    
+    // Date filtering (if selectedDate is provided, filter tasks for that week)
+    // This example focuses on displaying the whole week around selectedDate,
+    // For more precise filtering by selectedDate if it's a day view, this would need adjustment.
+    // For week view, we typically show all tasks and the selectedDate helps navigate.
+    // If specific date filtering is needed for the week view, that logic would go here.
 
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
       const fetchedTasks: Task[] = [];
@@ -155,8 +165,10 @@ export function PlannerView({ selectedDate, selectedSubjectFilter }: PlannerView
         fetchedTasks.push({ id: doc.id, ...doc.data() } as Task);
       });
       setTasks(fetchedTasks);
+      setIsLoadingTasks(false);
     }, (error) => {
       console.error("Error fetching tasks: ", error);
+      setIsLoadingTasks(false);
     });
 
     return () => unsubscribe();
@@ -176,8 +188,8 @@ export function PlannerView({ selectedDate, selectedSubjectFilter }: PlannerView
       console.error("User not logged in or DB not available");
       return;
     }
-    if (!newTask.title || !newTask.subject) {
-      console.error("Title and subject are required");
+    if (!newTask.title || !newTask.subject || newTask.day === undefined || newTask.startHour === undefined || newTask.duration === undefined ) {
+      alert("Please fill in all required fields: Title, Subject, Day, Start Time, and Duration."); // User-friendly alert
       return;
     }
 
@@ -190,14 +202,14 @@ export function PlannerView({ selectedDate, selectedSubjectFilter }: PlannerView
       duration: Number(newTask.duration) || 1,
       priority: newTask.priority as Priority || "medium",
       status: "pending",
-      day: Number(newTask.day) || 0,
-      startHour: Number(newTask.startHour) || 9,
+      day: Number(newTask.day),
+      startHour: Number(newTask.startHour),
     };
 
     try {
       const tasksCollectionRef = collection(db, "users", currentUser.uid, "plannerTasks");
       await addDoc(tasksCollectionRef, taskToSave);
-      setNewTask({
+      setNewTask({ // Reset form
         title: "",
         topic: "",
         description: "",
@@ -211,6 +223,7 @@ export function PlannerView({ selectedDate, selectedSubjectFilter }: PlannerView
       setIsDialogOpen(false)
     } catch (error) {
       console.error("Error creating task: ", error);
+      alert("Failed to create task. Please try again.");
     }
   }
 
@@ -224,7 +237,7 @@ export function PlannerView({ selectedDate, selectedSubjectFilter }: PlannerView
 
   const handleDragOver = (day: number, hour: number, e: React.DragEvent) => {
     e.preventDefault()
-    e.dataTransfer.dropEffect = "move";
+    if(e.dataTransfer) e.dataTransfer.dropEffect = "move";
     setDraggedOver({ day, hour })
   }
 
@@ -281,21 +294,21 @@ export function PlannerView({ selectedDate, selectedSubjectFilter }: PlannerView
         onDragStart={(e) => handleDragStart(task, e)}
         className={cn(
           "rounded-md p-2 mb-1.5 cursor-move shadow-sm border relative group",
-          task.status === "completed" ? "opacity-60 bg-opacity-70" : "opacity-100",
+          task.status === "completed" ? "opacity-60 bg-opacity-70 line-through" : "opacity-100",
           subjectInfo.color,
-          "hover:shadow-md transition-shadow"
+          "hover:shadow-md transition-shadow text-sm" //统一文字大小
         )}
-        style={{ minHeight: `${Math.max(1, task.duration) * 2.0}rem` }}
+        style={{ minHeight: `${Math.max(1, task.duration) * 2.25}rem` }} // Slightly increase height per duration unit
       >
         <div className="flex items-start justify-between">
           <div className="flex-1 overflow-hidden pr-1">
             <div className="flex items-center">
               <GripVertical className="h-4 w-4 mr-1 opacity-50 shrink-0 group-hover:opacity-70" />
-              <h4 className="font-semibold text-sm truncate" title={task.title}>{task.title}</h4>
+              <h4 className="font-semibold truncate" title={task.title}>{task.title}</h4>
             </div>
             <div className="text-xs mt-0.5 mb-1 opacity-80">
               <span className="font-medium">{subjectInfo.name}</span>
-              {task.topic && <span className="truncate" title={task.topic}> • {task.topic}</span>}
+              {task.topic && <span className="truncate block" title={task.topic}> {task.topic}</span>}
             </div>
             <div className="flex items-center text-xs opacity-70">
               <Clock className="h-3 w-3 mr-1 shrink-0" />
@@ -316,7 +329,7 @@ export function PlannerView({ selectedDate, selectedSubjectFilter }: PlannerView
             </button>
             <button
               onClick={() => handleDeleteTask(task.id)}
-              className="p-0.5 rounded-full hover:bg-black/10 dark:hover:bg-white/10 transition-colors text-destructive-foreground"
+              className="p-0.5 rounded-full hover:bg-black/10 dark:hover:bg-white/10 transition-colors"
               title="Delete task"
             >
               <Trash2 className="h-4 w-4 text-red-500 hover:text-red-700 dark:hover:text-red-400" />
@@ -324,7 +337,7 @@ export function PlannerView({ selectedDate, selectedSubjectFilter }: PlannerView
           </div>
         </div>
         {task.priority && (
-          <div className="mt-1">
+          <div className="mt-1.5"> {/* Add small margin top */}
             {getPriorityBadge(task.priority)}
           </div>
         )}
@@ -332,150 +345,182 @@ export function PlannerView({ selectedDate, selectedSubjectFilter }: PlannerView
     )
   }
 
-  return (
-    <div className="space-y-4 p-1 h-full flex flex-col">
-      {!currentUser && (
-         <Card className="border-dashed flex-grow">
-          <CardContent className="pt-6 text-center flex flex-col justify-center items-center h-full">
-            <div className="mx-auto rounded-full bg-primary/10 p-3 w-12 h-12 flex items-center justify-center mb-4">
-              <BookOpen className="h-6 w-6 text-primary" />
-            </div>
-            <h3 className="text-lg font-medium mb-2">Login to Plan Your Studies</h3>
-            <p className="text-muted-foreground mb-4">
-              Please login or sign up to start organizing your study schedule.
-            </p>
+  // Main Content Area
+  const MainContent = () => {
+    if (isLoadingTasks) {
+      return (
+        <Card className="border-dashed flex-grow flex flex-col items-center justify-center min-h-[400px]">
+          <CardContent className="text-center">
+            <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
+            <p className="text-muted-foreground">Loading your study plan...</p>
           </CardContent>
         </Card>
-      )}
-      {currentUser && tasks.length === 0 && (
-        <Card className="border-dashed flex-grow">
-          <CardContent className="pt-6 text-center flex flex-col justify-center items-center h-full">
-            <div className="mx-auto rounded-full bg-primary/10 p-3 w-12 h-12 flex items-center justify-center mb-4">
-              <BookOpen className="h-6 w-6 text-primary" />
+      );
+    }
+
+    if (tasks.length === 0) {
+      return (
+        <Card className="border-dashed flex-grow flex flex-col items-center justify-center min-h-[400px] bg-muted/20">
+          <CardContent className="text-center p-6">
+            <div className="mx-auto rounded-full bg-primary/10 p-4 w-16 h-16 flex items-center justify-center mb-4">
+              <BookOpen className="h-8 w-8 text-primary" />
             </div>
-            <h3 className="text-lg font-medium mb-2">No Tasks Yet</h3>
-            <p className="text-muted-foreground mb-4">
+            <h3 className="text-xl font-semibold mb-2 text-foreground">
               {selectedSubjectFilter && selectedSubjectFilter !== "all"
-                ? `No tasks found for ${getSubjectInfo(selectedSubjectFilter).name}. Try a different filter or add a new task.`
-                : "Click 'Add Task' to organize your study schedule."
+                ? `No tasks for ${getSubjectInfo(selectedSubjectFilter).name} yet.`
+                : "Your Planner is Empty"}
+            </h3>
+            <p className="text-muted-foreground mb-6">
+              {selectedSubjectFilter && selectedSubjectFilter !== "all"
+                ? "Add a new task for this subject or clear the filter to see all tasks."
+                : "Get started by adding your first study task to the planner!"
               }
             </p>
-            <Button onClick={() => setIsDialogOpen(true)}>
-              <Plus className="mr-2 h-4 w-4" /> Add Task
+            <Button onClick={() => setIsDialogOpen(true)} size="lg">
+              <Plus className="mr-2 h-5 w-5" /> Add New Task
             </Button>
           </CardContent>
         </Card>
-      )}
+      );
+    }
 
-      {currentUser && (tasks.length > 0 || (selectedSubjectFilter && selectedSubjectFilter !== "all")) && (
-        <div className="overflow-auto flex-grow pb-2 -mx-1">
-          <div className="grid grid-cols-[auto_repeat(7,minmax(130px,1fr))] gap-1 min-w-[950px]">
-            <div className="sticky left-0 bg-background z-10">
-              <div className="h-10"></div>
-              {hours.map(hour => (
-                <div key={`time-${hour}`} className="h-20 flex items-center justify-center border-r pr-1 text-xs font-medium text-muted-foreground">
-                  <span>
-                    {hour % 12 === 0 ? 12 : hour % 12}{hour < 12 ? 'am' : 'pm'}
-                  </span>
-                </div>
-              ))}
-            </div>
-
-            {days.map((dayLabel, dayIndex) => (
-              <div key={dayLabel}>
-                <div className="h-10 flex items-center justify-center font-semibold text-sm sticky top-0 bg-background z-10 border-b">
-                  {dayLabel}
-                </div>
-                {hours.map(hour => {
-                  const tasksInSlot = tasks.filter(
-                    task => task.day === dayIndex && task.startHour === hour
-                  );
-                  const isOver = draggedOver?.day === dayIndex && draggedOver?.hour === hour;
-
-                  return (
-                    <div
-                      key={`${dayIndex}-${hour}`}
-                      className={cn(
-                        "h-20 border rounded-md p-0.5 relative overflow-hidden",
-                        isOver ? "bg-accent/70 ring-1 ring-primary" : "bg-muted/20 hover:bg-muted/40",
-                        tasksInSlot.length > 0 ? "border-border/60" : "border-dashed border-border/40"
-                      )}
-                      onDragOver={(e) => handleDragOver(dayIndex, hour, e)}
-                      onDragLeave={handleDragLeave}
-                      onDrop={() => handleDrop(dayIndex, hour)}
-                    >
-                      <ScrollArea className="h-full">
-                        <div className="p-0.5">
-                        {tasksInSlot.length > 0 ?
-                          tasksInSlot.map(task => renderTask(task)) :
-                          (isOver && draggedTask) && (
-                            <div className="h-full flex items-center justify-center text-muted-foreground text-xs opacity-70">
-                              Drop here
-                            </div>
-                          )
-                        }
-                        </div>
-                      </ScrollArea>
-                    </div>
-                  )
-                })}
+    return (
+      <div className="overflow-auto flex-grow pb-2 -mx-1">
+        <div className="grid grid-cols-[auto_repeat(7,minmax(140px,1fr))] gap-1 min-w-[1024px]"> {/* Increased min cell width */}
+          <div className="sticky left-0 bg-background z-10">
+            <div className="h-10"></div> {/* Spacer for day labels */}
+            {hours.map(hour => (
+              <div key={`time-${hour}`} className="h-24 flex items-center justify-center border-r pr-1 text-xs font-medium text-muted-foreground"> {/* Increased cell height */}
+                <span>
+                  {hour % 12 === 0 ? 12 : hour % 12}{hour < 12 ? 'am' : 'pm'}
+                </span>
               </div>
             ))}
           </div>
-        </div>
-      )}
 
-      <div className="flex justify-end mt-2 shrink-0">
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
-            <Button disabled={!currentUser}>
-              <Plus className="mr-2 h-4 w-4" /> Add Task
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-lg">
-            <DialogHeader>
-              <DialogTitle>Add New Study Task</DialogTitle>
-              <DialogDescription>
-                Fill in the details for your new study task.
-              </DialogDescription>
-            </DialogHeader>
-            <Suspense fallback={<NewTaskDialogFallback />}>
-                <NewTaskDialogContent
-                    newTask={newTask}
-                    onInputChange={handleInputChange}
-                    onSelectChange={handleSelectChange}
-                />
-            </Suspense>
-            <DialogFooter className="mt-2 pt-4 border-t">
-              <Button variant="outline" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
-              <Button onClick={handleCreateTask} disabled={!currentUser || !newTask.title || !newTask.subject}>Save Task</Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      </div>
+          {days.map((dayLabel, dayIndex) => (
+            <div key={dayLabel}>
+              <div className="h-10 flex items-center justify-center font-semibold text-sm sticky top-0 bg-background z-10 border-b">
+                {dayLabel}
+              </div>
+              {hours.map(hour => {
+                const tasksInSlot = tasks.filter(
+                  task => task.day === dayIndex && task.startHour === hour
+                );
+                const isOver = draggedOver?.day === dayIndex && draggedOver?.hour === hour;
 
-      {currentUser && tasks.length > 0 && (
-        <Card className="mt-4 shrink-0">
-          <CardHeader className="pb-2 pt-4">
-            <CardTitle className="text-sm font-semibold">Subject Color Legend</CardTitle>
-          </CardHeader>
-          <CardContent className="pb-4">
-            <div className="flex flex-wrap gap-x-3 gap-y-2">
-              {subjects.map(subject => (
-                <div
-                  key={subject.id}
-                  className={cn(
-                    "px-2 py-0.5 rounded-full text-xs flex items-center border text-center",
-                    subject.color
-                  )}
-                >
-                  {subject.name}
-                </div>
-              ))}
+                return (
+                  <div
+                    key={`${dayIndex}-${hour}`}
+                    className={cn(
+                      "h-24 border rounded-md p-0.5 relative overflow-hidden", // Increased cell height
+                      isOver ? "bg-accent/70 ring-1 ring-primary" : "bg-muted/20 hover:bg-muted/40",
+                      tasksInSlot.length > 0 ? "border-border/60" : "border-dashed border-border/40"
+                    )}
+                    onDragOver={(e) => handleDragOver(dayIndex, hour, e)}
+                    onDragLeave={handleDragLeave}
+                    onDrop={() => handleDrop(dayIndex, hour)}
+                  >
+                    <ScrollArea className="h-full">
+                      <div className="p-0.5">
+                      {tasksInSlot.length > 0 ?
+                        tasksInSlot.map(task => renderTask(task)) :
+                        (isOver && draggedTask) && (
+                          <div className="h-full flex items-center justify-center text-muted-foreground text-xs opacity-70">
+                            Drop here
+                          </div>
+                        )
+                      }
+                      </div>
+                    </ScrollArea>
+                  </div>
+                )
+              })}
             </div>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
+
+  return (
+    <div className="space-y-4 p-1 h-full flex flex-col">
+      {!currentUser && (
+         <Card className="border-dashed flex-grow flex flex-col items-center justify-center min-h-[400px] bg-muted/20">
+          <CardContent className="pt-6 text-center p-6">
+            <div className="mx-auto rounded-full bg-primary/10 p-4 w-16 h-16 flex items-center justify-center mb-4">
+              <BookOpen className="h-8 w-8 text-primary" />
+            </div>
+            <h3 className="text-xl font-semibold mb-2 text-foreground">Login to Plan Your Studies</h3>
+            <p className="text-muted-foreground mb-6">
+              Please login or sign up to start organizing your study schedule and track your progress.
+            </p>
+            {/* Optionally add Login/Signup buttons here if contextually appropriate */}
           </CardContent>
         </Card>
+      )}
+      
+      {currentUser && <MainContent />}
+
+      {currentUser && (
+        <>
+          <div className="flex justify-end mt-2 shrink-0">
+            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+              <DialogTrigger asChild>
+                <Button>
+                  <Plus className="mr-2 h-4 w-4" /> Add Task
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-lg">
+                <DialogHeader>
+                  <DialogTitle>Add New Study Task</DialogTitle>
+                  <DialogDescription>
+                    Fill in the details for your new study task. Fields marked with <span className="text-destructive">*</span> are required.
+                  </DialogDescription>
+                </DialogHeader>
+                <Suspense fallback={<NewTaskDialogFallback />}>
+                    <NewTaskDialogContent
+                        newTask={newTask}
+                        onInputChange={handleInputChange}
+                        onSelectChange={handleSelectChange}
+                    />
+                </Suspense>
+                <DialogFooter className="mt-2 pt-4 border-t">
+                  <Button variant="outline" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
+                  <Button onClick={handleCreateTask} disabled={!newTask.title || !newTask.subject || newTask.day === undefined || newTask.startHour === undefined || newTask.duration === undefined}>Save Task</Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          </div>
+
+          {tasks.length > 0 && (
+             <Card className="mt-4 shrink-0">
+              <CardHeader className="pb-2 pt-4">
+                <CardTitle className="text-sm font-semibold">Subject Color Legend</CardTitle>
+              </CardHeader>
+              <CardContent className="pb-4">
+                <div className="flex flex-wrap gap-x-3 gap-y-2">
+                  {subjects.map(subject => (
+                    <div
+                      key={subject.id}
+                      className={cn(
+                        "px-2 py-0.5 rounded-full text-xs flex items-center border text-center",
+                        subject.color
+                      )}
+                    >
+                      {subject.name}
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </>
       )}
     </div>
   )
 }
+
+
+    
