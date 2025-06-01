@@ -47,7 +47,7 @@ import { startOfWeek, addDays, format } from "date-fns";
 const NewTaskDialogContent = React.lazy(() => import('./new-task-dialog-content'));
 
 interface PlannerViewProps {
-  selectedDate: Date; // Keep as Date, parent will ensure it's valid
+  selectedDate: Date; 
   selectedSubjectFilter?: string | null;
   onDateChange: (date: Date) => void;
   onViewChange: (view: 'day' | 'week' | 'month') => void;
@@ -243,7 +243,7 @@ export function PlannerView({ selectedDate, selectedSubjectFilter, onDateChange,
   }
   
   const handleDayHeaderClick = (dayIndexInWeek: number) => {
-    const weekStart = startOfWeek(selectedDate, { weekStartsOn: 0 }); // Assuming week starts on Sunday (0)
+    const weekStart = startOfWeek(selectedDate, { weekStartsOn: 0 }); 
     const clickedDayDate = addDays(weekStart, dayIndexInWeek);
     onDateChange(clickedDayDate);
     onViewChange('day');
@@ -325,12 +325,11 @@ export function PlannerView({ selectedDate, selectedSubjectFilter, onDateChange,
     }
 
     const tasksForCurrentWeekView = tasks.filter(task => {
-        // Basic filtering, week view usually shows all tasks unless a specific date range logic is added
         return true; 
     });
 
 
-    if (tasksForCurrentWeekView.length === 0) {
+    if (tasksForCurrentWeekView.length === 0 && !isLoadingTasks) {
       return (
         <Card className="border-dashed flex-grow flex flex-col items-center justify-center min-h-[400px] bg-muted/20">
           <CardContent className="text-center p-6">
@@ -348,9 +347,7 @@ export function PlannerView({ selectedDate, selectedSubjectFilter, onDateChange,
                 : "Get started by adding your first study task to the planner!"
               }
             </p>
-            <Button onClick={() => setIsDialogOpen(true)} size="lg">
-              <Plus className="mr-2 h-5 w-5" /> Add New Task
-            </Button>
+            {/* The Add Task button is now at the top, so no need to repeat it here specifically for empty state */}
           </CardContent>
         </Card>
       );
@@ -361,9 +358,9 @@ export function PlannerView({ selectedDate, selectedSubjectFilter, onDateChange,
 
     return (
       <div className="overflow-auto flex-grow pb-2 -mx-1">
-        <div className="grid grid-cols-[auto_repeat(7,minmax(160px,1fr))] min-w-[1180px]"> 
+        <div className="grid grid-cols-[auto_repeat(7,minmax(170px,1fr))] min-w-[1250px]"> 
           <div className="sticky left-0 bg-background z-10 border-r border-border">
-            <div className="h-12 border-b border-border"></div> {/* Spacer for day headers */}
+            <div className="h-12 border-b border-border"></div> 
             {hours.map(hour => (
               <div key={`time-${hour}`} className="h-24 flex items-center justify-center pr-2 text-xs font-medium text-muted-foreground border-b border-border"> 
                 <span>
@@ -426,7 +423,39 @@ export function PlannerView({ selectedDate, selectedSubjectFilter, onDateChange,
 
 
   return (
-    <div className="space-y-4 p-1 h-full flex flex-col">
+    <div className="p-1 h-full flex flex-col">
+      {currentUser && (
+        <div className="flex justify-end mb-3 px-1 shrink-0">
+          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+            <DialogTrigger asChild>
+              <Button size="sm">
+                <Plus className="mr-2 h-4 w-4" /> Add Task
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-lg">
+              <DialogHeader>
+                <DialogTitle>Add New Study Task</DialogTitle>
+                <DialogDescription>
+                  Fill in the details for your new study task. Fields marked with <span className="text-destructive">*</span> are required.
+                </DialogDescription>
+              </DialogHeader>
+              <Suspense fallback={<NewTaskDialogFallback />}>
+                  <NewTaskDialogContent
+                      newTask={newTask}
+                      onInputChange={handleInputChange}
+                      onSelectChange={handleSelectChange}
+                      isDayView={false} 
+                  />
+              </Suspense>
+              <DialogFooter className="mt-2 pt-4 border-t">
+                <Button variant="outline" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
+                <Button onClick={handleCreateTask} disabled={!newTask.title || !newTask.subject || newTask.day === undefined || newTask.startHour === undefined || newTask.duration === undefined}>Save Task</Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        </div>
+      )}
+      
       {!currentUser && (
          <Card className="border-dashed flex-grow flex flex-col items-center justify-center min-h-[400px] bg-muted/20">
           <CardContent className="pt-6 text-center p-6">
@@ -443,61 +472,27 @@ export function PlannerView({ selectedDate, selectedSubjectFilter, onDateChange,
       
       {currentUser && <MainContent />}
 
-      {currentUser && (
-        <>
-          <div className="flex justify-end mt-2 shrink-0">
-            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-              <DialogTrigger asChild>
-                <Button>
-                  <Plus className="mr-2 h-4 w-4" /> Add Task
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="sm:max-w-lg">
-                <DialogHeader>
-                  <DialogTitle>Add New Study Task</DialogTitle>
-                  <DialogDescription>
-                    Fill in the details for your new study task. Fields marked with <span className="text-destructive">*</span> are required.
-                  </DialogDescription>
-                </DialogHeader>
-                <Suspense fallback={<NewTaskDialogFallback />}>
-                    <NewTaskDialogContent
-                        newTask={newTask}
-                        onInputChange={handleInputChange}
-                        onSelectChange={handleSelectChange}
-                        isDayView={false} 
-                    />
-                </Suspense>
-                <DialogFooter className="mt-2 pt-4 border-t">
-                  <Button variant="outline" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
-                  <Button onClick={handleCreateTask} disabled={!newTask.title || !newTask.subject || newTask.day === undefined || newTask.startHour === undefined || newTask.duration === undefined}>Save Task</Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
-          </div>
-
-          {tasks.length > 0 && (
-             <Card className="mt-4 shrink-0">
-              <CardHeader className="pb-2 pt-4">
-                <CardTitle className="text-sm font-semibold">Subject Color Legend</CardTitle>
-              </CardHeader>
-              <CardContent className="pb-4">
-                <div className="flex flex-wrap gap-x-3 gap-y-2">
-                  {subjects.map(subject => (
-                    <div
-                      key={subject.id}
-                      className={cn(
-                        "px-2 py-0.5 rounded-full text-xs flex items-center border text-center",
-                        subject.color
-                      )}
-                    >
-                      {subject.name}
-                    </div>
-                  ))}
+      {currentUser && tasks.length > 0 && (
+         <Card className="mt-3 shrink-0">
+          <CardHeader className="pb-2 pt-4">
+            <CardTitle className="text-sm font-semibold">Subject Color Legend</CardTitle>
+          </CardHeader>
+          <CardContent className="pb-4">
+            <div className="flex flex-wrap gap-x-3 gap-y-2">
+              {subjects.map(subject => (
+                <div
+                  key={subject.id}
+                  className={cn(
+                    "px-2 py-0.5 rounded-full text-xs flex items-center border text-center",
+                    subject.color
+                  )}
+                >
+                  {subject.name}
                 </div>
-              </CardContent>
-            </Card>
-          )}
-        </>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
       )}
     </div>
   )
