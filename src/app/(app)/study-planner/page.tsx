@@ -7,7 +7,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Loader2 } from 'lucide-react';
 
 const PlannerView = React.lazy(() => import('@/components/planner/planner-view').then(module => ({ default: module.PlannerView })));
-const DayView = React.lazy(() => import('@/components/planner/day-view').then(module => ({ default: module.DayView })));
+const DayView = React.lazy(() => import('@/components/planner/day-view')); // Corrected import
 
 const ALL_SUBJECTS_FILTER_VALUE = "all";
 
