@@ -11,6 +11,7 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
+import { format } from 'date-fns';
 
 const SuggestStudyTopicsInputSchema = z.object({
   examType: z
@@ -28,6 +29,11 @@ const SuggestStudyTopicsInputSchema = z.object({
     .describe('The target date for syllabus completion (e.g., YYYY-MM-DD).'),
 });
 export type SuggestStudyTopicsInput = z.infer<typeof SuggestStudyTopicsInputSchema>;
+
+// Internal schema for the prompt, including the calculated currentDate
+const SuggestStudyTopicsPromptInputSchema = SuggestStudyTopicsInputSchema.extend({
+    currentDate: z.string().describe("The current date in YYYY-MM-DD format, used as a reference for planning by the AI.")
+});
 
 const SubjectSyllabusSchema = z.object({
   subject: z.string().describe("The name of the subject."),
@@ -48,7 +54,7 @@ export async function suggestStudyTopics(input: SuggestStudyTopicsInput): Promis
 
 const prompt = ai.definePrompt({
   name: 'suggestStudyTopicsPrompt',
-  input: {schema: SuggestStudyTopicsInputSchema},
+  input: {schema: SuggestStudyTopicsPromptInputSchema}, // Use the extended schema for prompt input
   output: {schema: SuggestStudyTopicsOutputSchema},
   prompt: `You are an expert AI study planner. A student is preparing for the {{{examType}}} exam and needs a syllabus for the following subjects: {{#each subjects}}{{{this}}}{{#unless @last}}, {{/unless}}{{/each}}.
 They have approximately {{{timeAvailablePerDay}}} hours available for study each day and their target completion date is {{{targetDate}}}.
@@ -58,7 +64,7 @@ Prioritize high-weightage topics first based on typical patterns for the {{{exam
 The schedule for each subject should be broken down into weeks (e.g., "Week 1", "Week 2", ...).
 For each week, list the topics to be covered for that subject. If possible, indicate an estimated study time for topics or ensure the weekly load is reasonable given the daily study hours and target date.
 The number of weeks should be realistic based on the target date and average daily study time.
-Calculate the total number of days available from today (assume today is {{currentDate "YYYY-MM-DD"}}) until the targetDate. Then calculate total study weeks.
+Calculate the total number of days available from today (assume today is {{{currentDate}}}) until the targetDate. Then calculate total study weeks.
 
 Output a JSON object strictly conforming to the SuggestStudyTopicsOutputSchema.
 The 'generatedSyllabus' array must contain one object for each subject listed by the user.
@@ -83,11 +89,17 @@ Provide a realistic and actionable plan.
 const suggestStudyTopicsFlow = ai.defineFlow(
   {
     name: 'suggestStudyTopicsFlow',
-    inputSchema: SuggestStudyTopicsInputSchema,
+    inputSchema: SuggestStudyTopicsInputSchema, // External flow input remains the same
     outputSchema: SuggestStudyTopicsOutputSchema,
   },
-  async input => {
-    const {output} = await prompt(input);
+  async (input: SuggestStudyTopicsInput) => {
+    const currentDateFormatted = format(new Date(), 'yyyy-MM-dd');
+    const promptInput = {
+      ...input,
+      currentDate: currentDateFormatted,
+    };
+    const {output} = await prompt(promptInput);
     return output!;
   }
 );
+
