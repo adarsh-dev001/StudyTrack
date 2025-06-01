@@ -18,13 +18,13 @@ const subjectColors: Record<string, string> = {
   biology: "hsl(var(--chart-3))",
   mathematics: "hsl(var(--chart-4))",
   english: "hsl(var(--chart-5))",
-  history: "hsl(var(--chart-1))",
-  other: "hsl(var(--chart-2))",
+  history: "hsl(var(--chart-1))", // Re-using chart-1 for variety
+  other: "hsl(var(--chart-2))", // Re-using chart-2 for variety
 };
 
 const getSubjectColor = (subjectKey: string) => {
   const normalizedKey = subjectKey.toLowerCase();
-  return subjectColors[normalizedKey] || "hsl(var(--muted-foreground))";
+  return subjectColors[normalizedKey] || "hsl(var(--muted-foreground))"; // Fallback color
 }
 
 const subjectTimeConfigBase = {
@@ -38,13 +38,44 @@ const subjectTimeConfigBase = {
   other: { label: "Other", color: getSubjectColor("other") },
 } satisfies ChartConfig;
 
+interface SubjectTimeDataPoint {
+  subject: string;
+  hours: number;
+  fill: string;
+}
+
 interface SubjectTimeDistributionChartProps {
   selectedSubjectFilter?: string | null;
 }
 
+// Helper to compare two arrays of SubjectTimeDataPoint
+function areSubjectTimeDataArraysEqual(arr1: SubjectTimeDataPoint[], arr2: SubjectTimeDataPoint[]): boolean {
+  if (arr1.length !== arr2.length) return false;
+  for (let i = 0; i < arr1.length; i++) {
+    if (arr1[i].subject !== arr2[i].subject || arr1[i].hours !== arr2[i].hours || arr1[i].fill !== arr2[i].fill) {
+      return false;
+    }
+  }
+  return true;
+}
+
+// Helper to compare two ChartConfig objects
+function areChartConfigsEqual(cfg1: ChartConfig, cfg2: ChartConfig): boolean {
+  const keys1 = Object.keys(cfg1);
+  const keys2 = Object.keys(cfg2);
+  if (keys1.length !== keys2.length) return false;
+  for (const key of keys1) {
+    if (!cfg2[key] || cfg1[key].label !== cfg2[key].label || cfg1[key].color !== cfg2[key].color) {
+      return false;
+    }
+  }
+  return true;
+}
+
+
 export default function SubjectTimeDistributionChart({ selectedSubjectFilter = null }: SubjectTimeDistributionChartProps) {
   const { currentUser } = useAuth();
-  const [subjectTimeDataDynamic, setSubjectTimeDataDynamic] = useState<{ subject: string; hours: number; fill: string; }[]>([]);
+  const [subjectTimeDataDynamic, setSubjectTimeDataDynamic] = useState<SubjectTimeDataPoint[]>([]);
   const [loadingSubjectData, setLoadingSubjectData] = useState(true);
   const [subjectTimeConfig, setSubjectTimeConfig] = useState<ChartConfig>(subjectTimeConfigBase);
   const unsubscribeRef = useRef<Unsubscribe | null>(null);
@@ -66,13 +97,10 @@ export default function SubjectTimeDistributionChart({ selectedSubjectFilter = n
     let q;
 
     if (selectedSubjectFilter && selectedSubjectFilter !== "all") {
-       // If a subject filter is applied, ensure the query includes it along with the status.
-       // Firestore might require a composite index for this: (subject, status).
       q = query(tasksRef, where('subject', '==', selectedSubjectFilter), where('status', '==', 'completed'));
     } else {
       q = query(tasksRef, where('status', '==', 'completed'));
     }
-
 
     if (unsubscribeRef.current) {
       unsubscribeRef.current();
@@ -82,7 +110,7 @@ export default function SubjectTimeDistributionChart({ selectedSubjectFilter = n
       const processingStartTime = performance.now();
       const subjectHoursMap: Record<string, number> = {};
       querySnapshot.forEach((doc) => {
-        const task = doc.data() as { subject: string; duration: number; title: string }; // Assume title might exist for context
+        const task = doc.data() as { subject: string; duration: number; title: string };
         if (task.subject && typeof task.subject === 'string' && typeof task.duration === 'number' && task.duration > 0) {
           const subjectKey = task.subject.toLowerCase();
           subjectHoursMap[subjectKey] = (subjectHoursMap[subjectKey] || 0) + task.duration;
@@ -98,7 +126,7 @@ export default function SubjectTimeDistributionChart({ selectedSubjectFilter = n
           hours,
           fill: getSubjectColor(subjectKey),
         };
-      });
+      }).sort((a, b) => b.hours - a.hours); // Sort for consistent order if that helps comparisons
 
       const newChartConfig: ChartConfig = { hours: { label: "Hours" } };
       newDynamicData.forEach(item => {
@@ -108,8 +136,20 @@ export default function SubjectTimeDistributionChart({ selectedSubjectFilter = n
         }
       });
       
-      setSubjectTimeDataDynamic(newDynamicData);
-      setSubjectTimeConfig(newChartConfig);
+      setSubjectTimeDataDynamic(prevData => {
+        if (areSubjectTimeDataArraysEqual(prevData, newDynamicData)) {
+          return prevData;
+        }
+        return newDynamicData;
+      });
+
+      setSubjectTimeConfig(prevConfig => {
+        if (areChartConfigsEqual(prevConfig, newChartConfig)) {
+          return prevConfig;
+        }
+        return newChartConfig;
+      });
+      
       setLoadingSubjectData(false);
 
     }, (error) => {
@@ -149,15 +189,23 @@ export default function SubjectTimeDistributionChart({ selectedSubjectFilter = n
           <p className="text-muted-foreground text-center">No completed tasks with subject data found. <br />Complete some tasks in the planner to see this chart!</p>
         )}
         {!loadingSubjectData && subjectTimeDataDynamic.length > 0 && (
-          <ChartContainer config={subjectTimeConfig} className="h-[250px] w-[300px]">
+          <ChartContainer config={subjectTimeConfig} className="h-[250px] w-full max-w-[350px] sm:max-w-[400px] mx-auto"> {/* Adjusted width */}
             <RechartsPieChart>
               <ChartTooltip cursor={false} content={<ChartTooltipContent hideLabel nameKey="subject" />} />
-              <Pie data={subjectTimeDataDynamic} dataKey="hours" nameKey="subject" label={({ subject, percent }) => `${subject}: ${(percent * 100).toFixed(0)}%`}>
+              <Pie 
+                data={subjectTimeDataDynamic} 
+                dataKey="hours" 
+                nameKey="subject" 
+                labelLine={false}
+                label={({ subject, percent, hours }) => percent > 0.03 ? `${subject}: ${(percent * 100).toFixed(0)}% (${hours}h)` : ''} // Show label only if significant
+                outerRadius={80} // Adjusted size
+                innerRadius={40} // For a donut chart effect
+              >
                 {subjectTimeDataDynamic.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={entry.fill} />
+                  <Cell key={`cell-${index}`} fill={entry.fill} stroke={entry.fill} /> // Added stroke for better segment separation
                 ))}
               </Pie>
-              <ChartLegend content={<ChartLegend className="mt-4" />} />
+              <ChartLegend content={<ChartLegend className="mt-4 text-xs" />} /> {/* Made legend text smaller */}
             </RechartsPieChart>
           </ChartContainer>
         )}
@@ -165,3 +213,4 @@ export default function SubjectTimeDistributionChart({ selectedSubjectFilter = n
     </Card>
   );
 }
+
