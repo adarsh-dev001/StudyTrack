@@ -81,7 +81,7 @@ export default function SubjectTimeDistributionChart({ selectedSubjectFilter = n
   const unsubscribeRef = useRef<Unsubscribe | null>(null);
 
   useEffect(() => {
-    if (!currentUser || !db) {
+    if (!currentUser?.uid || !db) { // Added !db check for safety, though db should be stable
       setLoadingSubjectData(false);
       setSubjectTimeDataDynamic([]);
       setSubjectTimeConfig(subjectTimeConfigBase);
@@ -107,7 +107,6 @@ export default function SubjectTimeDistributionChart({ selectedSubjectFilter = n
     }
 
     unsubscribeRef.current = onSnapshot(q, (querySnapshot) => {
-      const processingStartTime = performance.now();
       const subjectHoursMap: Record<string, number> = {};
       querySnapshot.forEach((doc) => {
         const task = doc.data() as { subject: string; duration: number; title: string };
@@ -116,8 +115,6 @@ export default function SubjectTimeDistributionChart({ selectedSubjectFilter = n
           subjectHoursMap[subjectKey] = (subjectHoursMap[subjectKey] || 0) + task.duration;
         }
       });
-      const dataProcessingTime = performance.now() - processingStartTime;
-      console.log(`AnalyticsPage (SubjectTimeDistribution): Data processing took ${dataProcessingTime.toFixed(2)}ms for ${querySnapshot.size} documents.`);
 
       const newDynamicData = Object.entries(subjectHoursMap).map(([subjectKey, hours]) => {
         const subjectLabel = subjectKey.charAt(0).toUpperCase() + subjectKey.slice(1);
@@ -126,7 +123,7 @@ export default function SubjectTimeDistributionChart({ selectedSubjectFilter = n
           hours,
           fill: getSubjectColor(subjectKey),
         };
-      }).sort((a, b) => b.hours - a.hours); // Sort for consistent order if that helps comparisons
+      }).sort((a, b) => b.hours - a.hours);
 
       const newChartConfig: ChartConfig = { hours: { label: "Hours" } };
       newDynamicData.forEach(item => {
@@ -136,8 +133,6 @@ export default function SubjectTimeDistributionChart({ selectedSubjectFilter = n
         }
       });
       
-      // The intentional blocking code that was here has been REMOVED.
-
       setSubjectTimeDataDynamic(prevData => {
         if (areSubjectTimeDataArraysEqual(prevData, newDynamicData)) {
           return prevData;
@@ -167,7 +162,7 @@ export default function SubjectTimeDistributionChart({ selectedSubjectFilter = n
         unsubscribeRef.current = null;
       }
     };
-  }, [currentUser?.uid, db, selectedSubjectFilter]);
+  }, [currentUser?.uid, selectedSubjectFilter]); // Removed db from dependency array
 
   return (
     <Card className="shadow-lg">
@@ -203,8 +198,8 @@ export default function SubjectTimeDistributionChart({ selectedSubjectFilter = n
                 outerRadius={80} // Adjusted size
                 innerRadius={40} // For a donut chart effect
               >
-                {subjectTimeDataDynamic.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={entry.fill} stroke={entry.fill} /> // Added stroke for better segment separation
+                {subjectTimeDataDynamic.map((entry) => (
+                  <Cell key={`cell-${entry.subject}`} fill={entry.fill} stroke={entry.fill} />
                 ))}
               </Pie>
               <ChartLegend content={<ChartLegend className="mt-4 text-xs" />} /> {/* Made legend text smaller */}
