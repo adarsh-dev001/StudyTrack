@@ -7,7 +7,9 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Loader2 } from 'lucide-react';
 
 const PlannerView = React.lazy(() => import('@/components/planner/planner-view').then(module => ({ default: module.PlannerView })));
-const DayView = React.lazy(() => import('@/components/planner/day-view')); // Corrected import
+const DayView = React.lazy(() => import('@/components/planner/day-view'));
+const MonthView = React.lazy(() => import('@/components/planner/month-view').then(module => ({ default: module.MonthView })));
+
 
 const ALL_SUBJECTS_FILTER_VALUE = "all";
 
@@ -46,17 +48,47 @@ function DayViewFallback() {
   );
 }
 
+function MonthViewFallback() {
+  return (
+    <div className="flex-grow overflow-hidden p-4 border rounded-lg shadow flex flex-col items-center justify-center min-h-[400px] bg-card">
+      <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
+      <p className="text-muted-foreground">Loading Month View...</p>
+      <div className="w-full mt-6 space-y-3">
+        <div className="flex justify-between items-center mb-2">
+          <Skeleton className="h-8 w-24" />
+          <Skeleton className="h-8 w-40" />
+          <Skeleton className="h-8 w-24" />
+        </div>
+        <div className="grid grid-cols-7 gap-1">
+            {Array.from({length: 7}).map((_, i) => <Skeleton key={`header-${i}`} className="h-8 w-full opacity-50" />)}
+            {Array.from({length: 35}).map((_, i) => <Skeleton key={`day-${i}`} className="h-20 w-full opacity-30" />)}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 
 export default function StudyPlannerPage() {
   const [currentView, setCurrentView] = useState<'day' | 'week' | 'month'>('week');
-  const [selectedDate, setSelectedDate] = useState<Date>(new Date()); // Ensure selectedDate is always a Date
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date()); 
   const [selectedSubject, setSelectedSubject] = useState<string>(ALL_SUBJECTS_FILTER_VALUE);
 
-  const handleDateChange = (date: Date | undefined) => {
-    if (date) {
+  const handleDateChange = (date: Date | undefined) => { // Calendar onSelect can return undefined
+    if (date instanceof Date) { // Check if date is a valid Date object
       setSelectedDate(date);
+    } else if (date === undefined) {
+      // Handle case where user deselects date in calendar, if applicable
+      // For now, we might not want to allow undefined if a date is always expected.
+      // Or set to new Date() as a fallback.
+      setSelectedDate(new Date()); // Or keep previous, or handle as error
     }
   };
+  
+  const handleMonthViewDateChange = (date: Date) => { // Specific handler for month view clicks
+    setSelectedDate(date);
+  };
+
 
   return (
     <div className="w-full flex h-full flex-col space-y-4">
@@ -64,7 +96,7 @@ export default function StudyPlannerPage() {
         currentView={currentView}
         onViewChange={setCurrentView}
         selectedDate={selectedDate}
-        onDateChange={handleDateChange} // Use updated handler
+        onDateChange={handleDateChange}
         selectedSubject={selectedSubject}
         onSubjectChange={setSelectedSubject}
         allSubjectsValue={ALL_SUBJECTS_FILTER_VALUE}
@@ -87,12 +119,18 @@ export default function StudyPlannerPage() {
           </Suspense>
         )}
         {currentView === 'month' && (
-          <div className="rounded-xl border bg-card text-card-foreground shadow p-6 min-h-[400px] flex items-center justify-center">
-            <p className="text-muted-foreground text-xl">Month View Coming Soon!</p>
-          </div>
+          <Suspense fallback={<MonthViewFallback />}>
+            <MonthView
+                selectedDate={selectedDate}
+                onDateChange={handleMonthViewDateChange} // Use the specific handler
+                onViewChange={setCurrentView}
+                selectedSubjectFilter={selectedSubject === ALL_SUBJECTS_FILTER_VALUE ? null : selectedSubject}
+            />
+          </Suspense>
         )}
       </div>
     </div>
   );
 }
 
+    
