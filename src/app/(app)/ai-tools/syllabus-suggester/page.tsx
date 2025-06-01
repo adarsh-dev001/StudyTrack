@@ -303,7 +303,7 @@ export default function SyllabusSuggesterPage() {
           </CardHeader>
           <CardContent className="space-y-6">
             {overallFeedback && (
-                <div className="p-4 bg-amber-50 border border-amber-200 rounded-md text-amber-700">
+                <div className="p-4 bg-amber-50 border border-amber-200 rounded-md text-amber-700 dark:bg-amber-900/30 dark:border-amber-700 dark:text-amber-300">
                     <p className="font-semibold">Overall Feedback & Advice:</p>
                     <p className="text-sm">{overallFeedback}</p>
                 </div>
@@ -349,5 +349,3 @@ export default function SyllabusSuggesterPage() {
     </div>
   );
 }
-
-```
