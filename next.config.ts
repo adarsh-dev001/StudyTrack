@@ -1,5 +1,15 @@
 
 import type {NextConfig} from 'next';
+import withPWAInit from 'next-pwa';
+
+const withPWA = withPWAInit({
+  dest: 'public',
+  register: true,
+  skipWaiting: true,
+  disable: process.env.NODE_ENV === 'development',
+  // You can add more PWA configurations here if needed
+  // e.g., runtimeCaching: [...]
+});
 
 /** @type {import('next').NextConfig} */
 const nextConfig: NextConfig = {
@@ -26,4 +36,4 @@ const nextConfig: NextConfig = {
   pageExtensions: ['js', 'jsx', 'ts', 'tsx'],
 };
  
-export default nextConfig;
+export default withPWA(nextConfig);
