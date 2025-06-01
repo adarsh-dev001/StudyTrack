@@ -38,8 +38,9 @@ import {
 } from "firebase/firestore";
 import { format } from "date-fns";
 import type { Task, Priority } from "./planner-types";
-import { subjects, getPriorityBadge, getSubjectInfo, hourToDisplayTime } from "./planner-utils";
+import { subjects, getPriorityBadgeInfo, getSubjectInfo, hourToDisplayTime } from "./planner-utils";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Badge } from "@/components/ui/badge"; // Import Badge component
 
 // Lazy load the dialog content
 const NewTaskDialogContent = React.lazy(() => import('./new-task-dialog-content'));
@@ -186,6 +187,7 @@ export default function DayView({ selectedDate, selectedSubjectFilter }: DayView
 
   const renderTaskCard = (task: Task) => {
     const subjectInfo = getSubjectInfo(task.subject);
+    const priorityInfo = getPriorityBadgeInfo(task.priority);
     return (
       <Card key={task.id} className={cn("mb-3 shadow-md border", subjectInfo.color, task.status === "completed" ? "opacity-60 line-through" : "")}>
         <CardHeader className="pb-2 pt-3 px-3">
@@ -214,7 +216,7 @@ export default function DayView({ selectedDate, selectedSubjectFilter }: DayView
               <Clock className="h-3 w-3 mr-1" />
               <span>{hourToDisplayTime(task.startHour)} ({task.duration} {task.duration === 1 ? "hr" : "hrs"})</span>
             </div>
-            {getPriorityBadge(task.priority)}
+            <Badge variant={priorityInfo.variant} className={priorityInfo.className}>{priorityInfo.text}</Badge>
           </div>
         </CardContent>
       </Card>
@@ -275,6 +277,7 @@ export default function DayView({ selectedDate, selectedSubjectFilter }: DayView
                     newTask={{...newTask, day: selectedDate.getDay() }} // Ensure day is correctly set
                     onInputChange={handleInputChange}
                     onSelectChange={handleSelectChange}
+                    isDayView={true} // Indicate it's for DayView
                 />
             </Suspense>
             <DialogFooter className="mt-2 pt-4 border-t">
@@ -322,4 +325,3 @@ export default function DayView({ selectedDate, selectedSubjectFilter }: DayView
     </div>
   );
 }
-

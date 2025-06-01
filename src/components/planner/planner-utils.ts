@@ -1,7 +1,8 @@
 
-import { Badge } from "@/components/ui/badge";
+import { Badge, badgeVariants } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import type { Priority } from "./planner-types";
+import type { VariantProps } from "class-variance-authority";
 
 export const subjects = [
   { id: "physics", name: "Physics", color: "bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-100 border-blue-300 dark:border-blue-700", textColor: "text-blue-800 dark:text-blue-100" },
@@ -13,16 +14,23 @@ export const subjects = [
   { id: "other", name: "Other", color: "bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-100 border-gray-300 dark:border-gray-600", textColor: "text-gray-800 dark:text-gray-100" },
 ];
 
-export const getPriorityBadge = (priority: Priority) => {
+export interface PriorityBadgeInfo {
+  text: string;
+  variant: VariantProps<typeof badgeVariants>["variant"];
+  className?: string;
+}
+
+export const getPriorityBadgeInfo = (priority: Priority): PriorityBadgeInfo => {
   switch (priority) {
     case "high":
-      return <Badge variant="destructive" className="bg-red-500 hover:bg-red-600 text-white">High</Badge>;
+      return { text: "High", variant: "destructive", className: "bg-red-500 hover:bg-red-600 text-white" };
     case "medium":
-      return <Badge className="bg-yellow-500 hover:bg-yellow-600 text-white">Medium</Badge>;
+      // Use "default" variant for Badge structure, but override styles with className
+      return { text: "Medium", variant: "default", className: "bg-yellow-500 hover:bg-yellow-600 text-white border-transparent" };
     case "low":
-      return <Badge variant="outline" className="bg-green-500 hover:bg-green-600 text-white border-green-600">Low</Badge>;
+      return { text: "Low", variant: "outline", className: "bg-green-500 hover:bg-green-600 text-white border-green-600" };
     default:
-      return <Badge variant="secondary">Unknown</Badge>;
+      return { text: "Unknown", variant: "secondary" };
   }
 };
 

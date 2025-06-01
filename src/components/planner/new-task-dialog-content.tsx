@@ -12,8 +12,8 @@ import {
   SelectTrigger,
   SelectValue
 } from "@/components/ui/select";
-import type { Priority, Task } from "./planner-types"; // Updated import
-import { subjects } from "./planner-utils"; // Updated import
+import type { Priority, Task } from "./planner-types"; 
+import { subjects } from "./planner-utils"; 
 
 const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const hours = Array.from({ length: 15 }, (_, i) => i + 8); // 8 AM to 10 PM
@@ -22,7 +22,7 @@ interface NewTaskDialogContentProps {
   newTask: Partial<Omit<Task, 'id'>>;
   onInputChange: (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
   onSelectChange: (name: string, value: string | number) => void;
-  isDayView?: boolean; // Optional prop to indicate if the dialog is used in DayView
+  isDayView?: boolean; 
 }
 
 export default function NewTaskDialogContent({ newTask, onInputChange, onSelectChange, isDayView = false }: NewTaskDialogContentProps) {
@@ -66,8 +66,8 @@ export default function NewTaskDialogContent({ newTask, onInputChange, onSelectC
           />
         </div>
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {!isDayView && ( // Only show Day selector if not in DayView (where day is fixed)
+      <div className={cn("grid grid-cols-1 gap-4", !isDayView && "md:grid-cols-2")}>
+        {!isDayView && ( 
             <div className="grid gap-2">
             <Label htmlFor="day">Day <span className="text-destructive">*</span></Label>
             <Select
@@ -105,8 +105,6 @@ export default function NewTaskDialogContent({ newTask, onInputChange, onSelectC
             </SelectContent>
           </Select>
         </div>
-         {/* Adjust grid if DayView to ensure StartTime is not alone if Day is hidden */}
-        {isDayView && <div className="md:hidden"></div>} 
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="grid gap-2">
@@ -155,4 +153,3 @@ export default function NewTaskDialogContent({ newTask, onInputChange, onSelectC
     </div>
   );
 }
-

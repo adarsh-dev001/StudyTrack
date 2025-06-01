@@ -38,8 +38,9 @@ import {
   onSnapshot
 } from "firebase/firestore"
 import { Skeleton } from "@/components/ui/skeleton";
-import type { Task, Priority } from "./planner-types"; // Updated import
-import { subjects, getPriorityBadge, getSubjectInfo } from "./planner-utils"; // Updated import
+import type { Task, Priority } from "./planner-types"; 
+import { subjects, getPriorityBadgeInfo, getSubjectInfo } from "./planner-utils"; 
+import { Badge } from "@/components/ui/badge"; // Import Badge component
 
 const NewTaskDialogContent = React.lazy(() => import('./new-task-dialog-content'));
 
@@ -126,7 +127,7 @@ export function PlannerView({ selectedDate, selectedSubjectFilter }: PlannerView
     });
 
     return () => unsubscribe();
-  }, [currentUser, selectedSubjectFilter]); // Removed selectedDate from deps as week view shows all tasks
+  }, [currentUser, selectedSubjectFilter]); 
 
   const handleInputChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -240,6 +241,7 @@ export function PlannerView({ selectedDate, selectedSubjectFilter }: PlannerView
 
   const renderTask = (task: Task) => {
     const subjectInfo = getSubjectInfo(task.subject);
+    const priorityInfo = getPriorityBadgeInfo(task.priority);
 
     return (
       <div
@@ -292,7 +294,7 @@ export function PlannerView({ selectedDate, selectedSubjectFilter }: PlannerView
         </div>
         {task.priority && (
           <div className="mt-1.5">
-            {getPriorityBadge(task.priority)}
+            <Badge variant={priorityInfo.variant} className={priorityInfo.className}>{priorityInfo.text}</Badge>
           </div>
         )}
       </div>
@@ -442,6 +444,7 @@ export function PlannerView({ selectedDate, selectedSubjectFilter }: PlannerView
                         newTask={newTask}
                         onInputChange={handleInputChange}
                         onSelectChange={handleSelectChange}
+                        isDayView={false} // Indicate it's for WeekView or general planner
                     />
                 </Suspense>
                 <DialogFooter className="mt-2 pt-4 border-t">
