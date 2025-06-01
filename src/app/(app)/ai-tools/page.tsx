@@ -44,7 +44,7 @@ export default function AiToolsPage() {
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         {aiTools.map((tool) => (
-          <Card key={tool.title} className="shadow-lg hover:shadow-xl transition-shadow duration-300_transform hover:-translate-y-1 flex flex-col">
+          <Card key={tool.title} className="shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 flex flex-col">
             <CardHeader className="flex flex-row items-start gap-4 space-y-0 pb-3">
               <div className="bg-primary/10 p-3 rounded-lg">
                 {tool.icon}
