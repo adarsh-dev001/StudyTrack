@@ -2,6 +2,7 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { useState } from 'react';
 import type { PostMeta } from '@/lib/blog.tsx';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -57,6 +58,16 @@ export default function BlogPostsDisplayClient({ posts, categories }: BlogPostsD
         <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
           {filteredPosts.map((post) => (
             <Card key={post.slug} className="flex flex-col overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-300">
+              <Link href={`/blog/${post.slug}`} className="block aspect-[16/9] relative w-full overflow-hidden">
+                <Image 
+                  src={post.featuredImage || "https://placehold.co/600x338.png"}
+                  alt={post.title}
+                  layout="fill"
+                  objectFit="cover"
+                  className="hover:scale-105 transition-transform duration-300"
+                  data-ai-hint="article highlight"
+                />
+              </Link>
               <CardHeader>
                 <CardTitle className="font-headline text-xl hover:text-primary transition-colors">
                   <Link href={`/blog/${post.slug}`}>

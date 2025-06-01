@@ -1,26 +1,20 @@
 
-// This page will be a Server Component for data fetching
-// and pass the serialized MDX to a Client Component for rendering.
-
 import type React from 'react';
-import { getPostBySlug, type PostMeta } from '@/lib/blog'; // Ensure this path is correct
-import { notFound } from 'next/navigation'; // Use for Server Components
+import { getPostBySlug, type PostMeta } from '@/lib/blog';
+import { notFound } from 'next/navigation';
 import { format } from 'date-fns';
 import type { MDXRemoteSerializeResult } from 'next-mdx-remote';
-import MdxContentRenderer from '@/components/blog/mdx-content-renderer'; // The client component for rendering
-import { Skeleton } from '@/components/ui/skeleton'; // For potential Suspense boundary
+import MdxContentRenderer from '@/components/blog/mdx-content-renderer';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
+import Image from 'next/image';
 import { ChevronLeft } from 'lucide-react';
 
-
-// Interface for the data structure returned by getPostBySlug
 interface BlogPostData {
   mdxSource: MDXRemoteSerializeResult;
   metadata: PostMeta;
 }
 
-// generateMetadata can be used for SEO in Server Components
 export async function generateMetadata({ params }: { params: { slug: string } }) {
   const postData = await getPostBySlug(params.slug);
   if (!postData) {
@@ -40,22 +34,16 @@ export async function generateMetadata({ params }: { params: { slug: string } })
         publishedTime: postData.metadata.date,
         authors: [postData.metadata.author],
         tags: [postData.metadata.category],
+        images: postData.metadata.featuredImage ? [{ url: postData.metadata.featuredImage }] : [],
     },
   };
 }
-
-// generateStaticParams can be used for pre-rendering paths at build time
-// export async function generateStaticParams() {
-//   const slugs = getPostSlugs(); // Assuming you have this function in blog.tsx
-//   return slugs.map(slug => ({ slug }));
-// }
-
 
 export default async function BlogPostPage({ params }: { params: { slug: string } }) {
   const postData = await getPostBySlug(params.slug);
 
   if (!postData) {
-    notFound(); // Correct way to handle not found in Server Components
+    notFound();
   }
 
   return (
@@ -70,6 +58,29 @@ export default async function BlogPostPage({ params }: { params: { slug: string 
       </div>
       <article>
         <header className="mb-8">
+          {postData.metadata.featuredImage && (
+            <div className="relative w-full aspect-[16/9] md:aspect-[2/1] rounded-lg overflow-hidden mb-6 shadow-lg">
+              <Image
+                src={postData.metadata.featuredImage}
+                alt={postData.metadata.title}
+                layout="fill"
+                objectFit="cover"
+                data-ai-hint="article banner"
+                priority // For LCP
+              />
+            </div>
+          )}
+          {!postData.metadata.featuredImage && (
+             <div className="relative w-full aspect-[16/9] md:aspect-[2/1] rounded-lg overflow-hidden mb-6 shadow-lg bg-muted">
+              <Image
+                src="https://placehold.co/800x450.png"
+                alt="Placeholder Image"
+                layout="fill"
+                objectFit="cover"
+                data-ai-hint="article banner placeholder"
+              />
+            </div>
+          )}
           <h1 className="font-headline text-3xl font-bold tracking-tight text-foreground md:text-4xl lg:text-5xl mb-3">
             {postData.metadata.title}
           </h1>
@@ -79,7 +90,6 @@ export default async function BlogPostPage({ params }: { params: { slug: string 
         </header>
         
         <div className="prose prose-lg lg:prose-xl max-w-none dark:prose-invert text-foreground prose-headings:text-foreground prose-a:text-primary hover:prose-a:text-primary/80 prose-strong:text-foreground prose-blockquote:border-primary prose-blockquote:text-muted-foreground prose-code:text-foreground prose-code:bg-muted prose-code:p-1 prose-code:rounded-md prose-table:border prose-th:bg-muted prose-li:marker:text-primary">
-          {/* MDXRemote will be handled by the client component */}
           <MdxContentRenderer source={postData.mdxSource} />
         </div>
       </article>
