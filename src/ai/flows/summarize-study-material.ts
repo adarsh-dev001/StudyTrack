@@ -6,6 +6,7 @@
  * - summarizeStudyMaterial - A function that handles summarizing material, extracting key concepts, and generating MCQs.
  * - SummarizeStudyMaterialInput - The input type for the summarizeStudyMaterial function.
  * - SummarizeStudyMaterialOutput - The return type for the summarizeStudyMaterial function.
+ * - MCQ - The type for a single Multiple Choice Question.
  */
 
 import {ai} from '@/ai/genkit';
@@ -24,6 +25,7 @@ const MCQSchema = z.object({
   correctAnswerIndex: z.number().int().min(0).describe("The 0-based index of the correct answer in the options array."),
   explanation: z.string().optional().describe("A brief explanation for why the answer is correct and/or why other options are incorrect.")
 });
+export type MCQ = z.infer<typeof MCQSchema>;
 
 const SummarizeStudyMaterialOutputSchema = z.object({
   summary: z.string().describe('A concise summary of the study material, approximately 100-200 words.'),

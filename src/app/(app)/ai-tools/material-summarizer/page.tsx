@@ -14,7 +14,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Loader2, Wand2, Sparkles, ListChecks, HelpCircle, CheckCircle, XCircle, Lightbulb } from 'lucide-react';
-import { summarizeStudyMaterial, type SummarizeStudyMaterialOutput } from '@/ai/flows/summarize-study-material';
+import { summarizeStudyMaterial, type SummarizeStudyMaterialOutput, type MCQ } from '@/ai/flows/summarize-study-material';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 
@@ -25,7 +25,7 @@ const summarizerFormSchema = z.object({
 
 type SummarizerFormData = z.infer<typeof summarizerFormSchema>;
 
-interface MCQWithUserAnswer extends SummarizeStudyMaterialOutput['multipleChoiceQuestions'][0] {
+interface MCQWithUserAnswer extends MCQ {
   userSelectedOption?: number;
   answerRevealed?: boolean;
 }
@@ -289,3 +289,4 @@ export default function MaterialSummarizerPage() {
     </div>
   );
 }
+
