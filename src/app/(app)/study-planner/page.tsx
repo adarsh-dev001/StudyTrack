@@ -8,7 +8,7 @@ import { Loader2 } from 'lucide-react';
 
 const PlannerView = React.lazy(() => import('@/components/planner/planner-view').then(module => ({ default: module.PlannerView })));
 const DayView = React.lazy(() => import('@/components/planner/day-view'));
-const MonthView = React.lazy(() => import('@/components/planner/month-view').then(module => ({ default: module.MonthView })));
+const MonthView = React.lazy(() => import('@/components/planner/month-view'));
 
 
 const ALL_SUBJECTS_FILTER_VALUE = "all";
