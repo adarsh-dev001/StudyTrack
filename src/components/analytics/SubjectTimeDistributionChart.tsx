@@ -136,19 +136,7 @@ export default function SubjectTimeDistributionChart({ selectedSubjectFilter = n
         }
       });
       
-      // Simulate heavy computation after data processing FOR TESTING ONLY
-      // This will block the main thread and make the UI unresponsive.
-      // REMOVE OR COMMENT OUT AFTER TESTING.
-      if (newDynamicData.length > 0) { // Only run if there's data to "process"
-        console.log("SubjectTimeDistributionChart: INTENTIONALLY BLOCKING THREAD FOR TESTING...");
-        const startTime = performance.now();
-        let i = 0;
-        while (performance.now() - startTime < 3000) { // Block for 3 seconds
-          i++; // Intensive loop
-        }
-        console.log("SubjectTimeDistributionChart: Blocking finished after 3 seconds.");
-      }
-      // END OF INTENTIONAL BLOCKING CODE
+      // The intentional blocking code that was here has been REMOVED.
 
       setSubjectTimeDataDynamic(prevData => {
         if (areSubjectTimeDataArraysEqual(prevData, newDynamicData)) {
