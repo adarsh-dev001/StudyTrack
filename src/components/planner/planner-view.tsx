@@ -4,7 +4,6 @@
 import type { ChangeEvent } from "react";
 import React, { useState, useEffect, Suspense } from "react"
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
   Plus,
@@ -36,62 +35,17 @@ import {
   deleteDoc,
   query,
   where,
-  onSnapshot,
-  Timestamp
+  onSnapshot
 } from "firebase/firestore"
 import { Skeleton } from "@/components/ui/skeleton";
+import type { Task, Priority } from "./planner-types"; // Updated import
+import { subjects, getPriorityBadge, getSubjectInfo } from "./planner-utils"; // Updated import
 
 const NewTaskDialogContent = React.lazy(() => import('./new-task-dialog-content'));
-
-
-// Types
-export type Priority = "low" | "medium" | "high"
-export type TaskStatus = "pending" | "completed" | "missed"
-
-export interface Task {
-  id: string
-  userId?: string
-  title: string
-  subject: string
-  topic: string
-  description?: string
-  duration: number
-  priority: Priority
-  status: TaskStatus
-  day: number
-  startHour: number
-}
 
 interface PlannerViewProps {
   selectedDate?: Date;
   selectedSubjectFilter?: string | null;
-}
-
-const subjects = [
-  { id: "physics", name: "Physics", color: "bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-100 border-blue-300 dark:border-blue-700" },
-  { id: "chemistry", name: "Chemistry", color: "bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-100 border-green-300 dark:border-green-700" },
-  { id: "biology", name: "Biology", color: "bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-100 border-purple-300 dark:border-purple-700" },
-  { id: "mathematics", name: "Mathematics", color: "bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-100 border-red-300 dark:border-red-700" },
-  { id: "english", name: "English", color: "bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-100 border-yellow-300 dark:border-yellow-700" },
-  { id: "history", name: "History", color: "bg-orange-100 dark:bg-orange-900 text-orange-800 dark:text-orange-100 border-orange-300 dark:border-orange-700" },
-  { id: "other", name: "Other", color: "bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-100 border-gray-300 dark:border-gray-600" },
-];
-
-const getPriorityBadge = (priority: Priority) => {
-  switch (priority) {
-    case "high":
-      return <Badge variant="destructive" className="bg-red-500 hover:bg-red-600 text-white">High</Badge>
-    case "medium":
-      return <Badge className="bg-yellow-500 hover:bg-yellow-600 text-white">Medium</Badge>
-    case "low":
-      return <Badge variant="outline" className="bg-green-500 hover:bg-green-600 text-white border-green-600">Low</Badge>
-    default:
-      return <Badge variant="secondary">Unknown</Badge>;
-  }
-}
-
-const getSubjectInfo = (subjectId: string) => {
-  return subjects.find(s => s.id === subjectId) || subjects.find(s => s.id === "other")!;
 }
 
 function NewTaskDialogFallback() {
@@ -124,7 +78,7 @@ export function PlannerView({ selectedDate, selectedSubjectFilter }: PlannerView
     priority: "medium",
     status: "pending",
     duration: 1,
-    day: new Date().getDay(),
+    day: selectedDate ? selectedDate.getDay() : new Date().getDay(), // Initialize day with selectedDate
     startHour: 9,
     subject: subjects[0].id,
   })
@@ -134,6 +88,13 @@ export function PlannerView({ selectedDate, selectedSubjectFilter }: PlannerView
 
   const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
   const hours = Array.from({ length: 15 }, (_, i) => i + 8) // 8 AM to 10 PM (22:00)
+
+  useEffect(() => {
+    // When selectedDate changes, update the default day for new tasks
+    if (selectedDate) {
+      setNewTask(prev => ({ ...prev, day: selectedDate.getDay() }));
+    }
+  }, [selectedDate]);
 
   useEffect(() => {
     if (!currentUser || !db) {
@@ -146,19 +107,12 @@ export function PlannerView({ selectedDate, selectedSubjectFilter }: PlannerView
     const tasksCollectionRef = collection(db, "users", currentUser.uid, "plannerTasks");
     let q;
 
-    // Filtering logic remains the same
     if (selectedSubjectFilter && selectedSubjectFilter !== "all") {
       q = query(tasksCollectionRef, where("subject", "==", selectedSubjectFilter));
     } else {
       q = query(tasksCollectionRef);
     }
     
-    // Date filtering (if selectedDate is provided, filter tasks for that week)
-    // This example focuses on displaying the whole week around selectedDate,
-    // For more precise filtering by selectedDate if it's a day view, this would need adjustment.
-    // For week view, we typically show all tasks and the selectedDate helps navigate.
-    // If specific date filtering is needed for the week view, that logic would go here.
-
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
       const fetchedTasks: Task[] = [];
       querySnapshot.forEach((doc) => {
@@ -172,7 +126,7 @@ export function PlannerView({ selectedDate, selectedSubjectFilter }: PlannerView
     });
 
     return () => unsubscribe();
-  }, [currentUser, selectedSubjectFilter, selectedDate]);
+  }, [currentUser, selectedSubjectFilter]); // Removed selectedDate from deps as week view shows all tasks
 
   const handleInputChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -189,7 +143,7 @@ export function PlannerView({ selectedDate, selectedSubjectFilter }: PlannerView
       return;
     }
     if (!newTask.title || !newTask.subject || newTask.day === undefined || newTask.startHour === undefined || newTask.duration === undefined ) {
-      alert("Please fill in all required fields: Title, Subject, Day, Start Time, and Duration."); // User-friendly alert
+      alert("Please fill in all required fields: Title, Subject, Day, Start Time, and Duration.");
       return;
     }
 
@@ -209,14 +163,14 @@ export function PlannerView({ selectedDate, selectedSubjectFilter }: PlannerView
     try {
       const tasksCollectionRef = collection(db, "users", currentUser.uid, "plannerTasks");
       await addDoc(tasksCollectionRef, taskToSave);
-      setNewTask({ // Reset form
+      setNewTask({ 
         title: "",
         topic: "",
         description: "",
         priority: "medium",
         status: "pending",
         duration: 1,
-        day: new Date().getDay(),
+        day: selectedDate ? selectedDate.getDay() : new Date().getDay(),
         startHour: 9,
         subject: subjects[0].id,
       })
@@ -296,9 +250,9 @@ export function PlannerView({ selectedDate, selectedSubjectFilter }: PlannerView
           "rounded-md p-2 mb-1.5 cursor-move shadow-sm border relative group",
           task.status === "completed" ? "opacity-60 bg-opacity-70 line-through" : "opacity-100",
           subjectInfo.color,
-          "hover:shadow-md transition-shadow text-sm" //统一文字大小
+          "hover:shadow-md transition-shadow text-sm"
         )}
-        style={{ minHeight: `${Math.max(1, task.duration) * 2.25}rem` }} // Slightly increase height per duration unit
+        style={{ minHeight: `${Math.max(1, task.duration) * 2.25}rem` }} 
       >
         <div className="flex items-start justify-between">
           <div className="flex-1 overflow-hidden pr-1">
@@ -337,7 +291,7 @@ export function PlannerView({ selectedDate, selectedSubjectFilter }: PlannerView
           </div>
         </div>
         {task.priority && (
-          <div className="mt-1.5"> {/* Add small margin top */}
+          <div className="mt-1.5">
             {getPriorityBadge(task.priority)}
           </div>
         )}
@@ -345,12 +299,11 @@ export function PlannerView({ selectedDate, selectedSubjectFilter }: PlannerView
     )
   }
 
-  // Main Content Area
   const MainContent = () => {
     if (isLoadingTasks) {
       return (
-        <Card className="border-dashed flex-grow flex flex-col items-center justify-center min-h-[400px]">
-          <CardContent className="text-center">
+        <Card className="border-dashed flex-grow flex flex-col items-center justify-center min-h-[400px] bg-muted/20">
+          <CardContent className="text-center p-6">
             <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
             <p className="text-muted-foreground">Loading your study plan...</p>
           </CardContent>
@@ -358,7 +311,13 @@ export function PlannerView({ selectedDate, selectedSubjectFilter }: PlannerView
       );
     }
 
-    if (tasks.length === 0) {
+    const tasksForCurrentWeekView = tasks.filter(task => {
+        // Basic filtering, week view usually shows all tasks unless a specific date range logic is added
+        return true; 
+    });
+
+
+    if (tasksForCurrentWeekView.length === 0) {
       return (
         <Card className="border-dashed flex-grow flex flex-col items-center justify-center min-h-[400px] bg-muted/20">
           <CardContent className="text-center p-6">
@@ -386,11 +345,11 @@ export function PlannerView({ selectedDate, selectedSubjectFilter }: PlannerView
 
     return (
       <div className="overflow-auto flex-grow pb-2 -mx-1">
-        <div className="grid grid-cols-[auto_repeat(7,minmax(140px,1fr))] gap-1 min-w-[1024px]"> {/* Increased min cell width */}
+        <div className="grid grid-cols-[auto_repeat(7,minmax(150px,1fr))] gap-1 min-w-[1100px]"> 
           <div className="sticky left-0 bg-background z-10">
-            <div className="h-10"></div> {/* Spacer for day labels */}
+            <div className="h-10"></div> 
             {hours.map(hour => (
-              <div key={`time-${hour}`} className="h-24 flex items-center justify-center border-r pr-1 text-xs font-medium text-muted-foreground"> {/* Increased cell height */}
+              <div key={`time-${hour}`} className="h-24 flex items-center justify-center border-r pr-1 text-xs font-medium text-muted-foreground"> 
                 <span>
                   {hour % 12 === 0 ? 12 : hour % 12}{hour < 12 ? 'am' : 'pm'}
                 </span>
@@ -404,7 +363,7 @@ export function PlannerView({ selectedDate, selectedSubjectFilter }: PlannerView
                 {dayLabel}
               </div>
               {hours.map(hour => {
-                const tasksInSlot = tasks.filter(
+                const tasksInSlot = tasksForCurrentWeekView.filter(
                   task => task.day === dayIndex && task.startHour === hour
                 );
                 const isOver = draggedOver?.day === dayIndex && draggedOver?.hour === hour;
@@ -413,7 +372,7 @@ export function PlannerView({ selectedDate, selectedSubjectFilter }: PlannerView
                   <div
                     key={`${dayIndex}-${hour}`}
                     className={cn(
-                      "h-24 border rounded-md p-0.5 relative overflow-hidden", // Increased cell height
+                      "h-24 border rounded-md p-0.5 relative overflow-hidden", 
                       isOver ? "bg-accent/70 ring-1 ring-primary" : "bg-muted/20 hover:bg-muted/40",
                       tasksInSlot.length > 0 ? "border-border/60" : "border-dashed border-border/40"
                     )}
@@ -456,7 +415,6 @@ export function PlannerView({ selectedDate, selectedSubjectFilter }: PlannerView
             <p className="text-muted-foreground mb-6">
               Please login or sign up to start organizing your study schedule and track your progress.
             </p>
-            {/* Optionally add Login/Signup buttons here if contextually appropriate */}
           </CardContent>
         </Card>
       )}
@@ -521,6 +479,3 @@ export function PlannerView({ selectedDate, selectedSubjectFilter }: PlannerView
     </div>
   )
 }
-
-
-    
