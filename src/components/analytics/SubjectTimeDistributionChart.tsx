@@ -81,7 +81,7 @@ export default function SubjectTimeDistributionChart({ selectedSubjectFilter = n
   const unsubscribeRef = useRef<Unsubscribe | null>(null);
 
   useEffect(() => {
-    if (!currentUser?.uid || !db) { // Added !db check for safety, though db should be stable
+    if (!currentUser?.uid) { 
       setLoadingSubjectData(false);
       setSubjectTimeDataDynamic([]);
       setSubjectTimeConfig(subjectTimeConfigBase);
@@ -107,9 +107,10 @@ export default function SubjectTimeDistributionChart({ selectedSubjectFilter = n
     }
 
     unsubscribeRef.current = onSnapshot(q, (querySnapshot) => {
+      console.log(`SubjectTimeDistributionChart: Processing ${querySnapshot.size} completed task documents.`);
       const subjectHoursMap: Record<string, number> = {};
       querySnapshot.forEach((doc) => {
-        const task = doc.data() as { subject: string; duration: number; title: string };
+        const task = doc.data() as { subject: string; duration: number; title: string }; // title is not used here
         if (task.subject && typeof task.subject === 'string' && typeof task.duration === 'number' && task.duration > 0) {
           const subjectKey = task.subject.toLowerCase();
           subjectHoursMap[subjectKey] = (subjectHoursMap[subjectKey] || 0) + task.duration;
@@ -162,7 +163,7 @@ export default function SubjectTimeDistributionChart({ selectedSubjectFilter = n
         unsubscribeRef.current = null;
       }
     };
-  }, [currentUser?.uid, selectedSubjectFilter]); // Removed db from dependency array
+  }, [currentUser?.uid, selectedSubjectFilter]);
 
   return (
     <Card className="shadow-lg">
@@ -186,7 +187,7 @@ export default function SubjectTimeDistributionChart({ selectedSubjectFilter = n
           <p className="text-muted-foreground text-center">No completed tasks with subject data found. <br />Complete some tasks in the planner to see this chart!</p>
         )}
         {!loadingSubjectData && subjectTimeDataDynamic.length > 0 && (
-          <ChartContainer config={subjectTimeConfig} className="h-[250px] w-full max-w-[350px] sm:max-w-[400px] mx-auto"> {/* Adjusted width */}
+          <ChartContainer config={subjectTimeConfig} className="h-[250px] w-full max-w-[350px] sm:max-w-[400px] mx-auto">
             <RechartsPieChart>
               <ChartTooltip cursor={false} content={<ChartTooltipContent hideLabel nameKey="subject" />} />
               <Pie 
@@ -194,15 +195,15 @@ export default function SubjectTimeDistributionChart({ selectedSubjectFilter = n
                 dataKey="hours" 
                 nameKey="subject" 
                 labelLine={false}
-                label={({ subject, percent, hours }) => percent > 0.03 ? `${subject}: ${(percent * 100).toFixed(0)}% (${hours}h)` : ''} // Show label only if significant
-                outerRadius={80} // Adjusted size
-                innerRadius={40} // For a donut chart effect
+                label={({ subject, percent, hours }) => percent > 0.03 ? `${subject}: ${(percent * 100).toFixed(0)}% (${hours}h)` : ''}
+                outerRadius={80}
+                innerRadius={40}
               >
                 {subjectTimeDataDynamic.map((entry) => (
                   <Cell key={`cell-${entry.subject}`} fill={entry.fill} stroke={entry.fill} />
                 ))}
               </Pie>
-              <ChartLegend content={<ChartLegend className="mt-4 text-xs" />} /> {/* Made legend text smaller */}
+              <ChartLegend content={<ChartLegend className="mt-4 text-xs" />} />
             </RechartsPieChart>
           </ChartContainer>
         )}
