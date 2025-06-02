@@ -45,6 +45,12 @@ const nextConfig: NextConfig = {
         hostname: 'www.eggoz.com',
         port: '',
         pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'blogcdn.aakash.ac.in',
+        port: '',
+        pathname: '/**',
       }
     ],
   },
