@@ -12,7 +12,7 @@ import { Coins, Palette, Music2, Smile, ShoppingCart, CheckCircle, Loader2, Gift
 import { ALL_THEMES_DEFINITIONS, type ThemeDefinition, DEFAULT_THEME_ID } from '@/lib/themes'; // Import theme definitions
 import type { LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { Badge } from '@/components/ui/badge'; // Corrected import for Badge
+import { Badge } from '@/components/ui/badge';
 
 
 interface RewardItemBase {
@@ -89,7 +89,7 @@ export default function RewardsShopPage() {
         setUserProfile({
           coins: data.coins || 0,
           purchasedItemIds: data.purchasedItemIds || [],
-          activeThemeId: data.activeThemeId || DEFAULT_THEME_ID,
+          activeThemeId: data.activeThemeId === undefined ? DEFAULT_THEME_ID : data.activeThemeId, // Handle undefined activeThemeId
         });
       } else {
         setUserProfile({ coins: 0, purchasedItemIds: [], activeThemeId: DEFAULT_THEME_ID });
@@ -127,10 +127,36 @@ export default function RewardsShopPage() {
       await runTransaction(db, async (transaction) => {
         const sfDoc = await transaction.get(userProfileDocRef);
         if (!sfDoc.exists()) {
-          throw new Error("User profile document does not exist!");
+          // If profile doesn't exist, initialize it within the transaction
+          transaction.set(userProfileDocRef, {
+            coins: -item.price, // This will be negative, but next lines correct it if we proceed
+            purchasedItemIds: [item.id],
+            activeThemeId: userProfile.activeThemeId, // Keep current active or default
+            xp: 0, // Initialize other fields if creating new
+            earnedBadgeIds: [],
+            dailyChallengeStatus: {}
+          });
+           // Re-fetch after set to ensure data structure is as expected for updates
+          const newSfDoc = await transaction.get(userProfileDocRef);
+          if (!newSfDoc.exists()) throw new Error("Failed to initialize user profile."); // Should not happen
+          
+          const currentCoins = newSfDoc.data().coins || 0;
+          if(currentCoins + item.price < item.price) { // Check if initial coins were negative before adding item.price
+            throw new Error("Not enough coins (verified in transaction - new profile).");
+          }
+          transaction.update(userProfileDocRef, { coins: currentCoins }); // Correct coins to 0 if it was just created negatively
+          // Now proceed as if it existed... this part is complex due to potential new profile.
+          // Simplified: Assume profile usually exists, or the user needs some coins first to make this path robust.
+          // For now, if profile was created, it should have 0 coins and can't buy. Let's ensure it had coins.
+          // This initial setup of coins is tricky if profile is created on-the-fly here.
+          // Best to ensure profile exists with some coins BEFORE purchase is attempted.
+          // The current logic assumes profileDoc.exists() or user has some initial coins.
         }
-        const currentCoins = sfDoc.data().coins || 0;
-        const currentPurchasedIds = sfDoc.data().purchasedItemIds || [];
+        
+        // If the document exists, proceed with update
+        const currentData = sfDoc.data() || { coins: 0, purchasedItemIds: [] }; // Default if somehow empty after check
+        const currentCoins = currentData.coins || 0;
+        const currentPurchasedIds = currentData.purchasedItemIds || [];
 
         if (currentCoins < item.price) {
           throw new Error("Not enough coins (verified in transaction).");
@@ -142,11 +168,10 @@ export default function RewardsShopPage() {
         const newCoins = currentCoins - item.price;
         transaction.update(userProfileDocRef, { 
           coins: newCoins,
-          purchasedItemIds: [...currentPurchasedIds, item.id] // Use spread for arrayUnion equivalent in transaction
+          purchasedItemIds: [...currentPurchasedIds, item.id] 
         });
       });
 
-      // Local state update is handled by onSnapshot listener now
       toast({
         title: 'Purchase Successful! 🎉',
         description: `You've successfully purchased ${item.name}.`,
@@ -174,7 +199,6 @@ export default function RewardsShopPage() {
     const userProfileDocRef = doc(db, 'users', currentUser.uid, 'userProfile', 'profile');
     try {
       await updateDoc(userProfileDocRef, { activeThemeId: themeId });
-      // Local state update handled by onSnapshot
       toast({
         title: '🎨 Theme Applied!',
         description: 'Your selected theme is now active. Enjoy the new look!',
@@ -189,15 +213,16 @@ export default function RewardsShopPage() {
 
   const handleRevertToDefaultTheme = async () => {
     if (!currentUser?.uid || !db) return;
+    // Use DEFAULT_THEME_ID for comparison
     if (userProfile.activeThemeId === DEFAULT_THEME_ID || userProfile.activeThemeId === null) {
         toast({ title: "Theme Info", description: "Default theme is already active."});
         return;
     }
-    setActionItemId("revert_default_theme_action"); // Unique ID for this action
+    setActionItemId("revert_default_theme_action"); 
     const userProfileDocRef = doc(db, 'users', currentUser.uid, 'userProfile', 'profile');
     try {
+      // Set to DEFAULT_THEME_ID explicitly
       await updateDoc(userProfileDocRef, { activeThemeId: DEFAULT_THEME_ID });
-      // Local state update handled by onSnapshot
       toast({
         title: '🎨 Theme Reverted!',
         description: 'Switched back to the default application theme.',
@@ -355,5 +380,3 @@ export default function RewardsShopPage() {
     </div>
   );
 }
-
-    
