@@ -8,11 +8,13 @@ import { doc, getDoc, setDoc, Timestamp, onSnapshot, type Unsubscribe, updateDoc
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
-import { Flame, Loader2, CalendarCheck2, Award, Star, ShieldCheck, Brain, Clock, Zap, Share2, Copy, Check } from 'lucide-react';
+import { Flame, Loader2, CalendarCheck2, Award, Star, ShieldCheck, Brain, Clock, Zap, Share2, Copy, Check, Gift } from 'lucide-react'; // Added Gift
 import type { LucideIcon } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { isToday, isYesterday } from 'date-fns';
 import { cn } from '@/lib/utils';
+import Link from 'next/link';
+
 
 interface StreakData {
   currentStreak: number;
@@ -25,6 +27,7 @@ interface UserProfileData {
   earnedBadgeIds: string[];
   xp: number;
   coins: number;
+  purchasedItemIds: string[]; // Added for rewards shop
 }
 
 const initialStreakData: StreakData = {
@@ -37,6 +40,7 @@ const initialUserProfileData: UserProfileData = {
   earnedBadgeIds: [],
   xp: 0,
   coins: 0,
+  purchasedItemIds: [], // Initialize purchasedItemIds
 };
 
 // Define Badge Types
@@ -110,7 +114,7 @@ export default function StreaksPage() {
         setStreakData(initialStreakData);
         setAlreadyCheckedInToday(false);
       }
-      setLoading(false); // Consider moving this to only set false after both listeners have fired once
+      setLoading(false); 
     }, (error) => {
       console.error('Error fetching streak data:', error);
       toast({ title: 'Error Loading Streaks', description: 'Could not load streak data.', variant: 'destructive' });
@@ -126,6 +130,7 @@ export default function StreaksPage() {
           earnedBadgeIds: Array.isArray(rawData.earnedBadgeIds) ? rawData.earnedBadgeIds : [],
           xp: typeof rawData.xp === 'number' ? rawData.xp : 0,
           coins: typeof rawData.coins === 'number' ? rawData.coins : 0,
+          purchasedItemIds: Array.isArray(rawData.purchasedItemIds) ? rawData.purchasedItemIds : [], // Add purchasedItemIds
         });
       } else {
         // If profile doesn't exist, create it with initial values
@@ -133,11 +138,9 @@ export default function StreaksPage() {
           .then(() => setUserProfile(initialUserProfileData))
           .catch(err => console.error("Error creating initial user profile:", err));
       }
-      // setLoading(false); // Potentially set loading false here if this is the last one.
     }, (error) => {
       console.error('Error fetching user profile data:', error);
       toast({ title: 'Error Loading Profile', description: 'Could not load profile data.', variant: 'destructive' });
-      // setLoading(false);
     });
 
     return () => {
@@ -154,7 +157,6 @@ export default function StreaksPage() {
       return;
     }
 
-    // UI check first
     if (streakData.lastCheckInDate && isToday(streakData.lastCheckInDate.toDate())) {
       toast({ title: 'Already Checked In', description: 'You have already checked in for today!' });
       return;
@@ -165,7 +167,6 @@ export default function StreaksPage() {
     const userProfileDocRef = doc(db, 'users', currentUserId, 'userProfile', 'profile');
 
     try {
-      // Fetch latest data before writing (especially profile for badges)
       const [streakDocSnap, profileDocSnap] = await Promise.all([
         getDoc(userStreakDocRef),
         getDoc(userProfileDocRef)
@@ -174,13 +175,14 @@ export default function StreaksPage() {
       let currentDbStreakData = streakDocSnap.exists() ? streakDocSnap.data() as StreakData : initialStreakData;
       let currentDbProfileData = profileDocSnap.exists() ? profileDocSnap.data() as UserProfileData : initialUserProfileData;
       
-      // Ensure currentDbProfileData has earnedBadgeIds array
       if (!Array.isArray(currentDbProfileData.earnedBadgeIds)) {
         currentDbProfileData.earnedBadgeIds = [];
       }
+      if (!Array.isArray(currentDbProfileData.purchasedItemIds)) { // Ensure purchasedItemIds exists
+        currentDbProfileData.purchasedItemIds = [];
+      }
 
 
-      // Double-check if already checked in based on fresh DB data
       if (currentDbStreakData.lastCheckInDate && isToday(currentDbStreakData.lastCheckInDate.toDate())) {
         toast({ title: 'Already Checked In', description: 'You have already checked in today (verified from DB).' });
         setStreakData(currentDbStreakData); 
@@ -203,7 +205,6 @@ export default function StreaksPage() {
       };
       await setDoc(userStreakDocRef, updatedStreakData, { merge: true });
 
-      // Award Badges
       const newlyEarnedBadges: BadgeDefinition[] = [];
       const updatedEarnedBadgeIds = [...currentDbProfileData.earnedBadgeIds];
 
@@ -214,34 +215,30 @@ export default function StreaksPage() {
             newlyEarnedBadges.push(badge);
           }
         }
-        // Future: Add logic for pomodoro, task badges here
       });
 
-      if (newlyEarnedBadges.length > 0) {
-        await updateDoc(userProfileDocRef, { earnedBadgeIds: updatedEarnedBadgeIds });
-        newlyEarnedBadges.forEach(badge => {
-          toast({
-            title: `🎉 Badge Unlocked: ${badge.name}!`,
-            description: badge.description,
-          });
-        });
-      }
+      // Give 10 coins for check-in, 5 more if it's a new badge day
+      const coinsFromCheckIn = 10 + (newlyEarnedBadges.length > 0 ? 5 : 0);
+      const xpFromCheckIn = 5; // Static XP for now
+      const updatedCoins = (currentDbProfileData.coins || 0) + coinsFromCheckIn;
+      const updatedXp = (currentDbProfileData.xp || 0) + xpFromCheckIn;
+
+      await updateDoc(userProfileDocRef, { 
+        earnedBadgeIds: updatedEarnedBadgeIds,
+        coins: updatedCoins,
+        xp: updatedXp,
+      });
       
-      // Update XP and Coins (illustrative for now, can be tied to check-in or badges)
-      // const xpFromCheckIn = 5;
-      // const coinsFromCheckIn = 2;
-      // const updatedXp = (currentDbProfileData.xp || 0) + xpFromCheckIn;
-      // const updatedCoins = (currentDbProfileData.coins || 0) + coinsFromCheckIn;
-      // await updateDoc(userProfileDocRef, { xp: updatedXp, coins: updatedCoins });
-      // toast({
-      //   title: 'Checked In!',
-      //   description: `Current streak: ${newCurrentStreak}. +${xpFromCheckIn} XP, +${coinsFromCheckIn} Coins!`,
-      // });
-
-
+      newlyEarnedBadges.forEach(badge => {
+        toast({
+          title: `🎉 Badge Unlocked: ${badge.name}!`,
+          description: badge.description,
+        });
+      });
+      
       toast({
         title: 'Checked In Successfully!',
-        description: `Your current streak is now ${newCurrentStreak} ${newCurrentStreak === 1 ? 'day' : 'days'}. Keep it up!`,
+        description: `Streak: ${newCurrentStreak} ${newCurrentStreak === 1 ? 'day' : 'days'}. +${xpFromCheckIn} XP, +${coinsFromCheckIn} Coins! 🪙`,
       });
 
     } catch (error: any) {
@@ -250,17 +247,15 @@ export default function StreaksPage() {
     } finally {
       setIsCheckingIn(false);
     }
-  }, [currentUser?.uid, db, toast, streakData]);
+  }, [currentUser?.uid, toast, streakData]); // Removed 'db' as it's module-level
 
   const handleShareBadge = (badgeName: string) => {
-    // For now, just a toast. Actual sharing requires more complex implementation.
-    // Optionally, copy a message to clipboard.
     const shareText = `I just unlocked the "${badgeName}" badge on StudyTrack! 🚀 #StudyTrack #Achievement`;
     navigator.clipboard.writeText(shareText).then(() => {
         const badgeId = BADGE_DEFINITIONS.find(b => b.name === badgeName)?.id;
         if (badgeId) {
             setCopiedBadgeId(badgeId);
-            setTimeout(() => setCopiedBadgeId(null), 2000); // Reset after 2s
+            setTimeout(() => setCopiedBadgeId(null), 2000); 
         }
         toast({
             title: 'Share Message Copied!',
@@ -334,16 +329,23 @@ export default function StreaksPage() {
             <p className="text-xs text-muted-foreground pt-1">Your personal best!</p>
           </CardContent>
         </Card>
-         <Card className="shadow-lg">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-xl font-semibold">Rewards (Illustrative)</CardTitle>
-            <Star className="h-8 w-8 text-yellow-400" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-yellow-500 dark:text-yellow-400">{userProfile.xp} XP</div>
-            <div className="text-3xl font-bold text-yellow-500 dark:text-yellow-400 mt-1">{userProfile.coins} 🪙</div>
-            <p className="text-xs text-muted-foreground pt-1">Earn by completing challenges & streaks!</p>
-          </CardContent>
+         <Card className="shadow-lg flex flex-col">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-xl font-semibold">Your Rewards</CardTitle>
+                <Star className="h-8 w-8 text-yellow-400" />
+            </CardHeader>
+            <CardContent className="flex-grow">
+                <div className="text-3xl font-bold text-yellow-500 dark:text-yellow-400">{userProfile.xp} XP</div>
+                <div className="text-3xl font-bold text-yellow-500 dark:text-yellow-400 mt-1">{userProfile.coins} 🪙</div>
+                <p className="text-xs text-muted-foreground pt-1">Earn by checking in, completing challenges & streaks!</p>
+            </CardContent>
+            <CardFooter>
+                 <Button variant="outline" size="sm" asChild>
+                    <Link href="/rewards-shop">
+                        Visit Shop <Gift className="ml-2 h-4 w-4" />
+                    </Link>
+                </Button>
+            </CardFooter>
         </Card>
       </div>
 
@@ -351,17 +353,17 @@ export default function StreaksPage() {
         <CardHeader>
           <CardTitle className="text-xl">Daily Check-in</CardTitle>
           <CardDescription>
-            {alreadyCheckedInToday ? "You've already checked in for today. Great job!" : "Check in now to maintain your streak!"}
+            {alreadyCheckedInToday ? "You've already checked in for today. Great job!" : "Check in now to maintain your streak & earn rewards!"}
           </CardDescription>
         </CardHeader>
         <CardContent>
           <Button 
             onClick={handleCheckIn} 
-            disabled={alreadyCheckedInToday || isCheckingIn || !db}
+            disabled={alreadyCheckedInToday || isCheckingIn}
             className="w-full text-lg py-6" size="lg"
           >
             {isCheckingIn ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : (alreadyCheckedInToday ? <CalendarCheck2 className="mr-2 h-5 w-5" /> : <Flame className="mr-2 h-5 w-5" />)}
-            {isCheckingIn ? 'Checking In...' : (alreadyCheckedInToday ? 'Checked In for Today!' : 'Check-in for Today')}
+            {isCheckingIn ? 'Checking In...' : (alreadyCheckedInToday ? 'Checked In for Today!' : 'Check-in & Earn Rewards')}
           </Button>
            <p className="text-sm text-muted-foreground mt-3 text-center">Last check-in: {lastCheckInDateDisplay}</p>
         </CardContent>
@@ -421,13 +423,13 @@ export default function StreaksPage() {
       )}
 
        <div className="mt-8 p-6 rounded-xl border bg-card text-card-foreground shadow">
-          <h2 className="text-xl font-semibold mb-3">Why Track Streaks & Achievements?</h2>
+          <h2 className="text-xl font-semibold mb-3">Why Track Streaks &amp; Achievements?</h2>
           <ul className="list-disc list-inside space-y-2 text-muted-foreground">
-            <li>Builds a powerful habit of daily studying. ✅</li>
-            <li>Provides motivation to stay consistent. 🚀</li>
-            <li>Visualizes your commitment and progress over time. 📊</li>
-            <li>Helps in identifying patterns and overcoming procrastination. 💡</li>
-            <li>Unlock cool badges as a reward for your hard work! 🏆</li>
+            <li>✅ Builds a powerful habit of daily studying.</li>
+            <li>🚀 Provides motivation to stay consistent.</li>
+            <li>📊 Visualizes your commitment and progress over time.</li>
+            <li>💡 Helps in identifying patterns and overcoming procrastination.</li>
+            <li>🏆 Unlock cool badges as a reward for your hard work!</li>
           </ul>
         </div>
     </div>

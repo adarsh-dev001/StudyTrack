@@ -13,6 +13,7 @@ import {
   Flame,
   BarChart3,
   Settings,
+  ShoppingCart, // Added ShoppingCart icon
 } from 'lucide-react';
 import {
   Sidebar,
@@ -34,6 +35,7 @@ const mainNavItems = [
   { href: '/pomodoro', label: 'Pomodoro Timer', icon: Timer },
   { href: '/streaks', label: 'Study Streaks', icon: Flame },
   { href: '/analytics', label: 'Analytics', icon: BarChart3 },
+  { href: '/rewards-shop', label: 'Rewards Shop', icon: ShoppingCart }, // Added Rewards Shop
 ];
 
 export function AppSidebar() {
