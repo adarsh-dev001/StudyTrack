@@ -1,19 +1,22 @@
 
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { TimerIcon, PlayIcon, PauseIcon, RotateCcwIcon } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { TimerIcon, PlayIcon, PauseIcon, RotateCcwIcon, Music2, VolumeX, Volume2 } from 'lucide-react';
 import { useAuth } from '@/contexts/auth-context';
 import { db } from '@/lib/firebase';
-import { doc, getDoc, setDoc, updateDoc, Timestamp } from 'firebase/firestore';
+import { doc, getDoc, setDoc, updateDoc, Timestamp, onSnapshot } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
+import { ALL_SOUNDTRACK_DEFINITIONS, type SoundtrackDefinition } from '@/lib/soundtracks';
+import { DEFAULT_THEME_ID } from '@/lib/themes';
 
-const POMODORO_DURATION = 25 * 60; // 25 minutes
-const SHORT_BREAK_DURATION = 5 * 60; // 5 minutes
-const LONG_BREAK_DURATION = 15 * 60; // 15 minutes
+const POMODORO_DURATION = 25 * 60; 
+const SHORT_BREAK_DURATION = 5 * 60; 
+const LONG_BREAK_DURATION = 15 * 60;
 const POMODOROS_UNTIL_LONG_BREAK = 4;
 const COINS_FOR_POMODORO = 5;
 
@@ -32,6 +35,39 @@ export function PomodoroTimer() {
   const [timeRemaining, setTimeRemaining] = useState(modeDurations[mode]);
   const [isRunning, setIsRunning] = useState(false);
   const [pomodorosCompletedCycle, setPomodorosCompletedCycle] = useState(0);
+  
+  const [purchasedSoundtrackIds, setPurchasedSoundtrackIds] = useState<string[]>([]);
+  const [availableSoundtracks, setAvailableSoundtracks] = useState<SoundtrackDefinition[]>([]);
+  const [selectedSoundtrackPath, setSelectedSoundtrackPath] = useState<string | null>(null);
+  const audioRef = useRef<HTMLAudioElement>(null);
+
+  useEffect(() => {
+    if (!currentUser?.uid || !db) {
+        setPurchasedSoundtrackIds([]);
+        setAvailableSoundtracks([]);
+        return;
+    }
+    const userProfileDocRef = doc(db, 'users', currentUser.uid, 'userProfile', 'profile');
+    const unsubscribe = onSnapshot(userProfileDocRef, (docSnap) => {
+        if (docSnap.exists()) {
+            const data = docSnap.data();
+            const ids = data.purchasedItemIds || [];
+            setPurchasedSoundtrackIds(ids);
+            
+            const userTracks = ALL_SOUNDTRACK_DEFINITIONS.filter(track => ids.includes(track.id));
+            setAvailableSoundtracks(userTracks);
+        } else {
+            setPurchasedSoundtrackIds([]);
+            setAvailableSoundtracks([]);
+        }
+    }, (error) => {
+        console.error("Error fetching purchased soundtracks:", error);
+        setPurchasedSoundtrackIds([]);
+        setAvailableSoundtracks([]);
+    });
+    return () => unsubscribe();
+  }, [currentUser?.uid]);
+
 
   const formatTime = (totalSeconds: number): string => {
     const minutes = Math.floor(totalSeconds / 60);
@@ -45,22 +81,28 @@ export function PomodoroTimer() {
     const userProfileDocRef = doc(db, 'users', currentUser.uid, 'userProfile', 'profile');
     try {
       const docSnap = await getDoc(userProfileDocRef);
-      let newCoins;
+      let profileData = {
+        coins: 0,
+        xp: 0,
+        earnedBadgeIds: [],
+        purchasedItemIds: purchasedSoundtrackIds, // Use current state if creating
+        activeThemeId: DEFAULT_THEME_ID,
+        dailyChallengeStatus: {}
+      };
+
       if (docSnap.exists()) {
-        const currentCoins = docSnap.data()?.coins || 0;
-        newCoins = currentCoins + COINS_FOR_POMODORO;
-        await updateDoc(userProfileDocRef, { coins: newCoins });
-      } else {
-        // Profile doesn't exist, create it with the awarded coins
-        newCoins = COINS_FOR_POMODORO;
-        await setDoc(userProfileDocRef, {
-          coins: newCoins,
-          xp: 0,
-          earnedBadgeIds: [],
-          purchasedItemIds: [],
-          // Ensure lastCheckInDate is handled if profile is new, though Pomodoro doesn't directly affect streaks
-        }, { merge: true });
+        profileData = { ...profileData, ...docSnap.data() };
       }
+      
+      const newCoins = profileData.coins + COINS_FOR_POMODORO;
+      const updatePayload = { ...profileData, coins: newCoins };
+
+      if (docSnap.exists()) {
+        await updateDoc(userProfileDocRef, updatePayload);
+      } else {
+        await setDoc(userProfileDocRef, updatePayload);
+      }
+
       toast({
         title: 'Pomodoro Complete! 🎉',
         description: `✨ +${COINS_FOR_POMODORO} Coins for completing a focus session! Keep it up!`,
@@ -75,7 +117,6 @@ export function PomodoroTimer() {
     }
   };
 
-  // Effect for countdown
   useEffect(() => {
     let interval: NodeJS.Timeout | null = null;
     if (isRunning && timeRemaining > 0) {
@@ -88,13 +129,13 @@ export function PomodoroTimer() {
     };
   }, [isRunning, timeRemaining]);
 
-  // Effect to handle timer completion and automatic mode switching
   useEffect(() => {
-    if (timeRemaining === 0 && isRunning) { // Check isRunning to prevent multiple awards if already stopped
+    if (timeRemaining === 0 && isRunning) {
       setIsRunning(false); 
+      if (audioRef.current) audioRef.current.pause();
 
       if (mode === 'pomodoro') {
-        awardCoinsForPomodoro(); // Award coins
+        awardCoinsForPomodoro();
         const newPomodorosCompleted = pomodorosCompletedCycle + 1;
         setPomodorosCompletedCycle(newPomodorosCompleted);
         if (newPomodorosCompleted % POMODOROS_UNTIL_LONG_BREAK === 0) {
@@ -106,13 +147,30 @@ export function PomodoroTimer() {
         setMode('pomodoro');
       }
     }
-  }, [timeRemaining, mode, pomodorosCompletedCycle, isRunning]); 
+  }, [timeRemaining, mode, pomodorosCompletedCycle, isRunning, awardCoinsForPomodoro]);
 
-  // Effect to update timeRemaining and stop timer when mode changes
   useEffect(() => {
     setTimeRemaining(modeDurations[mode]);
-    setIsRunning(false); 
-  }, [mode]);
+    setIsRunning(false);
+    if (audioRef.current) {
+        audioRef.current.pause();
+        if (selectedSoundtrackPath) { // If a path is selected, load new audio for the mode
+            audioRef.current.src = selectedSoundtrackPath;
+            // Don't auto-play here, wait for user to press play
+        }
+    }
+  }, [mode, selectedSoundtrackPath]);
+
+  useEffect(() => {
+    if (audioRef.current) {
+      if (isRunning && selectedSoundtrackPath) {
+        audioRef.current.src = selectedSoundtrackPath;
+        audioRef.current.play().catch(e => console.error("Error playing audio:", e));
+      } else {
+        audioRef.current.pause();
+      }
+    }
+  }, [isRunning, selectedSoundtrackPath]);
 
   const handleStartPause = () => {
     setIsRunning((prev) => !prev);
@@ -121,6 +179,10 @@ export function PomodoroTimer() {
   const handleReset = useCallback(() => {
     setIsRunning(false);
     setTimeRemaining(modeDurations[mode]);
+    if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current.currentTime = 0;
+    }
   }, [mode]);
 
   const handleModeChange = (newModeString: string) => {
@@ -128,6 +190,27 @@ export function PomodoroTimer() {
     setMode(newMode);
   };
   
+  const handleSoundtrackChange = (soundtrackId: string) => {
+    if (soundtrackId === "none") {
+      setSelectedSoundtrackPath(null);
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current.src = ""; // Clear src
+      }
+    } else {
+      const track = ALL_SOUNDTRACK_DEFINITIONS.find(t => t.id === soundtrackId);
+      if (track) {
+        setSelectedSoundtrackPath(track.filePath);
+        if (audioRef.current) {
+          audioRef.current.src = track.filePath; // Set new src
+          if (isRunning) { // If timer is already running, play new track
+            audioRef.current.play().catch(e => console.error("Error playing audio:", e));
+          }
+        }
+      }
+    }
+  };
+
   useEffect(() => {
     const baseTitle = "StudyTrack";
     if (isRunning) {
@@ -171,7 +254,7 @@ export function PomodoroTimer() {
             className="w-32 text-lg py-6" 
             size="lg"
             aria-label={isRunning ? "Pause timer" : "Start timer"}
-            disabled={!currentUser} // Disable if not logged in
+            disabled={!currentUser}
           >
             {isRunning ? <PauseIcon className="mr-2" /> : <PlayIcon className="mr-2" />}
             {isRunning ? 'Pause' : 'Start'}
@@ -194,6 +277,45 @@ export function PomodoroTimer() {
             <p className="text-xs text-destructive text-center mt-2">Login to track Pomodoros and earn rewards!</p>
         )}
       </CardContent>
+      <CardFooter className="flex flex-col items-center space-y-3 pt-4 border-t">
+        {currentUser && (
+            <div className="w-full max-w-xs">
+                <Select 
+                    onValueChange={handleSoundtrackChange} 
+                    defaultValue={selectedSoundtrackPath ? availableSoundtracks.find(s => s.filePath === selectedSoundtrackPath)?.id : "none"}
+                    disabled={availableSoundtracks.length === 0}
+                >
+                    <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Select Soundtrack..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="none">
+                            <div className="flex items-center">
+                                <VolumeX className="mr-2 h-4 w-4" /> No Sound
+                            </div>
+                        </SelectItem>
+                        {availableSoundtracks.map(track => (
+                            <SelectItem key={track.id} value={track.id}>
+                                <div className="flex items-center">
+                                    <Music2 className="mr-2 h-4 w-4" /> {track.name}
+                                </div>
+                            </SelectItem>
+                        ))}
+                    </SelectContent>
+                </Select>
+                {availableSoundtracks.length === 0 && <p className="text-xs text-muted-foreground text-center mt-1.5">Purchase soundtracks in the Shop!</p>}
+            </div>
+        )}
+        <audio ref={audioRef} loop />
+         {/* USER ACTION REQUIRED: 
+             The 'filePath' in src/lib/soundtracks.ts currently uses placeholders like '/sounds/placeholder_lofi_1.mp3'.
+             You need to:
+             1. Create a 'sounds' folder inside your 'public' directory.
+             2. Place your actual audio files (e.g., lofi_chill_1.mp3) in 'public/sounds/'.
+             3. Update the 'filePath' in 'src/lib/soundtracks.ts' to reflect the correct paths to your audio files.
+             For example, change '/sounds/placeholder_lofi_1.mp3' to '/sounds/your_actual_lofi_filename.mp3'.
+        */}
+      </CardFooter>
     </Card>
   );
 }

@@ -9,7 +9,8 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { Coins, Palette, Music2, Smile, ShoppingCart, CheckCircle, Loader2, Gift, Settings2, RefreshCw } from 'lucide-react';
-import { ALL_THEMES_DEFINITIONS, type ThemeDefinition, DEFAULT_THEME_ID } from '@/lib/themes'; // Import theme definitions
+import { ALL_THEMES_DEFINITIONS, type ThemeDefinition, DEFAULT_THEME_ID } from '@/lib/themes';
+import { ALL_SOUNDTRACK_DEFINITIONS, type SoundtrackDefinition } from '@/lib/soundtracks'; // Import soundtracks
 import type { LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
@@ -25,21 +26,11 @@ interface RewardItemBase {
   colorClass?: string;
 }
 
-// Combine ThemeDefinition with RewardItemBase for theme rewards
-type RewardItem = RewardItemBase | (RewardItemBase & ThemeDefinition & { category: 'Theme' });
+// Combine ThemeDefinition and SoundtrackDefinition with RewardItemBase
+type RewardItem = RewardItemBase | (RewardItemBase & ThemeDefinition) | (RewardItemBase & SoundtrackDefinition);
 
 
-const OTHER_REWARDS: RewardItemBase[] = [
-    // Example non-theme rewards (can be expanded)
-  {
-    id: 'sound_lofi_pack_1',
-    name: 'Lo-fi Beats Pack Vol. 1',
-    description: 'Chill lo-fi tracks to help you concentrate. (Sound playback not implemented)',
-    price: 100,
-    icon: Music2,
-    category: 'Soundtrack',
-    colorClass: 'bg-purple-600/10 border-purple-600/30 text-purple-600 dark:text-purple-300',
-  },
+const OTHER_COSMETIC_REWARDS: RewardItemBase[] = [
   {
     id: 'avatar_frame_gold',
     name: 'Golden Avatar Frame',
@@ -51,13 +42,14 @@ const OTHER_REWARDS: RewardItemBase[] = [
   },
 ];
 
-// Combine theme definitions with other rewards
 const AVAILABLE_REWARDS: RewardItem[] = [
   ...ALL_THEMES_DEFINITIONS.map(themeDef => ({
-    ...themeDef, // Spread all properties from ThemeDefinition
-    // id, name, description, price, icon, category are part of ThemeDefinition
+    ...themeDef,
   })),
-  ...OTHER_REWARDS,
+  ...ALL_SOUNDTRACK_DEFINITIONS.map(soundtrackDef => ({ // Add soundtracks to rewards
+    ...soundtrackDef,
+  })),
+  ...OTHER_COSMETIC_REWARDS,
 ];
 
 
@@ -72,7 +64,7 @@ export default function RewardsShopPage() {
   const { toast } = useToast();
   const [userProfile, setUserProfile] = useState<UserShopProfile>({ coins: 0, purchasedItemIds: [], activeThemeId: DEFAULT_THEME_ID });
   const [loadingProfile, setLoadingProfile] = useState(true);
-  const [actionItemId, setActionItemId] = useState<string | null>(null); // For purchase or apply
+  const [actionItemId, setActionItemId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!currentUser?.uid || !db) {
@@ -89,7 +81,7 @@ export default function RewardsShopPage() {
         setUserProfile({
           coins: data.coins || 0,
           purchasedItemIds: data.purchasedItemIds || [],
-          activeThemeId: data.activeThemeId === undefined ? DEFAULT_THEME_ID : data.activeThemeId, // Handle undefined activeThemeId
+          activeThemeId: data.activeThemeId === undefined ? DEFAULT_THEME_ID : data.activeThemeId,
         });
       } else {
         setUserProfile({ coins: 0, purchasedItemIds: [], activeThemeId: DEFAULT_THEME_ID });
@@ -126,50 +118,41 @@ export default function RewardsShopPage() {
     try {
       await runTransaction(db, async (transaction) => {
         const sfDoc = await transaction.get(userProfileDocRef);
-        if (!sfDoc.exists()) {
-          // If profile doesn't exist, initialize it within the transaction
-          transaction.set(userProfileDocRef, {
-            coins: -item.price, // This will be negative, but next lines correct it if we proceed
-            purchasedItemIds: [item.id],
-            activeThemeId: userProfile.activeThemeId, // Keep current active or default
-            xp: 0, // Initialize other fields if creating new
-            earnedBadgeIds: [],
+        
+        let currentData = { 
+            coins: 0, 
+            purchasedItemIds: [] as string[], 
+            activeThemeId: DEFAULT_THEME_ID,
+            xp: 0,
+            earnedBadgeIds: [] as string[],
             dailyChallengeStatus: {}
-          });
-           // Re-fetch after set to ensure data structure is as expected for updates
-          const newSfDoc = await transaction.get(userProfileDocRef);
-          if (!newSfDoc.exists()) throw new Error("Failed to initialize user profile."); // Should not happen
-          
-          const currentCoins = newSfDoc.data().coins || 0;
-          if(currentCoins + item.price < item.price) { // Check if initial coins were negative before adding item.price
-            throw new Error("Not enough coins (verified in transaction - new profile).");
-          }
-          transaction.update(userProfileDocRef, { coins: currentCoins }); // Correct coins to 0 if it was just created negatively
-          // Now proceed as if it existed... this part is complex due to potential new profile.
-          // Simplified: Assume profile usually exists, or the user needs some coins first to make this path robust.
-          // For now, if profile was created, it should have 0 coins and can't buy. Let's ensure it had coins.
-          // This initial setup of coins is tricky if profile is created on-the-fly here.
-          // Best to ensure profile exists with some coins BEFORE purchase is attempted.
-          // The current logic assumes profileDoc.exists() or user has some initial coins.
+        };
+
+        if (sfDoc.exists()) {
+            currentData = { ...currentData, ...sfDoc.data() };
         }
         
-        // If the document exists, proceed with update
-        const currentData = sfDoc.data() || { coins: 0, purchasedItemIds: [] }; // Default if somehow empty after check
-        const currentCoins = currentData.coins || 0;
-        const currentPurchasedIds = currentData.purchasedItemIds || [];
-
-        if (currentCoins < item.price) {
+        if (currentData.coins < item.price) {
           throw new Error("Not enough coins (verified in transaction).");
         }
-        if (currentPurchasedIds.includes(item.id)) {
+        if (currentData.purchasedItemIds.includes(item.id)) {
             throw new Error("Item already purchased (verified in transaction).");
         }
 
-        const newCoins = currentCoins - item.price;
-        transaction.update(userProfileDocRef, { 
-          coins: newCoins,
-          purchasedItemIds: [...currentPurchasedIds, item.id] 
-        });
+        const newCoins = currentData.coins - item.price;
+        const newPurchasedItemIds = [...currentData.purchasedItemIds, item.id];
+        
+        const profilePayload = {
+            ...currentData, // Persist all existing fields
+            coins: newCoins,
+            purchasedItemIds: newPurchasedItemIds,
+        };
+
+        if (sfDoc.exists()) {
+            transaction.update(userProfileDocRef, profilePayload);
+        } else {
+            transaction.set(userProfileDocRef, profilePayload);
+        }
       });
 
       toast({
@@ -213,7 +196,6 @@ export default function RewardsShopPage() {
 
   const handleRevertToDefaultTheme = async () => {
     if (!currentUser?.uid || !db) return;
-    // Use DEFAULT_THEME_ID for comparison
     if (userProfile.activeThemeId === DEFAULT_THEME_ID || userProfile.activeThemeId === null) {
         toast({ title: "Theme Info", description: "Default theme is already active."});
         return;
@@ -221,7 +203,6 @@ export default function RewardsShopPage() {
     setActionItemId("revert_default_theme_action"); 
     const userProfileDocRef = doc(db, 'users', currentUser.uid, 'userProfile', 'profile');
     try {
-      // Set to DEFAULT_THEME_ID explicitly
       await updateDoc(userProfileDocRef, { activeThemeId: DEFAULT_THEME_ID });
       toast({
         title: '🎨 Theme Reverted!',
@@ -348,7 +329,7 @@ export default function RewardsShopPage() {
                         {isProcessing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Buy Theme'}
                       </Button>
                     )
-                  ) : ( // For non-theme items
+                  ) : ( 
                     <Button
                         onClick={() => handlePurchase(item)}
                         disabled={isOwned || isProcessing || userProfile.coins < item.price}
