@@ -6,8 +6,16 @@ import { TaskForm, type TaskFormData } from '@/components/tasks/task-form';
 import { TaskItem, type Task } from '@/components/tasks/task-item';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { useAuth } from '@/contexts/auth-context';
+import { db } from '@/lib/firebase';
+import { doc, getDoc, setDoc, updateDoc, Timestamp } from 'firebase/firestore';
+import { useToast } from '@/hooks/use-toast';
+
+const COINS_FOR_TASK = 2;
 
 export default function TasksPage() {
+  const { currentUser } = useAuth();
+  const { toast } = useToast();
   const [tasks, setTasks] = useState<Task[]>(() => {
     if (typeof window !== 'undefined') {
       const savedTasks = localStorage.getItem('studyTrackTasks');
@@ -31,12 +39,58 @@ export default function TasksPage() {
     setTasks((prevTasks) => [newTask, ...prevTasks]);
   };
 
+  const awardCoinsForTask = async () => {
+    if (!currentUser?.uid || !db) return;
+
+    const userProfileDocRef = doc(db, 'users', currentUser.uid, 'userProfile', 'profile');
+    try {
+      const docSnap = await getDoc(userProfileDocRef);
+      let newCoins;
+      if (docSnap.exists()) {
+        const currentCoins = docSnap.data()?.coins || 0;
+        newCoins = currentCoins + COINS_FOR_TASK;
+        await updateDoc(userProfileDocRef, { coins: newCoins });
+      } else {
+        // Profile doesn't exist, create it with the awarded coins
+        newCoins = COINS_FOR_TASK;
+        await setDoc(userProfileDocRef, {
+          coins: newCoins,
+          xp: 0, 
+          earnedBadgeIds: [],
+          purchasedItemIds: []
+        }, { merge: true });
+      }
+      toast({
+        title: 'Task Completed! 👍',
+        description: `✨ +${COINS_FOR_TASK} Coins for finishing a task! Great job!`,
+      });
+    } catch (error) {
+      console.error("Error awarding coins for task:", error);
+      toast({
+        title: 'Coin Award Error',
+        description: 'Could not update your coin balance for the task.',
+        variant: 'destructive',
+      });
+    }
+  };
+
   const handleToggleComplete = (id: string) => {
+    let taskJustCompleted = false;
     setTasks((prevTasks) =>
-      prevTasks.map((task) =>
-        task.id === id ? { ...task, completed: !task.completed } : task
-      )
+      prevTasks.map((task) => {
+        if (task.id === id) {
+          if (!task.completed) { // Task is being marked as complete
+            taskJustCompleted = true;
+          }
+          return { ...task, completed: !task.completed };
+        }
+        return task;
+      })
     );
+
+    if (taskJustCompleted && currentUser) {
+      awardCoinsForTask();
+    }
   };
 
   const handleDeleteTask = (id: string) => {
@@ -77,6 +131,7 @@ export default function TasksPage() {
                       task={task}
                       onToggleComplete={handleToggleComplete}
                       onDelete={handleDeleteTask}
+                      canEarnCoins={!!currentUser} // Pass whether user is logged in
                     />
                   ))}
                 </div>
@@ -101,6 +156,7 @@ export default function TasksPage() {
                       task={task}
                       onToggleComplete={handleToggleComplete}
                       onDelete={handleDeleteTask}
+                      canEarnCoins={!!currentUser}
                     />
                   ))}
                 </div>
@@ -111,6 +167,15 @@ export default function TasksPage() {
           </CardContent>
         </Card>
       </div>
+       {!currentUser && (
+        <Card className="mt-4">
+            <CardContent className="pt-6">
+                 <p className="text-sm text-destructive text-center">
+                    Login to earn coins for completing tasks and Pomodoro sessions!
+                </p>
+            </CardContent>
+        </Card>
+      )}
     </div>
   );
 }
