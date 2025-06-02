@@ -19,21 +19,26 @@ import Step2StudyHabits from './step-2-study-habits';
 import Step3LearningMotivation from './step-3-learning-motivation';
 
 // Define Zod schemas for each step
-const step1Schema = z.object({
+// Base object schema for step 1
+const baseStep1ObjectSchema = z.object({
   targetExams: z.array(z.string()).min(1, "Please select at least one target exam."),
-  otherExamName: z.string().optional(), // Optional, only relevant if 'other' is chosen
+  otherExamName: z.string().optional(),
   examAttemptYear: z.string().min(1, "Please select your attempt year."),
   languageMedium: z.string().min(1, "Please select your language medium."),
-  studyMode: z.string().min(1, "Please select your study mode.").optional(), // Making it optional for now
-  examPhase: z.string().min(1, "Please select your current exam phase.").optional(), // Making it optional for now
-}).refine(data => {
+  studyMode: z.string().min(1, "Please select your study mode.").optional(),
+  examPhase: z.string().min(1, "Please select your current exam phase.").optional(),
+  previousAttempts: z.string().min(1, "Please select number of previous attempts").optional(),
+});
+
+// Refined schema for step 1 validation
+const step1Schema = baseStep1ObjectSchema.refine(data => {
     if (data.targetExams.includes('other') && (!data.otherExamName || data.otherExamName.trim() === '')) {
-      return false; // Invalid if 'other' is selected but otherExamName is empty
+      return false;
     }
     return true;
   }, {
     message: "Please specify the exam name if you selected 'Other'.",
-    path: ['otherExamName'], // Path of error
+    path: ['otherExamName'],
   });
 
 const step2Schema = z.object({
@@ -41,15 +46,31 @@ const step2Schema = z.object({
   preferredStudyTime: z.array(z.string()).min(1, "Select at least one preferred study time."),
   weakSubjects: z.array(z.string()).optional(),
   strongSubjects: z.array(z.string()).optional(),
+  distractionStruggles: z.string().optional(),
 });
 
 const step3Schema = z.object({
   preferredLearningStyles: z.array(z.string()).min(1, "Select at least one learning style."),
   motivationType: z.string().min(1, "Please select your motivation type."),
+  age: z.coerce.number().positive("Age must be a positive number").optional().nullable(),
+  location: z.string().optional(),
+  socialVisibilityPublic: z.boolean().optional(),
 });
 
-// Combine schemas for the full form
-const fullOnboardingSchema = step1Schema.merge(step2Schema).merge(step3Schema);
+// Combine schemas for the full form, merging base objects and then applying refinements if necessary
+const fullOnboardingSchema = baseStep1ObjectSchema // Use the base object schema here
+  .merge(step2Schema)
+  .merge(step3Schema)
+  .refine(data => { // Re-apply the refinement from step1Schema if it's relevant for the full form
+    if (data.targetExams.includes('other') && (!data.otherExamName || data.otherExamName.trim() === '')) {
+      return false;
+    }
+    return true;
+  }, {
+    message: "Please specify the exam name if you selected 'Other'.",
+    path: ['otherExamName'],
+  });
+
 
 export type OnboardingFormData = z.infer<typeof fullOnboardingSchema>;
 
@@ -79,12 +100,17 @@ export default function OnboardingForm({ userId, onOnboardingSuccess }: Onboardi
       languageMedium: '',
       studyMode: '',
       examPhase: '',
+      previousAttempts: '',
       dailyStudyHours: '',
       preferredStudyTime: [],
       weakSubjects: [],
       strongSubjects: [],
+      distractionStruggles: '',
       preferredLearningStyles: [],
       motivationType: '',
+      age: null,
+      location: '',
+      socialVisibilityPublic: false,
     },
   });
 
@@ -92,9 +118,9 @@ export default function OnboardingForm({ userId, onOnboardingSuccess }: Onboardi
 
   const handleNextStep = async () => {
     let isValid = false;
-    if (currentStep === 1) isValid = await trigger(['targetExams', 'examAttemptYear', 'languageMedium', 'studyMode', 'examPhase', 'otherExamName']);
-    else if (currentStep === 2) isValid = await trigger(['dailyStudyHours', 'preferredStudyTime', 'weakSubjects', 'strongSubjects']);
-    else if (currentStep === 3) isValid = await trigger(['preferredLearningStyles', 'motivationType']);
+    if (currentStep === 1) isValid = await trigger(['targetExams', 'examAttemptYear', 'languageMedium', 'studyMode', 'examPhase', 'otherExamName', 'previousAttempts']);
+    else if (currentStep === 2) isValid = await trigger(['dailyStudyHours', 'preferredStudyTime', 'weakSubjects', 'strongSubjects', 'distractionStruggles']);
+    else if (currentStep === 3) isValid = await trigger(['preferredLearningStyles', 'motivationType', 'age', 'location', 'socialVisibilityPublic']);
 
 
     if (isValid && currentStep < TOTAL_STEPS) {
@@ -112,10 +138,12 @@ export default function OnboardingForm({ userId, onOnboardingSuccess }: Onboardi
     setIsLoading(true);
     const userProfileRef = doc(db, 'users', userId, 'userProfile', 'profile');
 
-    // Clean up otherExamName if 'other' is not selected
     const finalData = { ...data };
     if (!data.targetExams?.includes('other')) {
-      finalData.otherExamName = ''; // or delete finalData.otherExamName;
+      finalData.otherExamName = '';
+    }
+    if (data.age === null || data.age === undefined || data.age === 0) { // Handle empty or zero age
+        finalData.age = undefined; // Store as undefined if not provided or zero
     }
 
 
@@ -123,6 +151,11 @@ export default function OnboardingForm({ userId, onOnboardingSuccess }: Onboardi
       ...finalData, 
       onboardingCompleted: true,
     };
+    // Remove age if it's undefined to avoid writing undefined to Firestore
+    if (profilePayload.age === undefined) {
+        delete profilePayload.age;
+    }
+
 
     try {
       await setDoc(userProfileRef, profilePayload, { merge: true });
