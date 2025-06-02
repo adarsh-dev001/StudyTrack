@@ -4,44 +4,33 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/auth-context';
 import { db } from '@/lib/firebase';
-import { doc, getDoc, updateDoc, arrayUnion, runTransaction } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, runTransaction, type Unsubscribe, onSnapshot } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { Coins, Palette, Music2, Smile, ShoppingCart, CheckCircle, Loader2, Gift } from 'lucide-react';
+import { Coins, Palette, Music2, Smile, ShoppingCart, CheckCircle, Loader2, Gift, Settings2, RefreshCw } from 'lucide-react';
+import { ALL_THEMES_DEFINITIONS, type ThemeDefinition, DEFAULT_THEME_ID } from '@/lib/themes'; // Import theme definitions
 import type { LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Badge } from '@/components/ui/badge'; // Corrected import for Badge
 
-interface RewardItem {
+
+interface RewardItemBase {
   id: string;
   name: string;
   description: string;
   price: number;
   icon: LucideIcon;
   category: 'Theme' | 'Soundtrack' | 'Cosmetic';
-  colorClass?: string; // Optional: for styling the card
+  colorClass?: string;
 }
 
-// Sample Rewards - In a real app, this might come from a config or database
-const AVAILABLE_REWARDS: RewardItem[] = [
-  {
-    id: 'theme_crimson_dark',
-    name: 'Crimson Dark Theme',
-    description: 'A sleek dark theme with crimson accents. (Visual unlock only for now)',
-    price: 200,
-    icon: Palette,
-    category: 'Theme',
-    colorClass: 'bg-red-700/10 border-red-700/30 text-red-700 dark:text-red-300',
-  },
-  {
-    id: 'theme_ocean_blue',
-    name: 'Ocean Blue Theme',
-    description: 'A calming blue theme for focused study. (Visual unlock only for now)',
-    price: 200,
-    icon: Palette,
-    category: 'Theme',
-    colorClass: 'bg-sky-700/10 border-sky-700/30 text-sky-700 dark:text-sky-300',
-  },
+// Combine ThemeDefinition with RewardItemBase for theme rewards
+type RewardItem = RewardItemBase | (RewardItemBase & ThemeDefinition & { category: 'Theme' });
+
+
+const OTHER_REWARDS: RewardItemBase[] = [
+    // Example non-theme rewards (can be expanded)
   {
     id: 'sound_lofi_pack_1',
     name: 'Lo-fi Beats Pack Vol. 1',
@@ -62,17 +51,28 @@ const AVAILABLE_REWARDS: RewardItem[] = [
   },
 ];
 
+// Combine theme definitions with other rewards
+const AVAILABLE_REWARDS: RewardItem[] = [
+  ...ALL_THEMES_DEFINITIONS.map(themeDef => ({
+    ...themeDef, // Spread all properties from ThemeDefinition
+    // id, name, description, price, icon, category are part of ThemeDefinition
+  })),
+  ...OTHER_REWARDS,
+];
+
+
 interface UserShopProfile {
   coins: number;
   purchasedItemIds: string[];
+  activeThemeId?: string | null;
 }
 
 export default function RewardsShopPage() {
   const { currentUser } = useAuth();
   const { toast } = useToast();
-  const [userProfile, setUserProfile] = useState<UserShopProfile>({ coins: 0, purchasedItemIds: [] });
+  const [userProfile, setUserProfile] = useState<UserShopProfile>({ coins: 0, purchasedItemIds: [], activeThemeId: DEFAULT_THEME_ID });
   const [loadingProfile, setLoadingProfile] = useState(true);
-  const [purchasingItemId, setPurchasingItemId] = useState<string | null>(null);
+  const [actionItemId, setActionItemId] = useState<string | null>(null); // For purchase or apply
 
   useEffect(() => {
     if (!currentUser?.uid || !db) {
@@ -82,25 +82,26 @@ export default function RewardsShopPage() {
 
     setLoadingProfile(true);
     const userProfileDocRef = doc(db, 'users', currentUser.uid, 'userProfile', 'profile');
-    const unsubscribe = getDoc(userProfileDocRef).then(docSnap => {
+    
+    const unsubscribe = onSnapshot(userProfileDocRef, (docSnap) => {
       if (docSnap.exists()) {
         const data = docSnap.data();
         setUserProfile({
           coins: data.coins || 0,
           purchasedItemIds: data.purchasedItemIds || [],
+          activeThemeId: data.activeThemeId || DEFAULT_THEME_ID,
         });
       } else {
-        // Profile might not exist if user hasn't visited streaks page yet, default it
-        setUserProfile({ coins: 0, purchasedItemIds: [] });
+        setUserProfile({ coins: 0, purchasedItemIds: [], activeThemeId: DEFAULT_THEME_ID });
       }
       setLoadingProfile(false);
-    }).catch(error => {
+    }, (error) => {
       console.error("Error fetching user profile for shop:", error);
       toast({ title: 'Error', description: 'Could not load your profile data.', variant: 'destructive' });
       setLoadingProfile(false);
     });
-    // This is a one-time fetch for now. For real-time updates, use onSnapshot.
-    // return () => unsubscribe(); // Not needed for getDoc
+    
+    return () => unsubscribe();
   }, [currentUser?.uid, toast]);
 
   const handlePurchase = async (item: RewardItem) => {
@@ -119,7 +120,7 @@ export default function RewardsShopPage() {
       return;
     }
 
-    setPurchasingItemId(item.id);
+    setActionItemId(item.id);
     const userProfileDocRef = doc(db, 'users', currentUser.uid, 'userProfile', 'profile');
 
     try {
@@ -141,16 +142,11 @@ export default function RewardsShopPage() {
         const newCoins = currentCoins - item.price;
         transaction.update(userProfileDocRef, { 
           coins: newCoins,
-          purchasedItemIds: arrayUnion(item.id)
+          purchasedItemIds: [...currentPurchasedIds, item.id] // Use spread for arrayUnion equivalent in transaction
         });
       });
 
-      // Update local state after successful transaction
-      setUserProfile(prev => ({
-        coins: prev.coins - item.price,
-        purchasedItemIds: [...prev.purchasedItemIds, item.id],
-      }));
-
+      // Local state update is handled by onSnapshot listener now
       toast({
         title: 'Purchase Successful! 🎉',
         description: `You've successfully purchased ${item.name}.`,
@@ -163,7 +159,54 @@ export default function RewardsShopPage() {
         variant: 'destructive',
       });
     } finally {
-      setPurchasingItemId(null);
+      setActionItemId(null);
+    }
+  };
+
+  const handleApplyTheme = async (themeId: string) => {
+    if (!currentUser?.uid || !db) return;
+    if (themeId === userProfile.activeThemeId) {
+        toast({ title: "Theme Info", description: "This theme is already active."});
+        return;
+    }
+
+    setActionItemId(themeId);
+    const userProfileDocRef = doc(db, 'users', currentUser.uid, 'userProfile', 'profile');
+    try {
+      await updateDoc(userProfileDocRef, { activeThemeId: themeId });
+      // Local state update handled by onSnapshot
+      toast({
+        title: '🎨 Theme Applied!',
+        description: 'Your selected theme is now active. Enjoy the new look!',
+      });
+    } catch (error: any) {
+      console.error("Error applying theme:", error);
+      toast({ title: 'Error', description: 'Could not apply theme.', variant: 'destructive' });
+    } finally {
+        setActionItemId(null);
+    }
+  };
+
+  const handleRevertToDefaultTheme = async () => {
+    if (!currentUser?.uid || !db) return;
+    if (userProfile.activeThemeId === DEFAULT_THEME_ID || userProfile.activeThemeId === null) {
+        toast({ title: "Theme Info", description: "Default theme is already active."});
+        return;
+    }
+    setActionItemId("revert_default_theme_action"); // Unique ID for this action
+    const userProfileDocRef = doc(db, 'users', currentUser.uid, 'userProfile', 'profile');
+    try {
+      await updateDoc(userProfileDocRef, { activeThemeId: DEFAULT_THEME_ID });
+      // Local state update handled by onSnapshot
+      toast({
+        title: '🎨 Theme Reverted!',
+        description: 'Switched back to the default application theme.',
+      });
+    } catch (error: any) {
+      console.error("Error reverting to default theme:", error);
+      toast({ title: 'Error', description: 'Could not revert to default theme.', variant: 'destructive' });
+    } finally {
+        setActionItemId(null);
     }
   };
   
@@ -218,12 +261,26 @@ export default function RewardsShopPage() {
             </CardContent>
         </Card>
       ) : (
+        <>
+        <div className="flex justify-end">
+            <Button 
+                variant="outline" 
+                onClick={handleRevertToDefaultTheme}
+                disabled={actionItemId === "revert_default_theme_action" || userProfile.activeThemeId === DEFAULT_THEME_ID || userProfile.activeThemeId === null}
+            >
+                {actionItemId === "revert_default_theme_action" ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
+                Revert to Default Theme
+            </Button>
+        </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {AVAILABLE_REWARDS.map((item) => {
             const isOwned = userProfile.purchasedItemIds.includes(item.id);
+            const isActiveTheme = item.category === 'Theme' && item.id === userProfile.activeThemeId;
             const IconComponent = item.icon;
+            const isProcessing = actionItemId === item.id;
+
             return (
-              <Card key={item.id} className={cn("shadow-lg flex flex-col transition-all duration-300 transform hover:-translate-y-1", item.colorClass, isOwned && "opacity-70 bg-slate-500/5 dark:bg-slate-800/20")}>
+              <Card key={item.id} className={cn("shadow-lg flex flex-col transition-all duration-300 transform hover:-translate-y-1", item.colorClass, isOwned && "opacity-80 bg-slate-500/5 dark:bg-slate-800/20", isActiveTheme && "ring-2 ring-primary shadow-primary/30")}>
                 <CardHeader className="flex flex-row items-start gap-4 space-y-0 pb-3">
                   <div className={cn("p-3 rounded-lg", item.colorClass ? 'bg-current/20 dark:bg-current/30' : 'bg-primary/10' )}>
                     <IconComponent className={cn("h-8 w-8", item.colorClass ? 'text-current' : 'text-primary')} />
@@ -241,40 +298,62 @@ export default function RewardsShopPage() {
                     <p className="text-lg font-semibold flex items-center">
                       <Coins className="mr-1.5 h-5 w-5 text-amber-500" /> {item.price}
                     </p>
-                    {isOwned && <span className="text-sm font-medium text-green-600 dark:text-green-400 flex items-center"><CheckCircle className="mr-1.5 h-4 w-4"/>Owned</span>}
+                    {isOwned && !isActiveTheme && item.category === 'Theme' && <Badge variant="outline" className="text-xs">Owned</Badge>}
+                    {isActiveTheme && <Badge variant="default" className="text-xs bg-primary/80"><CheckCircle className="mr-1.5 h-3 w-3"/>Active Theme</Badge>}
+                    {isOwned && item.category !== 'Theme' && <Badge variant="outline" className="text-xs"><CheckCircle className="mr-1.5 h-3 w-3"/>Owned</Badge>}
                   </div>
-                  <Button
-                    onClick={() => handlePurchase(item)}
-                    disabled={isOwned || purchasingItemId === item.id || userProfile.coins < item.price}
-                    className="w-full"
-                    variant={isOwned ? "outline" : "default"}
-                  >
-                    {purchasingItemId === item.id ? (
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    ) : isOwned ? (
-                      'Already Purchased'
+                  
+                  {item.category === 'Theme' ? (
+                    isOwned ? (
+                      <Button
+                        onClick={() => handleApplyTheme(item.id)}
+                        disabled={isActiveTheme || isProcessing}
+                        className="w-full"
+                        variant={isActiveTheme ? "secondary" : "default"}
+                      >
+                        {isProcessing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 
+                         isActiveTheme ? 'Theme Active' : 'Apply Theme'}
+                      </Button>
                     ) : (
-                      'Buy Reward'
-                    )}
-                  </Button>
+                      <Button
+                        onClick={() => handlePurchase(item)}
+                        disabled={isProcessing || userProfile.coins < item.price}
+                        className="w-full"
+                      >
+                        {isProcessing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Buy Theme'}
+                      </Button>
+                    )
+                  ) : ( // For non-theme items
+                    <Button
+                        onClick={() => handlePurchase(item)}
+                        disabled={isOwned || isProcessing || userProfile.coins < item.price}
+                        className="w-full"
+                        variant={isOwned ? "outline" : "default"}
+                    >
+                        {isProcessing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 
+                         isOwned ? 'Already Purchased' : 'Buy Reward'}
+                    </Button>
+                  )}
                 </CardFooter>
               </Card>
             );
           })}
         </div>
+        </>
       )}
       
        <Card className="mt-8 p-6 rounded-xl border bg-card text-card-foreground shadow">
           <h2 className="text-xl font-semibold mb-3 flex items-center"><Coins className="mr-2 h-6 w-6 text-amber-500" /> How to Earn Coins?</h2>
           <ul className="list-disc list-inside space-y-2 text-muted-foreground">
-            <li>✅ Complete daily study tasks.</li>
-            <li>🔥 Maintain your study streaks.</li>
-            <li>🍅 Finish Pomodoro sessions.</li>
-            <li>💡 Ace quizzes and challenges (coming soon!).</li>
-            <li><span className="font-semibold text-primary">(Note: Coin earning mechanisms are currently under development and will be activated soon!)</span></li>
+            <li>✅ Complete daily study tasks: **+2 Coins** per task.</li>
+            <li>🔥 Maintain your study streaks: **+10 Coins** for daily check-in (+5 bonus for new badge days).</li>
+            <li>🍅 Finish Pomodoro sessions: **+5 Coins** per Pomodoro.</li>
+            <li>🏆 Complete Daily Challenges on your Dashboard for bonus XP & Coins!</li>
+            <li>💡 Ace quizzes and other challenges (coming soon!).</li>
           </ul>
         </Card>
     </div>
   );
 }
 
+    

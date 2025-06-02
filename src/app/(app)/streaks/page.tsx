@@ -27,7 +27,9 @@ interface UserProfileData {
   earnedBadgeIds: string[];
   xp: number;
   coins: number;
-  purchasedItemIds: string[]; // Added for rewards shop
+  purchasedItemIds: string[];
+  activeThemeId?: string | null; // Added for theme switching
+  dailyChallengeStatus?: { [challengeId: string]: { completedOn: Timestamp } }; // For daily challenge persistence
 }
 
 const initialStreakData: StreakData = {
@@ -40,7 +42,9 @@ const initialUserProfileData: UserProfileData = {
   earnedBadgeIds: [],
   xp: 0,
   coins: 0,
-  purchasedItemIds: [], // Initialize purchasedItemIds
+  purchasedItemIds: [],
+  activeThemeId: null,
+  dailyChallengeStatus: {},
 };
 
 // Define Badge Types
@@ -121,7 +125,7 @@ export default function StreaksPage() {
       setLoading(false);
     });
 
-    // Listener for User Profile Data (Badges, XP, Coins)
+    // Listener for User Profile Data (Badges, XP, Coins, Theme, Challenges)
     const userProfileDocRef = doc(db, 'users', currentUser.uid, 'userProfile', 'profile');
     profileUnsubscribeRef.current = onSnapshot(userProfileDocRef, (docSnap) => {
       if (docSnap.exists()) {
@@ -130,7 +134,9 @@ export default function StreaksPage() {
           earnedBadgeIds: Array.isArray(rawData.earnedBadgeIds) ? rawData.earnedBadgeIds : [],
           xp: typeof rawData.xp === 'number' ? rawData.xp : 0,
           coins: typeof rawData.coins === 'number' ? rawData.coins : 0,
-          purchasedItemIds: Array.isArray(rawData.purchasedItemIds) ? rawData.purchasedItemIds : [], // Add purchasedItemIds
+          purchasedItemIds: Array.isArray(rawData.purchasedItemIds) ? rawData.purchasedItemIds : [],
+          activeThemeId: typeof rawData.activeThemeId === 'string' ? rawData.activeThemeId : null,
+          dailyChallengeStatus: typeof rawData.dailyChallengeStatus === 'object' ? rawData.dailyChallengeStatus : {},
         });
       } else {
         // If profile doesn't exist, create it with initial values
@@ -175,12 +181,10 @@ export default function StreaksPage() {
       let currentDbStreakData = streakDocSnap.exists() ? streakDocSnap.data() as StreakData : initialStreakData;
       let currentDbProfileData = profileDocSnap.exists() ? profileDocSnap.data() as UserProfileData : initialUserProfileData;
       
-      if (!Array.isArray(currentDbProfileData.earnedBadgeIds)) {
-        currentDbProfileData.earnedBadgeIds = [];
-      }
-      if (!Array.isArray(currentDbProfileData.purchasedItemIds)) { // Ensure purchasedItemIds exists
-        currentDbProfileData.purchasedItemIds = [];
-      }
+      // Ensure arrays and objects exist on profile data
+      currentDbProfileData.earnedBadgeIds = currentDbProfileData.earnedBadgeIds || [];
+      currentDbProfileData.purchasedItemIds = currentDbProfileData.purchasedItemIds || [];
+      currentDbProfileData.dailyChallengeStatus = currentDbProfileData.dailyChallengeStatus || {};
 
 
       if (currentDbStreakData.lastCheckInDate && isToday(currentDbStreakData.lastCheckInDate.toDate())) {
@@ -223,11 +227,20 @@ export default function StreaksPage() {
       const updatedCoins = (currentDbProfileData.coins || 0) + coinsFromCheckIn;
       const updatedXp = (currentDbProfileData.xp || 0) + xpFromCheckIn;
 
-      await updateDoc(userProfileDocRef, { 
+      // Prepare profile updates
+      const profileUpdates: Partial<UserProfileData> = {
         earnedBadgeIds: updatedEarnedBadgeIds,
         coins: updatedCoins,
         xp: updatedXp,
-      });
+      };
+      // Ensure other fields are not accidentally overwritten if profile didn't exist
+      if (!profileDocSnap.exists()) {
+        profileUpdates.purchasedItemIds = [];
+        profileUpdates.activeThemeId = null;
+        profileUpdates.dailyChallengeStatus = {};
+      }
+
+      await setDoc(userProfileDocRef, profileUpdates, { merge: true });
       
       newlyEarnedBadges.forEach(badge => {
         toast({
@@ -247,7 +260,7 @@ export default function StreaksPage() {
     } finally {
       setIsCheckingIn(false);
     }
-  }, [currentUser?.uid, toast, streakData]); // Removed 'db' as it's module-level
+  }, [currentUser?.uid, toast, streakData]);
 
   const handleShareBadge = (badgeName: string) => {
     const shareText = `I just unlocked the "${badgeName}" badge on StudyTrack! 🚀 #StudyTrack #Achievement`;
@@ -435,3 +448,5 @@ export default function StreaksPage() {
     </div>
   );
 }
+
+    
