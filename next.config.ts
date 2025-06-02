@@ -51,6 +51,12 @@ const nextConfig: NextConfig = {
         hostname: 'blogcdn.aakash.ac.in',
         port: '',
         pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'i.pinimg.com',
+        port: '',
+        pathname: '/**',
       }
     ],
   },
