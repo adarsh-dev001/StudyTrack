@@ -106,10 +106,10 @@ export default function SyllabusSuggesterPage() {
   return (
     <div className="w-full space-y-6">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight md:text-4xl flex items-center">
-          <ListTree className="mr-3 h-8 w-8 text-primary" /> AI Syllabus Suggester
+        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight md:text-4xl flex items-center">
+          <ListTree className="mr-2 sm:mr-3 h-7 w-7 sm:h-8 sm:w-8 text-primary" /> AI Syllabus Suggester
         </h1>
-        <p className="text-lg text-muted-foreground">
+        <p className="text-md sm:text-lg text-muted-foreground">
           Get a personalized, topic-wise syllabus based on your exam, subjects, study time, and target date.
         </p>
       </div>
@@ -117,40 +117,40 @@ export default function SyllabusSuggesterPage() {
       <Card className="shadow-lg">
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)}>
-            <CardHeader>
-              <CardTitle>Your Study Profile 🧑‍🎓</CardTitle>
-              <CardDescription>Provide details to generate a tailored syllabus.</CardDescription>
+            <CardHeader className="p-4 sm:p-6">
+              <CardTitle className="text-lg sm:text-xl">Your Study Profile 🧑‍🎓</CardTitle>
+              <CardDescription className="text-xs sm:text-sm">Provide details to generate a tailored syllabus.</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-6">
+            <CardContent className="space-y-4 sm:space-y-6 p-4 sm:p-6">
               <FormField
                 control={form.control}
                 name="examType"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Exam Type <span className="text-destructive">*</span></FormLabel>
+                    <FormLabel className="text-sm sm:text-base">Exam Type <span className="text-destructive">*</span></FormLabel>
                      <Select onValueChange={field.onChange} defaultValue={field.value}>
                       <FormControl>
-                        <SelectTrigger>
+                        <SelectTrigger className="text-sm sm:text-base">
                           <SelectValue placeholder="Select the exam you're preparing for" />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
                         {predefinedExams.map((exam) => (
-                          <SelectItem key={exam.value} value={exam.value}>
+                          <SelectItem key={exam.value} value={exam.value} className="text-sm sm:text-base">
                             {exam.label}
                           </SelectItem>
                         ))}
-                         <SelectItem value="Other">Other (Specify if not listed)</SelectItem>
+                         <SelectItem value="Other" className="text-sm sm:text-base">Other (Specify if not listed)</SelectItem>
                       </SelectContent>
                     </Select>
-                    {form.watch('examType') === "Other" && ( // Use form.watch here
+                    {form.watch('examType') === "Other" && (
                         <Input
                             placeholder="Specify other exam type"
-                            onChange={(e) => field.onChange(e.target.value)} // This is fine
-                            className="mt-2"
+                            onChange={(e) => field.onChange(e.target.value)}
+                            className="mt-2 text-sm sm:text-base"
                         />
                     )}
-                    <FormDescription>
+                    <FormDescription className="text-xs sm:text-sm">
                       Choose the competitive exam you are targeting.
                     </FormDescription>
                     <FormMessage />
@@ -163,13 +163,13 @@ export default function SyllabusSuggesterPage() {
                 name="subjects"
                 render={() => (
                   <FormItem>
-                    <div className="mb-2">
-                      <FormLabel className="text-base">Subjects <span className="text-destructive">*</span></FormLabel>
-                      <FormDescription>
+                    <div className="mb-1 sm:mb-2">
+                      <FormLabel className="text-sm sm:text-base font-semibold">Subjects <span className="text-destructive">*</span></FormLabel>
+                      <FormDescription className="text-xs sm:text-sm">
                         Select all subjects you want to include in the syllabus.
                       </FormDescription>
                     </div>
-                    <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-x-4 gap-y-2">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-x-3 gap-y-2 sm:gap-x-4 sm:gap-y-2.5 pt-1 sm:pt-2">
                     {commonSubjects.map((item) => (
                       <FormField
                         key={item.id}
@@ -179,7 +179,7 @@ export default function SyllabusSuggesterPage() {
                           return (
                             <FormItem
                               key={item.id}
-                              className="flex flex-row items-start space-x-3 space-y-0"
+                              className="flex flex-row items-center space-x-2 space-y-0"
                             >
                               <FormControl>
                                 <Checkbox
@@ -195,7 +195,7 @@ export default function SyllabusSuggesterPage() {
                                   }}
                                 />
                               </FormControl>
-                              <FormLabel className="text-sm font-normal">
+                              <FormLabel className="text-xs sm:text-sm font-normal">
                                 {item.label}
                               </FormLabel>
                             </FormItem>
@@ -209,17 +209,17 @@ export default function SyllabusSuggesterPage() {
                 )}
               />
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
                 <FormField
                   control={form.control}
                   name="timeAvailablePerDay"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Daily Study Time (Hours) <span className="text-destructive">*</span> ⏳</FormLabel>
+                      <FormLabel className="text-sm sm:text-base">Daily Study Time (Hours) <span className="text-destructive">*</span> ⏳</FormLabel>
                       <FormControl>
-                        <Input type="number" step="0.5" placeholder="e.g., 4.5" {...field} />
+                        <Input type="number" step="0.5" placeholder="e.g., 4.5" {...field} className="text-sm sm:text-base"/>
                       </FormControl>
-                      <FormDescription>
+                      <FormDescription className="text-xs sm:text-sm">
                         Average hours you can dedicate to study each day.
                       </FormDescription>
                       <FormMessage />
@@ -231,14 +231,14 @@ export default function SyllabusSuggesterPage() {
                   name="targetDate"
                   render={({ field }) => (
                     <FormItem className="flex flex-col">
-                      <FormLabel>Target Completion Date <span className="text-destructive">*</span> 🎯</FormLabel>
+                      <FormLabel className="text-sm sm:text-base">Target Completion Date <span className="text-destructive">*</span> 🎯</FormLabel>
                       <Popover>
                         <PopoverTrigger asChild>
                           <FormControl>
                             <Button
                               variant={"outline"}
                               className={cn(
-                                "w-full pl-3 text-left font-normal",
+                                "w-full pl-3 text-left font-normal text-sm sm:text-base",
                                 !field.value && "text-muted-foreground"
                               )}
                             >
@@ -263,7 +263,7 @@ export default function SyllabusSuggesterPage() {
                           />
                         </PopoverContent>
                       </Popover>
-                      <FormDescription>
+                      <FormDescription className="text-xs sm:text-sm">
                         When do you aim to complete this syllabus?
                       </FormDescription>
                       <FormMessage />
@@ -272,16 +272,16 @@ export default function SyllabusSuggesterPage() {
                 />
               </div>
             </CardContent>
-            <CardFooter>
-              <Button type="submit" disabled={isLoading} size="lg" className="w-full sm:w-auto">
+            <CardFooter className="p-4 sm:p-6">
+              <Button type="submit" disabled={isLoading} size="default" className="w-full sm:w-auto text-sm sm:text-base">
                 {isLoading ? (
                   <>
-                    <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                    <Loader2 className="mr-2 h-4 w-4 sm:h-5 sm:w-5 animate-spin" />
                     Generating Syllabus...
                   </>
                 ) : (
                   <>
-                    <ListTree className="mr-2 h-5 w-5" />
+                    <ListTree className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />
                     Generate Syllabus
                   </>
                 )}
@@ -293,57 +293,57 @@ export default function SyllabusSuggesterPage() {
 
       {generatedSyllabus && generatedSyllabus.length > 0 && (
         <Card className="shadow-lg animate-in fade-in-50 duration-500 mt-6">
-          <CardHeader>
-            <CardTitle className="text-2xl font-headline">Your Personalized Study Plan for <span className="text-primary">{form.getValues('examType')}</span> 🌟</CardTitle>
-            <CardDescription>
+          <CardHeader className="p-4 sm:p-6">
+            <CardTitle className="text-xl sm:text-2xl font-headline">Your Personalized Study Plan for <span className="text-primary">{form.getValues('examType')}</span> 🌟</CardTitle>
+            <CardDescription className="text-xs sm:text-sm">
               Target Completion: {format(form.getValues('targetDate'), "PPP")} ({form.getValues('timeAvailablePerDay')} hrs/day)
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-6">
+          <CardContent className="space-y-4 sm:space-y-6 p-4 sm:p-6">
             {overallFeedback && (
-                <div className="mt-2 mb-6 p-4 bg-sky-50 dark:bg-sky-900/40 border border-sky-300 dark:border-sky-700 rounded-lg shadow">
-                    <h3 className="text-lg font-semibold text-sky-700 dark:text-sky-300 mb-2 flex items-center">
-                        <Sparkles className="mr-2 h-5 w-5 text-sky-500" /> AI Coach's Wisdom: Overall Feedback
+                <div className="mt-1 sm:mt-2 mb-4 sm:mb-6 p-3 sm:p-4 bg-sky-50 dark:bg-sky-900/40 border border-sky-300 dark:border-sky-700 rounded-lg shadow">
+                    <h3 className="text-md sm:text-lg font-semibold text-sky-700 dark:text-sky-300 mb-1.5 sm:mb-2 flex items-center">
+                        <Sparkles className="mr-2 h-4 w-4 sm:h-5 sm:w-5 text-sky-500" /> AI Coach's Wisdom: Overall Feedback
                     </h3>
-                    <p className="text-sm text-muted-foreground leading-relaxed">{overallFeedback}</p>
+                    <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">{overallFeedback}</p>
                 </div>
             )}
             {generatedSyllabus.map((subjectSyllabus, subjectIndex) => (
-              <div key={subjectIndex} className="border p-4 rounded-lg bg-card/60 shadow-md">
-                <h3 className="text-xl font-semibold text-primary mb-3 flex items-center">
-                  <BookOpen className="mr-3 h-6 w-6" /> Subject: {subjectSyllabus.subject}
+              <div key={subjectIndex} className="border p-3 sm:p-4 rounded-lg bg-card/60 shadow-md">
+                <h3 className="text-lg sm:text-xl font-semibold text-primary mb-2 sm:mb-3 flex items-center">
+                  <BookOpen className="mr-2 sm:mr-3 h-5 w-5 sm:h-6 sm:w-6" /> Subject: {subjectSyllabus.subject}
                 </h3>
                 {subjectSyllabus.summary && (
-                    <div className="mb-4 p-3 bg-muted/60 rounded-md border border-border">
-                        <p className="text-sm italic text-foreground/90"><Lightbulb className="inline-block mr-2 h-4 w-4 text-yellow-500 dark:text-yellow-400" /><strong>Quick Notes:</strong> {subjectSyllabus.summary}</p>
+                    <div className="mb-3 sm:mb-4 p-2 sm:p-3 bg-muted/60 rounded-md border border-border">
+                        <p className="text-xs sm:text-sm italic text-foreground/90"><Lightbulb className="inline-block mr-1.5 h-3.5 w-3.5 sm:h-4 sm:w-4 text-yellow-500 dark:text-yellow-400" /><strong>Quick Notes:</strong> {subjectSyllabus.summary}</p>
                     </div>
                 )}
-                <div className="space-y-4">
+                <div className="space-y-3 sm:space-y-4">
                   {subjectSyllabus.schedule.map((weeklyItem, weekIndex) => (
-                    <div key={`${subjectSyllabus.subject}-week-${weekIndex}`} className="pl-2">
-                      <h4 className="font-medium text-md text-foreground/95 flex items-center mb-1">
-                        <CalendarDays className="mr-2 h-5 w-5 text-accent" /> {weeklyItem.weekLabel}:
+                    <div key={`${subjectSyllabus.subject}-week-${weekIndex}`} className="pl-1 sm:pl-2">
+                      <h4 className="font-medium text-sm sm:text-md text-foreground/95 flex items-center mb-1">
+                        <CalendarDays className="mr-1.5 sm:mr-2 h-4 w-4 sm:h-5 sm:w-5 text-accent" /> {weeklyItem.weekLabel}:
                       </h4>
                       {weeklyItem.topics.length > 0 ? (
-                        <ul className="list-none space-y-1.5 pl-7 mt-1">
+                        <ul className="list-none space-y-1 sm:space-y-1.5 pl-5 sm:pl-7 mt-0.5 sm:mt-1">
                           {weeklyItem.topics.map((topic, topicIndex) => (
-                            <li key={topicIndex} className="flex items-start text-sm text-foreground/80">
-                                <Target className="mr-2.5 h-4 w-4 text-primary shrink-0 mt-1" />
-                                <span>{topic}</span>
+                            <li key={topicIndex} className="flex items-start text-xs sm:text-sm text-foreground/80">
+                                <Target className="mr-2 h-3.5 w-3.5 sm:h-4 sm:w-4 text-primary shrink-0 mt-0.5 sm:mt-1" />
+                                <span className="break-words min-w-0">{topic}</span>
                             </li>
                           ))}
                         </ul>
                       ) : (
-                        <p className="text-sm text-muted-foreground pl-7">No specific topics listed for this week. It might be a buffer week or revision period. 🤔</p>
+                        <p className="text-xs sm:text-sm text-muted-foreground pl-5 sm:pl-7">No specific topics listed for this week. It might be a buffer week or revision period. 🤔</p>
                       )}
                     </div>
                   ))}
                 </div>
               </div>
             ))}
-            <div className="mt-8 text-center pt-6 border-t">
-                <p className="text-lg font-semibold text-accent">🚀 You've got a plan! Stick to it and conquer your exams!</p>
-                <p className="text-muted-foreground mt-1">Remember, consistency is key. You can do this! 🙌</p>
+            <div className="mt-6 sm:mt-8 text-center pt-4 sm:pt-6 border-t">
+                <p className="text-md sm:text-lg font-semibold text-accent">🚀 You've got a plan! Stick to it and conquer your exams!</p>
+                <p className="text-muted-foreground mt-1 text-xs sm:text-sm">Remember, consistency is key. You can do this! 🙌</p>
             </div>
           </CardContent>
         </Card>
@@ -351,11 +351,11 @@ export default function SyllabusSuggesterPage() {
 
       { (generatedSyllabus === null || generatedSyllabus.length === 0) && !isLoading && form.formState.isSubmitted && (
          <Card className="shadow-lg animate-in fade-in-50 duration-500 mt-6">
-          <CardHeader>
-            <CardTitle>😕 No Syllabus Generated</CardTitle>
+          <CardHeader className="p-4 sm:p-6">
+            <CardTitle className="text-lg sm:text-xl">😕 No Syllabus Generated</CardTitle>
           </CardHeader>
-          <CardContent>
-            <p className="text-muted-foreground">The AI could not generate a syllabus based on the provided inputs, or the list was empty. Please review your selections and try again. Ensure all required fields are filled correctly.</p>
+          <CardContent className="p-4 sm:p-6">
+            <p className="text-muted-foreground text-sm sm:text-base">The AI could not generate a syllabus based on the provided inputs, or the list was empty. Please review your selections and try again. Ensure all required fields are filled correctly.</p>
           </CardContent>
         </Card>
       )}

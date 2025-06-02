@@ -8,7 +8,7 @@ import { doc, getDoc, setDoc, Timestamp, onSnapshot, type Unsubscribe, updateDoc
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
-import { Flame, Loader2, CalendarCheck2, Award, Star, ShieldCheck, Brain, Clock, Zap, Share2, Copy, Check, Gift } from 'lucide-react'; // Added Gift
+import { Flame, Loader2, CalendarCheck2, Award, Star, ShieldCheck, Brain, Clock, Zap, Share2, Copy, Check, Gift } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { isToday, isYesterday } from 'date-fns';
@@ -23,7 +23,6 @@ interface StreakData {
   lastCheckInDate: Timestamp | null;
 }
 
-// Combined User Profile Data
 interface UserProfileData {
   earnedBadgeIds: string[];
   xp: number;
@@ -48,17 +47,16 @@ const initialUserProfileData: UserProfileData = {
   dailyChallengeStatus: {},
 };
 
-// Define Badge Types
-type BadgeType = 'streak' | 'pomodoro' | 'task' | 'topic'; // topic type not used for now
+type BadgeType = 'streak' | 'pomodoro' | 'task' | 'topic';
 
 interface BadgeDefinition {
   id: string;
   name: string;
   description: string;
   icon: LucideIcon;
-  milestone: number; // e.g., days for streak, count for pomodoros/tasks
+  milestone: number;
   type: BadgeType;
-  colorClass: string; // For styling the badge card
+  colorClass: string;
 }
 
 const BADGE_DEFINITIONS: BadgeDefinition[] = [
@@ -66,7 +64,6 @@ const BADGE_DEFINITIONS: BadgeDefinition[] = [
   { id: 'streak_3', name: 'Consistent Learner', description: 'Maintained a 3-day streak!', icon: Star, milestone: 3, type: 'streak', colorClass: 'bg-yellow-500/10 border-yellow-500/30 text-yellow-700 dark:text-yellow-300' },
   { id: 'streak_7', name: 'Week Warrior', description: 'Completed a 7-day streak!', icon: Award, milestone: 7, type: 'streak', colorClass: 'bg-green-500/10 border-green-500/30 text-green-700 dark:text-green-300' },
   { id: 'streak_30', name: 'Monthly Marvel', description: 'Achieved a 30-day streak!', icon: ShieldCheck, milestone: 30, type: 'streak', colorClass: 'bg-sky-500/10 border-sky-500/30 text-sky-700 dark:text-sky-300' },
-  // Mocked/Placeholder Badges for future features
   { id: 'pomodoro_10', name: 'Pomodoro Power', description: 'Completed 10 Pomodoro sessions.', icon: Clock, milestone: 10, type: 'pomodoro', colorClass: 'bg-red-500/10 border-red-500/30 text-red-700 dark:text-red-300' },
   { id: 'task_25', name: 'Task Titan', description: 'Completed 25 study tasks.', icon: Zap, milestone: 25, type: 'task', colorClass: 'bg-purple-500/10 border-purple-500/30 text-purple-700 dark:text-purple-300' },
 ];
@@ -87,7 +84,6 @@ export default function StreaksPage() {
   const profileUnsubscribeRef = useRef<Unsubscribe | null>(null);
 
   useEffect(() => {
-    // Clear previous listeners
     if (streakUnsubscribeRef.current) streakUnsubscribeRef.current();
     if (profileUnsubscribeRef.current) profileUnsubscribeRef.current();
     streakUnsubscribeRef.current = null;
@@ -103,7 +99,6 @@ export default function StreaksPage() {
 
     setLoading(true);
 
-    // Listener for Streak Data
     const userStreakDocRef = doc(db, 'users', currentUser.uid, 'streaksData', 'main');
     streakUnsubscribeRef.current = onSnapshot(userStreakDocRef, (docSnap) => {
       if (docSnap.exists()) {
@@ -126,7 +121,6 @@ export default function StreaksPage() {
       setLoading(false);
     });
 
-    // Listener for User Profile Data (Badges, XP, Coins, Theme, Challenges)
     const userProfileDocRef = doc(db, 'users', currentUser.uid, 'userProfile', 'profile');
     profileUnsubscribeRef.current = onSnapshot(userProfileDocRef, (docSnap) => {
       if (docSnap.exists()) {
@@ -140,7 +134,6 @@ export default function StreaksPage() {
           dailyChallengeStatus: typeof rawData.dailyChallengeStatus === 'object' ? rawData.dailyChallengeStatus : {},
         });
       } else {
-        // If profile doesn't exist, create it with initial values
         setDoc(userProfileDocRef, initialUserProfileData, { merge: true })
           .then(() => setUserProfile(initialUserProfileData))
           .catch(err => console.error("Error creating initial user profile:", err));
@@ -180,10 +173,8 @@ export default function StreaksPage() {
       ]);
 
       let currentDbStreakData = streakDocSnap.exists() ? streakDocSnap.data() as StreakData : initialStreakData;
-      // Use initialUserProfileData as a base for a new profile, ensuring all fields including activeThemeId are set
       let currentDbProfileData = profileDocSnap.exists() ? profileDocSnap.data() as UserProfileData : {...initialUserProfileData}; 
       
-      // Ensure arrays and objects exist on profile data
       currentDbProfileData.earnedBadgeIds = currentDbProfileData.earnedBadgeIds || [];
       currentDbProfileData.purchasedItemIds = currentDbProfileData.purchasedItemIds || [];
       currentDbProfileData.dailyChallengeStatus = currentDbProfileData.dailyChallengeStatus || {};
@@ -224,23 +215,21 @@ export default function StreaksPage() {
         }
       });
 
-      // Give 10 coins for check-in, 5 more if it's a new badge day
       const coinsFromCheckIn = 10 + (newlyEarnedBadges.length > 0 ? 5 : 0);
-      const xpFromCheckIn = 5; // Static XP for now
+      const xpFromCheckIn = 5;
       const updatedCoins = (currentDbProfileData.coins || 0) + coinsFromCheckIn;
       const updatedXp = (currentDbProfileData.xp || 0) + xpFromCheckIn;
 
-      // Prepare profile updates, ensuring all fields from UserProfileData are included if creating anew
       const profileUpdates: UserProfileData = {
         earnedBadgeIds: updatedEarnedBadgeIds,
         coins: updatedCoins,
         xp: updatedXp,
-        purchasedItemIds: currentDbProfileData.purchasedItemIds, // Persist existing or default []
-        activeThemeId: currentDbProfileData.activeThemeId,     // Persist existing or default
-        dailyChallengeStatus: currentDbProfileData.dailyChallengeStatus, // Persist existing or default {}
+        purchasedItemIds: currentDbProfileData.purchasedItemIds,
+        activeThemeId: currentDbProfileData.activeThemeId,
+        dailyChallengeStatus: currentDbProfileData.dailyChallengeStatus,
       };
       
-      await setDoc(userProfileDocRef, profileUpdates, { merge: true }); // merge ensures we don't wipe other fields
+      await setDoc(userProfileDocRef, profileUpdates, { merge: true });
       
       newlyEarnedBadges.forEach(badge => {
         toast({
@@ -286,20 +275,20 @@ export default function StreaksPage() {
 
   if (loading) {
     return (
-      <div className="flex h-full items-center justify-center">
-        <Loader2 className="h-12 w-12 animate-spin text-primary" />
+      <div className="flex flex-col h-full items-center justify-center text-center p-4">
+        <Loader2 className="h-10 w-10 sm:h-12 sm:w-12 animate-spin text-primary" />
       </div>
     );
   }
 
   if (!currentUser?.uid) { 
     return (
-      <div className="w-full space-y-6">
-        <h1 className="text-3xl font-bold tracking-tight md:text-4xl">Study Streaks & Achievements</h1>
-        <p className="text-lg text-muted-foreground">Log in to track your consistency and earn badges!</p>
+      <div className="w-full space-y-6 p-4">
+        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight md:text-4xl">Study Streaks & Achievements</h1>
+        <p className="text-md sm:text-lg text-muted-foreground">Log in to track your consistency and earn badges!</p>
          <Card className="w-full shadow-lg">
-          <CardContent className="pt-6 text-center">
-            <p className="text-muted-foreground">Please log in to view and manage your study streaks and achievements.</p>
+          <CardContent className="pt-6 text-center p-4 sm:p-6">
+            <p className="text-muted-foreground text-sm sm:text-base">Please log in to view and manage your study streaks and achievements.</p>
           </CardContent>
         </Card>
       </div>
@@ -315,47 +304,47 @@ export default function StreaksPage() {
 
 
   return (
-    <div className="w-full space-y-8">
+    <div className="w-full space-y-6 sm:space-y-8">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight md:text-4xl">Study Streaks & Achievements</h1>
-        <p className="text-lg text-muted-foreground">Track your daily consistency, build strong habits, and unlock cool badges!</p>
+        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight md:text-4xl">Study Streaks & Achievements</h1>
+        <p className="text-md sm:text-lg text-muted-foreground">Track your daily consistency, build strong habits, and unlock cool badges!</p>
       </div>
 
-      <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
         <Card className="shadow-xl transform hover:scale-105 transition-transform duration-300">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-xl font-semibold">Current Streak</CardTitle>
-            <Flame className="h-8 w-8 text-orange-500" />
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 p-4 sm:p-5">
+            <CardTitle className="text-lg sm:text-xl font-semibold">Current Streak</CardTitle>
+            <Flame className="h-7 w-7 sm:h-8 sm:w-8 text-orange-500" />
           </CardHeader>
-          <CardContent>
-            <div className="text-5xl font-bold text-orange-500">{currentStreakValue}</div>
+          <CardContent className="p-4 sm:p-5">
+            <div className="text-4xl sm:text-5xl font-bold text-orange-500">{currentStreakValue}</div>
             <p className="text-xs text-muted-foreground pt-1">{currentStreakValue === 1 ? 'day' : 'days'} of consistent study</p>
           </CardContent>
         </Card>
         <Card className="shadow-xl transform hover:scale-105 transition-transform duration-300">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-xl font-semibold">Longest Streak</CardTitle>
-            <Award className="h-8 w-8 text-primary" />
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 p-4 sm:p-5">
+            <CardTitle className="text-lg sm:text-xl font-semibold">Longest Streak</CardTitle>
+            <Award className="h-7 w-7 sm:h-8 sm:w-8 text-primary" />
           </CardHeader>
-          <CardContent>
-            <div className="text-5xl font-bold text-primary">{longestStreakValue}</div>
+          <CardContent className="p-4 sm:p-5">
+            <div className="text-4xl sm:text-5xl font-bold text-primary">{longestStreakValue}</div>
             <p className="text-xs text-muted-foreground pt-1">Your personal best!</p>
           </CardContent>
         </Card>
          <Card className="shadow-xl flex flex-col transform hover:scale-105 transition-transform duration-300">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-xl font-semibold">Your Rewards</CardTitle>
-                <Star className="h-8 w-8 text-yellow-400" />
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 p-4 sm:p-5">
+                <CardTitle className="text-lg sm:text-xl font-semibold">Your Rewards</CardTitle>
+                <Star className="h-7 w-7 sm:h-8 sm:w-8 text-yellow-400" />
             </CardHeader>
-            <CardContent className="flex-grow">
-                <div className="text-3xl font-bold text-yellow-500 dark:text-yellow-400">{userProfile.xp} XP</div>
-                <div className="text-3xl font-bold text-yellow-500 dark:text-yellow-400 mt-1">{userProfile.coins} 🪙</div>
+            <CardContent className="flex-grow p-4 sm:p-5">
+                <div className="text-2xl sm:text-3xl font-bold text-yellow-500 dark:text-yellow-400">{userProfile.xp} XP</div>
+                <div className="text-2xl sm:text-3xl font-bold text-yellow-500 dark:text-yellow-400 mt-1">{userProfile.coins} 🪙</div>
                 <p className="text-xs text-muted-foreground pt-1">Earn by checking in, completing challenges & streaks!</p>
             </CardContent>
-            <CardFooter>
-                 <Button variant="outline" size="sm" asChild className="w-full sm:w-auto">
+            <CardFooter className="p-4 sm:p-5">
+                 <Button variant="outline" size="sm" asChild className="w-full text-xs sm:text-sm">
                     <Link href="/rewards-shop">
-                        Visit Shop <Gift className="ml-2 h-4 w-4" />
+                        Visit Shop <Gift className="ml-1.5 h-3.5 w-3.5 sm:h-4 sm:w-4" />
                     </Link>
                 </Button>
             </CardFooter>
@@ -363,45 +352,44 @@ export default function StreaksPage() {
       </div>
 
       <Card className="shadow-lg">
-        <CardHeader>
-          <CardTitle className="text-xl">Daily Check-in</CardTitle>
-          <CardDescription>
+        <CardHeader className="p-4 sm:p-6">
+          <CardTitle className="text-lg sm:text-xl">Daily Check-in</CardTitle>
+          <CardDescription className="text-xs sm:text-sm">
             {alreadyCheckedInToday ? "You've already checked in for today. Great job!" : "Check in now to maintain your streak & earn rewards!"}
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-4 sm:p-6">
           <Button 
             onClick={handleCheckIn} 
             disabled={alreadyCheckedInToday || isCheckingIn}
-            className="w-full text-lg py-6" size="lg"
+            className="w-full text-md sm:text-lg py-3 sm:py-6" size="lg"
           >
-            {isCheckingIn ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : (alreadyCheckedInToday ? <CalendarCheck2 className="mr-2 h-5 w-5" /> : <Flame className="mr-2 h-5 w-5" />)}
+            {isCheckingIn ? <Loader2 className="mr-2 h-4 w-4 sm:h-5 sm:w-5 animate-spin" /> : (alreadyCheckedInToday ? <CalendarCheck2 className="mr-2 h-4 w-4 sm:h-5 sm:w-5" /> : <Flame className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />)}
             {isCheckingIn ? 'Checking In...' : (alreadyCheckedInToday ? 'Checked In for Today!' : 'Check-in & Earn Rewards')}
           </Button>
-           <p className="text-sm text-muted-foreground mt-3 text-center">Last check-in: {lastCheckInDateDisplay}</p>
+           <p className="text-xs sm:text-sm text-muted-foreground mt-2 sm:mt-3 text-center">Last check-in: {lastCheckInDateDisplay}</p>
         </CardContent>
       </Card>
 
-      {/* Achievements Section */}
       <Card className="shadow-lg">
-        <CardHeader>
-          <CardTitle className="text-2xl font-semibold flex items-center"><Award className="mr-3 h-7 w-7 text-yellow-500" /> Your Achievements</CardTitle>
-          <CardDescription>Celebrate your milestones and dedication!</CardDescription>
+        <CardHeader className="p-4 sm:p-6">
+          <CardTitle className="text-xl sm:text-2xl font-semibold flex items-center"><Award className="mr-2 sm:mr-3 h-6 w-6 sm:h-7 sm:w-7 text-yellow-500" /> Your Achievements</CardTitle>
+          <CardDescription className="text-xs sm:text-sm">Celebrate your milestones and dedication!</CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-4 sm:p-6">
           {earnedBadges.length === 0 && (
-            <p className="text-muted-foreground text-center py-4">No badges unlocked yet. Keep checking in and completing challenges! 💪</p>
+            <p className="text-muted-foreground text-center py-3 sm:py-4 text-sm sm:text-base">No badges unlocked yet. Keep checking in and completing challenges! 💪</p>
           )}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
             {earnedBadges.map(badge => (
-              <Card key={badge.id} className={cn("p-4 flex flex-col items-center text-center shadow-md", badge.colorClass)}>
-                <div className="p-3 bg-white/70 dark:bg-black/30 rounded-full mb-2 inline-block shadow">
-                   <badge.icon className="h-10 w-10" />
+              <Card key={badge.id} className={cn("p-3 sm:p-4 flex flex-col items-center text-center shadow-md", badge.colorClass)}>
+                <div className="p-2 sm:p-3 bg-white/70 dark:bg-black/30 rounded-full mb-1.5 sm:mb-2 inline-block shadow">
+                   <badge.icon className="h-8 w-8 sm:h-10 sm:w-10" />
                 </div>
-                <h3 className="font-semibold text-lg mb-0.5">{badge.name}</h3>
-                <p className="text-xs opacity-90 mb-2">{badge.description}</p>
-                <Button variant="outline" size="sm" onClick={() => handleShareBadge(badge.name)} className="mt-auto border-current hover:bg-current/20 w-full sm:w-auto">
-                  {copiedBadgeId === badge.id ? <Check className="mr-2 h-4 w-4" /> : <Copy className="mr-2 h-4 w-4" />}
+                <h3 className="font-semibold text-md sm:text-lg mb-0.5">{badge.name}</h3>
+                <p className="text-xs opacity-90 mb-1.5 sm:mb-2">{badge.description}</p>
+                <Button variant="outline" size="xs" onClick={() => handleShareBadge(badge.name)} className="mt-auto border-current hover:bg-current/20 w-full text-xs sm:text-sm">
+                  {copiedBadgeId === badge.id ? <Check className="mr-1.5 h-3.5 w-3.5" /> : <Copy className="mr-1.5 h-3.5 w-3.5" />}
                   {copiedBadgeId === badge.id ? 'Copied!' : 'Share'}
                 </Button>
               </Card>
@@ -412,17 +400,17 @@ export default function StreaksPage() {
 
       {unearnedBadges.length > 0 && (
         <Card className="shadow-md">
-          <CardHeader>
-            <CardTitle className="text-xl font-semibold">🎯 Badges to Unlock</CardTitle>
-            <CardDescription>Keep pushing to earn these awesome badges!</CardDescription>
+          <CardHeader className="p-4 sm:p-6">
+            <CardTitle className="text-lg sm:text-xl font-semibold">🎯 Badges to Unlock</CardTitle>
+            <CardDescription className="text-xs sm:text-sm">Keep pushing to earn these awesome badges!</CardDescription>
           </CardHeader>
-          <CardContent className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <CardContent className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 p-4 sm:p-6">
             {unearnedBadges.map(badge => (
-              <Card key={badge.id} className={cn("p-4 flex flex-col items-center text-center border-dashed opacity-70 hover:opacity-100 transition-opacity", badge.colorClass, "bg-opacity-5 dark:bg-opacity-5")}>
-                 <div className="p-3 bg-white/50 dark:bg-black/20 rounded-full mb-2 inline-block shadow-sm">
-                    <badge.icon className="h-10 w-10" />
+              <Card key={badge.id} className={cn("p-3 sm:p-4 flex flex-col items-center text-center border-dashed opacity-70 hover:opacity-100 transition-opacity", badge.colorClass, "bg-opacity-5 dark:bg-opacity-5")}>
+                 <div className="p-2 sm:p-3 bg-white/50 dark:bg-black/20 rounded-full mb-1.5 sm:mb-2 inline-block shadow-sm">
+                    <badge.icon className="h-8 w-8 sm:h-10 sm:w-10" />
                  </div>
-                <h3 className="font-semibold text-md mb-0.5">{badge.name}</h3>
+                <h3 className="font-semibold text-sm sm:text-md mb-0.5">{badge.name}</h3>
                 <p className="text-xs opacity-80 mb-1">{badge.description}</p>
                 <p className="text-xs font-medium mt-auto">
                     {badge.type === 'streak' && `Reach a ${badge.milestone}-day streak!`}
@@ -435,9 +423,9 @@ export default function StreaksPage() {
         </Card>
       )}
 
-       <div className="mt-8 p-6 rounded-xl border bg-card text-card-foreground shadow">
-          <h2 className="text-xl font-semibold mb-3">Why Track Streaks &amp; Achievements?</h2>
-          <ul className="list-disc list-inside space-y-2 text-muted-foreground">
+       <div className="mt-6 sm:mt-8 p-4 sm:p-6 rounded-xl border bg-card text-card-foreground shadow">
+          <h2 className="text-lg sm:text-xl font-semibold mb-2 sm:mb-3">Why Track Streaks &amp; Achievements?</h2>
+          <ul className="list-disc list-inside space-y-1.5 sm:space-y-2 text-xs sm:text-sm text-muted-foreground">
             <li>✅ Builds a powerful habit of daily studying.</li>
             <li>🚀 Provides motivation to stay consistent.</li>
             <li>📊 Visualizes your commitment and progress over time.</li>
@@ -448,5 +436,4 @@ export default function StreaksPage() {
     </div>
   );
 }
-
     

@@ -8,6 +8,7 @@ export const metadata: Metadata = {
   title: 'StudyTrack - Ace Your Competitive Exams',
   description: 'Your all-in-one study planner, productivity tracker, and AI-powered learning assistant for NEET, UPSC, JEE, and more.',
   manifest: '/manifest.json', // Link to the manifest file
+  viewport: 'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no', // Added for better mobile control
 };
 
 export default function RootLayout({

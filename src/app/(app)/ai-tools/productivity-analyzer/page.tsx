@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Loader2, Lightbulb, Zap, Brain, Award, TrendingUp, Rocket, Target as TargetIcon } from 'lucide-react'; // Added Award, TrendingUp, Rocket, TargetIcon
+import { Loader2, Lightbulb, Zap, Brain, Award, TrendingUp, Rocket, Target as TargetIcon } from 'lucide-react';
 import { analyzeProductivityData, type AnalyzeProductivityDataInput, type AnalyzeProductivityDataOutput } from '@/ai/flows/analyze-productivity-data';
 import { useToast } from '@/hooks/use-toast';
 
@@ -89,10 +89,10 @@ export default function ProductivityAnalyzerPage() {
   return (
     <div className="w-full space-y-6">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight md:text-4xl flex items-center">
-          <Brain className="mr-3 h-8 w-8 text-primary" /> Productivity Analysis AI
+        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight md:text-4xl flex items-center">
+          <Brain className="mr-2 sm:mr-3 h-7 w-7 sm:h-8 sm:w-8 text-primary" /> Productivity Analysis AI
         </h1>
-        <p className="text-lg text-muted-foreground">
+        <p className="text-md sm:text-lg text-muted-foreground">
           Input your weekly study data to get AI-driven insights and recommendations. 📈
         </p>
       </div>
@@ -100,20 +100,20 @@ export default function ProductivityAnalyzerPage() {
       <Card className="shadow-lg">
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)}>
-            <CardHeader>
-              <CardTitle>Your Weekly Study Data 🗓️</CardTitle>
-              <CardDescription>Provide your study metrics for the past week to get AI feedback.</CardDescription>
+            <CardHeader className="p-4 sm:p-6">
+              <CardTitle className="text-lg sm:text-xl">Your Weekly Study Data 🗓️</CardTitle>
+              <CardDescription className="text-xs sm:text-sm">Provide your study metrics for the past week to get AI feedback.</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
+            <CardContent className="space-y-4 sm:space-y-6 p-4 sm:p-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 sm:gap-x-6 gap-y-3 sm:gap-y-4">
                 <FormField
                   control={form.control}
                   name="studyHours"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Total Study Hours (Weekly) ⏳</FormLabel>
+                      <FormLabel className="text-sm sm:text-base">Total Study Hours (Weekly) ⏳</FormLabel>
                       <FormControl>
-                        <Input type="number" placeholder="e.g., 20" {...field} />
+                        <Input type="number" placeholder="e.g., 20" {...field} className="text-sm sm:text-base"/>
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -124,9 +124,9 @@ export default function ProductivityAnalyzerPage() {
                   name="topicsCompleted"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Total Topics Completed (Weekly) ✅</FormLabel>
+                      <FormLabel className="text-sm sm:text-base">Total Topics Completed (Weekly) ✅</FormLabel>
                       <FormControl>
-                        <Input type="number" placeholder="e.g., 5" {...field} />
+                        <Input type="number" placeholder="e.g., 5" {...field} className="text-sm sm:text-base"/>
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -135,40 +135,40 @@ export default function ProductivityAnalyzerPage() {
               </div>
               
               <Card className="border-border/70 bg-muted/30">
-                <CardHeader className="pb-3 pt-4">
-                    <CardTitle className="text-lg">Subject-wise Time Distribution (Hours) 📚</CardTitle>
-                    <CardDescription className="text-sm">Enter hours spent on each subject this week. Leave blank or 0 if not applicable.</CardDescription>
+                <CardHeader className="pb-2 sm:pb-3 pt-3 sm:pt-4 px-3 sm:px-4">
+                    <CardTitle className="text-md sm:text-lg">Subject-wise Time Distribution (Hours) 📚</CardTitle>
+                    <CardDescription className="text-xs sm:text-sm">Enter hours spent on each subject this week. Leave blank or 0 if not applicable.</CardDescription>
                 </CardHeader>
-                <CardContent className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-3">
+                <CardContent className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-x-3 sm:gap-x-4 gap-y-2 sm:gap-y-3 p-3 sm:p-4">
                     <FormField control={form.control} name="subjectPhysicsHours" render={({ field }) => (
-                        <FormItem><FormLabel className="text-sm">Physics</FormLabel><FormControl><Input type="number" placeholder="e.g., 5" {...field} value={field.value || ''} /></FormControl><FormMessage /></FormItem>
+                        <FormItem><FormLabel className="text-xs sm:text-sm">Physics</FormLabel><FormControl><Input type="number" placeholder="e.g., 5" {...field} value={field.value || ''} className="text-xs sm:text-sm h-9 sm:h-10"/></FormControl><FormMessage /></FormItem>
                     )} />
                     <FormField control={form.control} name="subjectChemistryHours" render={({ field }) => (
-                        <FormItem><FormLabel className="text-sm">Chemistry</FormLabel><FormControl><Input type="number" placeholder="e.g., 4" {...field} value={field.value || ''} /></FormControl><FormMessage /></FormItem>
+                        <FormItem><FormLabel className="text-xs sm:text-sm">Chemistry</FormLabel><FormControl><Input type="number" placeholder="e.g., 4" {...field} value={field.value || ''} className="text-xs sm:text-sm h-9 sm:h-10"/></FormControl><FormMessage /></FormItem>
                     )} />
                     <FormField control={form.control} name="subjectBiologyHours" render={({ field }) => (
-                       <FormItem><FormLabel className="text-sm">Biology</FormLabel><FormControl><Input type="number" placeholder="e.g., 3" {...field} value={field.value || ''} /></FormControl><FormMessage /></FormItem>
+                       <FormItem><FormLabel className="text-xs sm:text-sm">Biology</FormLabel><FormControl><Input type="number" placeholder="e.g., 3" {...field} value={field.value || ''} className="text-xs sm:text-sm h-9 sm:h-10"/></FormControl><FormMessage /></FormItem>
                     )} />
                     <FormField control={form.control} name="subjectMathHours" render={({ field }) => (
-                        <FormItem><FormLabel className="text-sm">Mathematics</FormLabel><FormControl><Input type="number" placeholder="e.g., 4" {...field} value={field.value || ''} /></FormControl><FormMessage /></FormItem>
+                        <FormItem><FormLabel className="text-xs sm:text-sm">Mathematics</FormLabel><FormControl><Input type="number" placeholder="e.g., 4" {...field} value={field.value || ''} className="text-xs sm:text-sm h-9 sm:h-10"/></FormControl><FormMessage /></FormItem>
                     )} />
                     <FormField control={form.control} name="subjectOtherHours" render={({ field }) => (
-                        <FormItem><FormLabel className="text-sm">Other Subjects</FormLabel><FormControl><Input type="number" placeholder="e.g., 2" {...field} value={field.value || ''} /></FormControl><FormMessage /></FormItem>
+                        <FormItem><FormLabel className="text-xs sm:text-sm">Other Subjects</FormLabel><FormControl><Input type="number" placeholder="e.g., 2" {...field} value={field.value || ''} className="text-xs sm:text-sm h-9 sm:h-10"/></FormControl><FormMessage /></FormItem>
                     )} />
                 </CardContent>
               </Card>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 sm:gap-x-6 gap-y-3 sm:gap-y-4">
                 <FormField
                   control={form.control}
                   name="streakLength"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Current Study Streak (Days) 🔥</FormLabel>
+                      <FormLabel className="text-sm sm:text-base">Current Study Streak (Days) 🔥</FormLabel>
                       <FormControl>
-                        <Input type="number" placeholder="e.g., 7" {...field} />
+                        <Input type="number" placeholder="e.g., 7" {...field} className="text-sm sm:text-base"/>
                       </FormControl>
-                      <FormDescription>How many consecutive days have you studied?</FormDescription>
+                      <FormDescription className="text-xs sm:text-sm">How many consecutive days have you studied?</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -178,27 +178,27 @@ export default function ProductivityAnalyzerPage() {
                   name="weeklyGoalsCompleted"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Weekly Goals Completed 🎯</FormLabel>
+                      <FormLabel className="text-sm sm:text-base">Weekly Goals Completed 🎯</FormLabel>
                       <FormControl>
-                        <Input type="number" placeholder="e.g., 3 of 5" {...field} />
+                        <Input type="number" placeholder="e.g., 3 of 5" {...field} className="text-sm sm:text-base"/>
                       </FormControl>
-                      <FormDescription>How many of your set weekly goals did you achieve?</FormDescription>
+                      <FormDescription className="text-xs sm:text-sm">How many of your set weekly goals did you achieve?</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
               </div>
             </CardContent>
-            <CardFooter>
-              <Button type="submit" disabled={isLoading} size="lg" className="w-full sm:w-auto">
+            <CardFooter className="p-4 sm:p-6">
+              <Button type="submit" disabled={isLoading} size="default" className="w-full sm:w-auto text-sm sm:text-base">
                 {isLoading ? (
                   <>
-                    <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                    <Loader2 className="mr-2 h-4 w-4 sm:h-5 sm:w-5 animate-spin" />
                     Analyzing...
                   </>
                 ) : (
                   <>
-                    <Lightbulb className="mr-2 h-5 w-5" />
+                    <Lightbulb className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />
                     Get AI Insights
                   </>
                 )}
@@ -210,29 +210,29 @@ export default function ProductivityAnalyzerPage() {
 
       {analysisResult && (
         <Card className="shadow-lg animate-in fade-in-50 duration-500 mt-6">
-          <CardHeader>
-            <CardTitle className="text-2xl font-headline text-primary flex items-center">
-                <Zap className="mr-2 h-6 w-6" /> 🚀 Your AI Productivity Analysis!
+          <CardHeader className="p-4 sm:p-6">
+            <CardTitle className="text-xl sm:text-2xl font-headline text-primary flex items-center">
+                <Zap className="mr-2 h-5 w-5 sm:h-6 sm:w-6" /> 🚀 Your AI Productivity Analysis!
             </CardTitle>
-            <CardDescription>Here's what the AI thinks about your study habits this week.</CardDescription>
+            <CardDescription className="text-xs sm:text-sm">Here's what the AI thinks about your study habits this week.</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="p-4 bg-secondary/40 rounded-lg border border-border">
-              <h3 className="font-semibold text-xl mb-2 text-foreground flex items-center">
-                <Award className="mr-2 h-5 w-5 text-accent" /> Overall Assessment Snapshot:
+          <CardContent className="space-y-4 sm:space-y-6 p-4 sm:p-6">
+            <div className="p-3 sm:p-4 bg-secondary/40 rounded-lg border border-border">
+              <h3 className="font-semibold text-lg sm:text-xl mb-1.5 sm:mb-2 text-foreground flex items-center">
+                <Award className="mr-2 h-4 w-4 sm:h-5 sm:w-5 text-accent" /> Overall Assessment Snapshot:
               </h3>
-              <p className="text-muted-foreground leading-relaxed">{analysisResult.overallAssessment}</p>
+              <p className="text-sm sm:text-base text-muted-foreground leading-relaxed">{analysisResult.overallAssessment}</p>
             </div>
             
             {analysisResult.insights && analysisResult.insights.length > 0 && (
-              <div className="p-4 bg-card rounded-lg border border-border">
-                <h3 className="font-semibold text-xl mb-3 text-foreground flex items-center">
-                  <Lightbulb className="mr-2 h-5 w-5 text-yellow-500 dark:text-yellow-400" /> Personalized Insights Unlocked:
+              <div className="p-3 sm:p-4 bg-card rounded-lg border border-border">
+                <h3 className="font-semibold text-lg sm:text-xl mb-2 sm:mb-3 text-foreground flex items-center">
+                  <Lightbulb className="mr-2 h-4 w-4 sm:h-5 sm:w-5 text-yellow-500 dark:text-yellow-400" /> Personalized Insights Unlocked:
                 </h3>
-                <ul className="space-y-2.5 text-muted-foreground">
+                <ul className="space-y-2 text-sm sm:text-base text-muted-foreground">
                   {analysisResult.insights.map((insight, index) => (
-                    <li key={`insight-${index}`} className="py-1 flex items-start">
-                        <TrendingUp className="mr-3 h-5 w-5 text-sky-500 dark:text-sky-400 shrink-0 mt-0.5" />
+                    <li key={`insight-${index}`} className="py-0.5 sm:py-1 flex items-start">
+                        <TrendingUp className="mr-2 sm:mr-3 h-4 w-4 sm:h-5 sm:w-5 text-sky-500 dark:text-sky-400 shrink-0 mt-0.5" />
                         <span>{insight}</span>
                     </li>
                   ))}
@@ -241,14 +241,14 @@ export default function ProductivityAnalyzerPage() {
             )}
 
             {analysisResult.recommendations && analysisResult.recommendations.length > 0 && (
-              <div className="p-4 bg-card rounded-lg border border-border">
-                <h3 className="font-semibold text-xl mb-3 text-foreground flex items-center">
-                  <Rocket className="mr-2 h-5 w-5 text-green-500 dark:text-green-400" /> Your Action Plan for Success:
+              <div className="p-3 sm:p-4 bg-card rounded-lg border border-border">
+                <h3 className="font-semibold text-lg sm:text-xl mb-2 sm:mb-3 text-foreground flex items-center">
+                  <Rocket className="mr-2 h-4 w-4 sm:h-5 sm:w-5 text-green-500 dark:text-green-400" /> Your Action Plan for Success:
                 </h3>
-                <ul className="space-y-2.5 text-muted-foreground">
+                <ul className="space-y-2 text-sm sm:text-base text-muted-foreground">
                   {analysisResult.recommendations.map((rec, index) => (
-                    <li key={`rec-${index}`} className="py-1 flex items-start">
-                        <TargetIcon className="mr-3 h-5 w-5 text-red-500 dark:text-red-400 shrink-0 mt-0.5" />
+                    <li key={`rec-${index}`} className="py-0.5 sm:py-1 flex items-start">
+                        <TargetIcon className="mr-2 sm:mr-3 h-4 w-4 sm:h-5 sm:w-5 text-red-500 dark:text-red-400 shrink-0 mt-0.5" />
                         <span>{rec}</span>
                     </li>
                   ))}
@@ -256,8 +256,8 @@ export default function ProductivityAnalyzerPage() {
               </div>
             )}
           </CardContent>
-           <CardFooter className="pt-6 border-t mt-6 bg-secondary/20 rounded-b-lg">
-            <p className="text-md text-center w-full text-accent-foreground/90 font-semibold">
+           <CardFooter className="pt-4 sm:pt-6 border-t mt-4 sm:mt-6 bg-secondary/20 rounded-b-lg p-4 sm:p-6">
+            <p className="text-sm sm:text-md text-center w-full text-accent-foreground/90 font-semibold">
                 🙌 Keep crushing those goals! Small improvements lead to big wins. You're on the path to success!
             </p>
           </CardFooter>

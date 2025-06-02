@@ -40,36 +40,35 @@ const featuresRow2 = [
 
 export function FeaturesSection() {
   return (
-    <section id="features" className="w-full py-12 md:py-24 lg:py-32 bg-background">
+    <section id="features" className="w-full py-12 md:py-20 lg:py-28 bg-background">
       <div className="container mx-auto px-4 md:px-6">
-        <div className="flex flex-col items-center justify-center space-y-4 text-center mb-12">
-          <div className="inline-block rounded-lg bg-secondary px-3 py-1 text-sm text-secondary-foreground">Key Features</div>
-          <h2 className="font-headline text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl text-foreground">
+        <div className="flex flex-col items-center justify-center space-y-3 sm:space-y-4 text-center mb-10 md:mb-12">
+          <div className="inline-block rounded-lg bg-secondary px-3 py-1 text-xs sm:text-sm text-secondary-foreground">Key Features</div>
+          <h2 className="font-headline text-2xl font-bold tracking-tighter sm:text-3xl md:text-4xl text-foreground">
             Unlock Your Potential with StudyTrack
           </h2>
-          <p className="max-w-[700px] text-muted-foreground md:text-xl/relaxed lg:text-base/relaxed xl:text-xl/relaxed">
+          <p className="max-w-[700px] text-muted-foreground text-sm sm:text-base md:text-lg/relaxed xl:text-xl/relaxed">
             Everything you need to organize your studies, stay focused, and achieve your exam goals.
           </p>
         </div>
-        <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 mb-12">
+        <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 mb-10 md:mb-12">
           {featuresRow1.map((feature) => (
             <FeatureCard key={feature.title} {...feature} />
           ))}
         </div>
-        <div className="flex flex-col items-center justify-center space-y-4 text-center my-12">
-           <h2 className="font-headline text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl text-foreground">
+        <div className="flex flex-col items-center justify-center space-y-3 sm:space-y-4 text-center my-10 md:my-12">
+           <h2 className="font-headline text-2xl font-bold tracking-tighter sm:text-3xl md:text-4xl text-foreground">
             Streamline Your Study Routine
           </h2>
-          <p className="max-w-[700px] text-muted-foreground md:text-xl/relaxed lg:text-base/relaxed xl:text-xl/relaxed">
+          <p className="max-w-[700px] text-muted-foreground text-sm sm:text-base md:text-lg/relaxed xl:text-xl/relaxed">
             Powerful tools designed to enhance your productivity and learning efficiency.
           </p>
         </div>
-        <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
           {featuresRow2.map((feature) => (
             <FeatureCard key={feature.title} {...feature} />
           ))}
         </div>
-         {/* The "And More..." section and the Productivity Stats card have been removed */}
       </div>
     </section>
   );

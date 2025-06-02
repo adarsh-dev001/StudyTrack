@@ -37,7 +37,6 @@ export function PomodoroTimer() {
   const [isRunning, setIsRunning] = useState(false);
   const [pomodorosCompletedCycle, setPomodorosCompletedCycle] = useState(0);
   
-  // All soundtracks are available, no need to check purchase status
   const [availableSoundtracks] = useState<SoundtrackDefinition[]>(ALL_SOUNDTRACK_DEFINITIONS);
   const [selectedSoundtrackPath, setSelectedSoundtrackPath] = useState<string | null>(null);
 
@@ -58,7 +57,7 @@ export function PomodoroTimer() {
         coins: 0,
         xp: 0,
         earnedBadgeIds: [],
-        purchasedItemIds: [], // Kept for structure, but soundtracks aren't "purchased"
+        purchasedItemIds: [],
         activeThemeId: DEFAULT_THEME_ID,
         dailyChallengeStatus: {}
       };
@@ -105,7 +104,7 @@ export function PomodoroTimer() {
   useEffect(() => {
     if (timeRemaining === 0 && isRunning) {
       if (mode === 'pomodoro') {
-        if (currentUser) { // Only award coins if user is logged in
+        if (currentUser) {
           awardCoinsForPomodoro();
         }
         const newPomodorosCompleted = pomodorosCompletedCycle + 1;
@@ -169,93 +168,85 @@ export function PomodoroTimer() {
   }, [timeRemaining, isRunning, mode]);
 
   return (
-    <Card className="w-full max-w-md mx-auto shadow-xl">
-      <CardHeader className="text-center">
-        <CardTitle className="font-headline text-2xl flex items-center justify-center">
-          <TimerIcon className="mr-2 h-7 w-7 text-primary" />
+    <Card className="w-full max-w-sm sm:max-w-md mx-auto shadow-xl">
+      <CardHeader className="text-center p-4 sm:p-6">
+        <CardTitle className="font-headline text-xl sm:text-2xl flex items-center justify-center">
+          <TimerIcon className="mr-2 h-6 w-6 sm:h-7 sm:w-7 text-primary" />
           Pomodoro Timer
         </CardTitle>
       </CardHeader>
-      <CardContent className="flex flex-col items-center space-y-6 pt-6">
+      <CardContent className="flex flex-col items-center space-y-4 sm:space-y-6 p-4 sm:p-6 pt-2 sm:pt-6">
         <Tabs value={mode} onValueChange={handleModeChange} className="w-full">
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="pomodoro">Pomodoro ({formatTime(POMODORO_DURATION)})</TabsTrigger>
-            <TabsTrigger value="shortBreak">Short Break ({formatTime(SHORT_BREAK_DURATION)})</TabsTrigger>
-            <TabsTrigger value="longBreak">Long Break ({formatTime(LONG_BREAK_DURATION)})</TabsTrigger>
+          <TabsList className="grid w-full grid-cols-3 h-auto text-xs sm:text-sm">
+            <TabsTrigger value="pomodoro" className="py-1.5 sm:py-2">Pomodoro ({formatTime(POMODORO_DURATION)})</TabsTrigger>
+            <TabsTrigger value="shortBreak" className="py-1.5 sm:py-2">Short Break ({formatTime(SHORT_BREAK_DURATION)})</TabsTrigger>
+            <TabsTrigger value="longBreak" className="py-1.5 sm:py-2">Long Break ({formatTime(LONG_BREAK_DURATION)})</TabsTrigger>
           </TabsList>
         </Tabs>
 
-        <div className="text-7xl font-bold text-foreground tabular-nums my-4" aria-live="polite">
+        <div className="text-6xl sm:text-7xl font-bold text-foreground tabular-nums my-2 sm:my-4" aria-live="polite">
           {formatTime(timeRemaining)}
         </div>
 
-        <div className="flex flex-col sm:flex-row space-y-3 sm:space-y-0 sm:space-x-4 w-full max-w-xs">
+        <div className="flex flex-col xs:flex-row space-y-2 xs:space-y-0 xs:space-x-3 w-full max-w-xs">
           <Button 
             onClick={handleStartPause} 
-            className="flex-1 text-lg py-6" 
+            className="flex-1 text-md sm:text-lg py-2.5 sm:py-3 h-auto sm:h-12" 
             size="lg"
             aria-label={isRunning ? "Pause timer" : "Start timer"}
-            disabled={!currentUser && mode === 'pomodoro'} // Disable start for pomodoro if not logged in
+            disabled={!currentUser && mode === 'pomodoro'}
           >
-            {isRunning ? <PauseIcon className="mr-2" /> : <PlayIcon className="mr-2" />}
+            {isRunning ? <PauseIcon className="mr-1.5 h-4 w-4 sm:h-5 sm:w-5" /> : <PlayIcon className="mr-1.5 h-4 w-4 sm:h-5 sm:w-5" />}
             {isRunning ? 'Pause' : 'Start'}
           </Button>
           <Button 
             onClick={handleReset} 
             variant="outline" 
-            className="flex-1 text-lg py-6" 
+            className="flex-1 text-md sm:text-lg py-2.5 sm:py-3 h-auto sm:h-12" 
             size="lg"
             aria-label="Reset timer"
           >
-            <RotateCcwIcon className="mr-2" />
+            <RotateCcwIcon className="mr-1.5 h-4 w-4 sm:h-5 sm:w-5" />
             Reset
           </Button>
         </div>
-        <p className="text-sm text-muted-foreground">
+        <p className="text-xs sm:text-sm text-muted-foreground">
           Completed in cycle: {pomodorosCompletedCycle % POMODOROS_UNTIL_LONG_BREAK} (next long break after {POMODOROS_UNTIL_LONG_BREAK})
         </p>
          {!currentUser && mode === 'pomodoro' && (
-            <p className="text-xs text-destructive text-center mt-2">Login to track Pomodoros and earn rewards!</p>
+            <p className="text-xs text-destructive text-center mt-1 sm:mt-2">Login to track Pomodoros and earn rewards!</p>
         )}
       </CardContent>
-      <CardFooter className="flex flex-col items-center space-y-3 pt-4 border-t">
-        {true && ( // Always show soundtrack selector if soundtracks are defined, login not required to select
+      <CardFooter className="flex flex-col items-center space-y-2 sm:space-y-3 p-4 sm:p-6 pt-3 sm:pt-4 border-t">
+        {true && (
             <div className="w-full max-w-xs">
                 <Select 
                     onValueChange={handleSoundtrackChange} 
                     defaultValue={selectedSoundtrackPath ? availableSoundtracks.find(s => s.filePath === selectedSoundtrackPath)?.id : "none"}
                     disabled={availableSoundtracks.length === 0}
                 >
-                    <SelectTrigger className="w-full">
+                    <SelectTrigger className="w-full text-xs sm:text-sm h-9 sm:h-10">
                         <SelectValue placeholder="Select Soundtrack..." />
                     </SelectTrigger>
                     <SelectContent>
-                        <SelectItem value="none">
+                        <SelectItem value="none" className="text-xs sm:text-sm">
                             <div className="flex items-center">
-                                <VolumeX className="mr-2 h-4 w-4" /> No Sound
+                                <VolumeX className="mr-2 h-3.5 w-3.5 sm:h-4 sm:w-4" /> No Sound
                             </div>
                         </SelectItem>
                         {availableSoundtracks.map(track => (
-                            <SelectItem key={track.id} value={track.id}>
+                            <SelectItem key={track.id} value={track.id} className="text-xs sm:text-sm">
                                 <div className="flex items-center">
-                                    <Music2 className="mr-2 h-4 w-4" /> {track.name}
+                                    <Music2 className="mr-2 h-3.5 w-3.5 sm:h-4 sm:w-4" /> {track.name}
                                 </div>
                             </SelectItem>
                         ))}
                     </SelectContent>
                 </Select>
-                {availableSoundtracks.length === 0 && <p className="text-xs text-muted-foreground text-center mt-1.5">No soundtracks available.</p>}
+                {availableSoundtracks.length === 0 && <p className="text-xs text-muted-foreground text-center mt-1">No soundtracks available.</p>}
             </div>
         )}
         <FocusAudioPlayer src={selectedSoundtrackPath} isPlaying={isRunning && !!selectedSoundtrackPath} loop={true} volume={0.5} />
-         {/* USER ACTION REQUIRED: 
-             The 'filePath' in src/lib/soundtracks.ts currently uses placeholders like '/sounds/placeholder_lofi_1.mp3'.
-             You need to:
-             1. Create a 'sounds' folder inside your 'public' directory.
-             2. Place your actual audio files (e.g., lofi_chill_1.mp3) in 'public/sounds/'.
-             3. Update the 'filePath' in 'src/lib/soundtracks.ts' to reflect the correct paths to your audio files.
-             For example, change '/sounds/placeholder_lofi_1.mp3' to '/sounds/your_actual_lofi_filename.mp3'.
-        */}
       </CardFooter>
     </Card>
   );

@@ -40,9 +40,8 @@ import { format } from "date-fns";
 import type { Task, Priority } from "./planner-types";
 import { subjects, getPriorityBadgeInfo, getSubjectInfo, hourToDisplayTime } from "./planner-utils";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Badge } from "@/components/ui/badge"; // Import Badge component
+import { Badge } from "@/components/ui/badge";
 
-// Lazy load the dialog content
 const NewTaskDialogContent = React.lazy(() => import('./new-task-dialog-content'));
 
 interface DayViewProps {
@@ -52,12 +51,12 @@ interface DayViewProps {
 
 function NewTaskDialogFallback() {
     return (
-        <div className="grid gap-4 py-4 max-h-[65vh] overflow-y-auto pr-3">
-            <Skeleton className="h-10 w-full" />
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4"><Skeleton className="h-10 w-full" /><Skeleton className="h-10 w-full" /></div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4"><Skeleton className="h-10 w-full" /><Skeleton className="h-10 w-full" /></div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4"><Skeleton className="h-10 w-full" /><Skeleton className="h-10 w-full" /></div>
-            <Skeleton className="h-20 w-full" />
+        <div className="grid gap-4 py-4 max-h-[60vh] sm:max-h-[65vh] overflow-y-auto pr-3">
+            <Skeleton className="h-9 sm:h-10 w-full" />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4"><Skeleton className="h-9 sm:h-10 w-full" /><Skeleton className="h-9 sm:h-10 w-full" /></div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4"><Skeleton className="h-9 sm:h-10 w-full" /><Skeleton className="h-9 sm:h-10 w-full" /></div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4"><Skeleton className="h-9 sm:h-10 w-full" /><Skeleton className="h-9 sm:h-10 w-full" /></div>
+            <Skeleton className="h-16 sm:h-20 w-full" />
         </div>
     );
 }
@@ -71,15 +70,14 @@ export default function DayView({ selectedDate, selectedSubjectFilter }: DayView
     status: "pending",
     duration: 1,
     day: selectedDate.getDay(),
-    startHour: 9, // Default start hour
-    subject: subjects[0].id, // Default subject
+    startHour: 9,
+    subject: subjects[0].id,
   });
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
-  const hours = Array.from({ length: 15 }, (_, i) => i + 8); // 8 AM to 10 PM
+  const hours = Array.from({ length: 15 }, (_, i) => i + 8);
 
   useEffect(() => {
-    // Update the default day for new tasks when selectedDate changes
     setNewTask(prev => ({ ...prev, day: selectedDate.getDay() }));
   }, [selectedDate]);
 
@@ -107,7 +105,6 @@ export default function DayView({ selectedDate, selectedSubjectFilter }: DayView
       querySnapshot.forEach((doc) => {
         fetchedTasks.push({ id: doc.id, ...doc.data() } as Task);
       });
-      // Sort tasks by startHour for consistent display
       fetchedTasks.sort((a, b) => a.startHour - b.startHour);
       setTasks(fetchedTasks);
       setIsLoadingTasks(false);
@@ -144,7 +141,7 @@ export default function DayView({ selectedDate, selectedSubjectFilter }: DayView
       duration: Number(newTask.duration) || 1,
       priority: newTask.priority as Priority || "medium",
       status: "pending",
-      day: selectedDate.getDay(), // Ensure day is from selectedDate
+      day: selectedDate.getDay(),
       startHour: Number(newTask.startHour),
     };
 
@@ -189,18 +186,18 @@ export default function DayView({ selectedDate, selectedSubjectFilter }: DayView
     const subjectInfo = getSubjectInfo(task.subject);
     const priorityInfo = getPriorityBadgeInfo(task.priority);
     return (
-      <Card key={task.id} className={cn("mb-3 shadow-md border", subjectInfo.color, task.status === "completed" ? "opacity-60 line-through" : "")}>
-        <CardHeader className="pb-2 pt-3 px-3">
-          <div className="flex justify-between items-start gap-2">
-            <CardTitle className={cn("text-base font-semibold leading-tight break-words", subjectInfo.textColor)} title={task.title}>
+      <Card key={task.id} className={cn("mb-2 sm:mb-3 shadow-md border", subjectInfo.color, task.status === "completed" ? "opacity-60 line-through" : "")}>
+        <CardHeader className="pb-1.5 sm:pb-2 pt-2 sm:pt-3 px-2 sm:px-3">
+          <div className="flex justify-between items-start gap-1 sm:gap-2">
+            <CardTitle className={cn("text-sm sm:text-base font-semibold leading-tight break-words", subjectInfo.textColor)} title={task.title}>
               {task.title}
             </CardTitle>
-            <div className="flex items-center space-x-1 shrink-0">
-              <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => toggleTaskStatus(task.id)} title={task.status === "completed" ? "Mark pending" : "Mark completed"}>
-                {task.status === "completed" ? <CheckCircle2 className="h-4 w-4 text-green-600" /> : <CheckCircle2 className="h-4 w-4 opacity-50 hover:opacity-100" />}
+            <div className="flex items-center space-x-0.5 sm:space-x-1 shrink-0">
+              <Button variant="ghost" size="icon" className="h-5 w-5 sm:h-6 sm:w-6" onClick={() => toggleTaskStatus(task.id)} title={task.status === "completed" ? "Mark pending" : "Mark completed"}>
+                {task.status === "completed" ? <CheckCircle2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-green-600" /> : <CheckCircle2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 opacity-50 hover:opacity-100" />}
               </Button>
-              <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleDeleteTask(task.id)} title="Delete task">
-                <Trash2 className="h-4 w-4 text-red-500 hover:text-red-700" />
+              <Button variant="ghost" size="icon" className="h-5 w-5 sm:h-6 sm:w-6" onClick={() => handleDeleteTask(task.id)} title="Delete task">
+                <Trash2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-red-500 hover:text-red-700" />
               </Button>
             </div>
           </div>
@@ -209,14 +206,14 @@ export default function DayView({ selectedDate, selectedSubjectFilter }: DayView
             {task.topic && <span className="ml-1 break-all"> - {task.topic}</span>}
           </div>
         </CardHeader>
-        <CardContent className="px-3 pb-3 text-xs">
-          {task.description && <p className={cn("mb-2 opacity-80 break-words", subjectInfo.textColor)}>{task.description}</p>}
+        <CardContent className="px-2 sm:px-3 pb-2 sm:pb-3 text-xs">
+          {task.description && <p className={cn("mb-1.5 sm:mb-2 opacity-80 break-words", subjectInfo.textColor)}>{task.description}</p>}
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-1 sm:gap-2">
             <div className={cn("flex items-center opacity-80", subjectInfo.textColor)}>
               <Clock className="h-3 w-3 mr-1" />
               <span>{hourToDisplayTime(task.startHour)} ({task.duration} {task.duration === 1 ? "hr" : "hrs"})</span>
             </div>
-            <Badge variant={priorityInfo.variant} className={cn("mt-1 sm:mt-0", priorityInfo.className)}>{priorityInfo.text}</Badge>
+            <Badge variant={priorityInfo.variant} className={cn("mt-1 sm:mt-0 text-[10px] sm:text-xs px-1.5 py-0.5", priorityInfo.className)}>{priorityInfo.text}</Badge>
           </div>
         </CardContent>
       </Card>
@@ -225,20 +222,20 @@ export default function DayView({ selectedDate, selectedSubjectFilter }: DayView
 
   if (isLoadingTasks) {
     return (
-      <div className="flex-grow flex flex-col items-center justify-center p-6 bg-muted/20 rounded-lg">
-        <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
-        <p className="text-muted-foreground">Loading tasks for {format(selectedDate, "EEEE, MMM d")}...</p>
+      <div className="flex-grow flex flex-col items-center justify-center p-4 sm:p-6 bg-muted/20 rounded-lg">
+        <Loader2 className="h-10 w-10 sm:h-12 sm:w-12 animate-spin text-primary mb-3 sm:mb-4" />
+        <p className="text-muted-foreground text-sm sm:text-base">Loading tasks for {format(selectedDate, "EEEE, MMM d")}...</p>
       </div>
     );
   }
 
   if (!currentUser) {
     return (
-      <Card className="border-dashed flex-grow flex flex-col items-center justify-center min-h-[400px] bg-muted/20">
-        <CardContent className="pt-6 text-center p-6">
-             <BookOpen className="h-10 w-10 text-primary mx-auto mb-4" />
-          <h3 className="text-xl font-semibold mb-2">Login to Plan Your Day</h3>
-          <p className="text-muted-foreground">Please login to view and manage your daily study schedule.</p>
+      <Card className="border-dashed flex-grow flex flex-col items-center justify-center min-h-[300px] sm:min-h-[400px] bg-muted/20 p-4">
+        <CardContent className="pt-6 text-center">
+             <BookOpen className="h-8 w-8 sm:h-10 sm:w-10 text-primary mx-auto mb-3 sm:mb-4" />
+          <h3 className="text-lg sm:text-xl font-semibold mb-1.5 sm:mb-2">Login to Plan Your Day</h3>
+          <p className="text-muted-foreground text-sm sm:text-base">Please login to view and manage your daily study schedule.</p>
         </CardContent>
       </Card>
     );
@@ -254,46 +251,46 @@ export default function DayView({ selectedDate, selectedSubjectFilter }: DayView
 
 
   return (
-    <div className="flex-grow flex flex-col p-1">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 px-2 gap-2">
-        <h2 className="text-xl font-bold text-foreground">
+    <div className="flex-grow flex flex-col p-1 sm:p-0">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-3 sm:mb-4 px-1 sm:px-2 gap-2">
+        <h2 className="text-lg sm:text-xl font-bold text-foreground">
           Tasks for: {format(selectedDate, "EEEE, MMMM d, yyyy")}
         </h2>
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
-            <Button size="sm" className="w-full sm:w-auto">
-              <Plus className="mr-2 h-4 w-4" /> Add Task
+            <Button size="sm" className="w-full sm:w-auto text-xs sm:text-sm">
+              <Plus className="mr-1.5 h-3.5 w-3.5 sm:h-4 sm:w-4" /> Add Task
             </Button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-lg">
+          <DialogContent className="sm:max-w-md md:max-w-lg">
             <DialogHeader>
-              <DialogTitle>Add New Task for {format(selectedDate, "EEEE")}</DialogTitle>
-              <DialogDescription>
+              <DialogTitle className="text-base sm:text-lg">Add New Task for {format(selectedDate, "EEEE")}</DialogTitle>
+              <DialogDescription className="text-xs sm:text-sm">
                 Fill in the details for your new study task for {format(selectedDate, "MMMM d")}. Required fields are marked with <span className="text-destructive">*</span>.
               </DialogDescription>
             </DialogHeader>
             <Suspense fallback={<NewTaskDialogFallback />}>
                 <NewTaskDialogContent
-                    newTask={{...newTask, day: selectedDate.getDay() }} // Ensure day is correctly set
+                    newTask={{...newTask, day: selectedDate.getDay() }}
                     onInputChange={handleInputChange}
                     onSelectChange={handleSelectChange}
-                    isDayView={true} // Indicate it's for DayView
+                    isDayView={true}
                 />
             </Suspense>
-            <DialogFooter className="mt-2 pt-4 border-t">
-              <Button variant="outline" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
-              <Button onClick={handleCreateTask} disabled={!newTask.title || !newTask.subject || newTask.startHour === undefined || newTask.duration === undefined}>Save Task</Button>
+            <DialogFooter className="mt-2 pt-3 sm:pt-4 border-t">
+              <Button variant="outline" onClick={() => setIsDialogOpen(false)} size="sm" className="text-xs sm:text-sm">Cancel</Button>
+              <Button onClick={handleCreateTask} disabled={!newTask.title || !newTask.subject || newTask.startHour === undefined || newTask.duration === undefined} size="sm" className="text-xs sm:text-sm">Save Task</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
       </div>
 
       {tasks.length === 0 && !isLoadingTasks && (
-        <Card className="border-dashed flex-grow flex flex-col items-center justify-center min-h-[300px] bg-muted/20">
-          <CardContent className="text-center p-6">
-            <BookOpen className="h-10 w-10 text-primary mx-auto mb-4" />
-            <h3 className="text-lg font-semibold mb-1 text-foreground">No tasks for {format(selectedDate, "EEEE")}.</h3>
-            <p className="text-muted-foreground text-sm">
+        <Card className="border-dashed flex-grow flex flex-col items-center justify-center min-h-[250px] sm:min-h-[300px] bg-muted/20">
+          <CardContent className="text-center p-4 sm:p-6">
+            <BookOpen className="h-8 w-8 sm:h-10 sm:w-10 text-primary mx-auto mb-3 sm:mb-4" />
+            <h3 className="text-md sm:text-lg font-semibold mb-1 text-foreground">No tasks for {format(selectedDate, "EEEE")}.</h3>
+            <p className="text-muted-foreground text-xs sm:text-sm">
               {selectedSubjectFilter && selectedSubjectFilter !== "all" 
                 ? `No tasks for ${getSubjectInfo(selectedSubjectFilter).name} on this day. Add one or change the filter.`
                 : "Enjoy your free day or add some tasks!"}
@@ -303,18 +300,18 @@ export default function DayView({ selectedDate, selectedSubjectFilter }: DayView
       )}
 
       {tasks.length > 0 && (
-        <ScrollArea className="flex-grow">
-          <div className="space-y-0 pr-3">
+        <ScrollArea className="flex-grow pr-1 sm:pr-2">
+          <div className="space-y-0">
             {hours.map((hour) => (
-              <div key={hour} className="flex items-start py-2 border-b last:border-b-0">
-                <div className="w-16 sm:w-20 text-xs text-muted-foreground font-medium pt-1 text-right pr-2 sm:pr-3 shrink-0">
+              <div key={hour} className="flex items-start py-1.5 sm:py-2 border-b last:border-b-0">
+                <div className="w-12 sm:w-16 text-[10px] sm:text-xs text-muted-foreground font-medium pt-0.5 sm:pt-1 text-right pr-1.5 sm:pr-2 shrink-0">
                   {hourToDisplayTime(hour)}
                 </div>
-                <div className="flex-grow pl-2 sm:pl-3 border-l min-h-[3rem]">
+                <div className="flex-grow pl-1.5 sm:pl-2 border-l min-h-[2.5rem] sm:min-h-[3rem]">
                   {tasksByHour[hour] && tasksByHour[hour].length > 0 ? (
                     tasksByHour[hour].map(task => renderTaskCard(task))
                   ) : (
-                    <div className="text-xs text-muted-foreground/70 italic h-full flex items-center">No tasks scheduled.</div>
+                    <div className="text-[10px] sm:text-xs text-muted-foreground/70 italic h-full flex items-center">No tasks scheduled.</div>
                   )}
                 </div>
               </div>

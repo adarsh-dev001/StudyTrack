@@ -16,15 +16,15 @@ export default function Step1ExamFocus() {
   const selectedExams = watch('targetExams') || [];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 md:space-y-6">
       <FormField
         control={control}
         name="targetExams"
         render={() => (
           <FormItem>
-            <FormLabel className="text-base font-semibold">Target Exam(s) <span className="text-destructive">*</span></FormLabel>
-            <FormDescription>Select the competitive exam(s) you are preparing for.</FormDescription>
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-3 pt-2">
+            <FormLabel className="text-sm sm:text-base font-semibold">Target Exam(s) <span className="text-destructive">*</span></FormLabel>
+            <FormDescription className="text-xs sm:text-sm">Select the competitive exam(s) you are preparing for.</FormDescription>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-3 gap-y-2 sm:gap-x-4 sm:gap-y-3 pt-1 sm:pt-2">
               {TARGET_EXAMS.map((exam) => (
                 <FormField
                   key={exam.value}
@@ -44,7 +44,7 @@ export default function Step1ExamFocus() {
                             }}
                           />
                         </FormControl>
-                        <FormLabel className="font-normal text-sm">{exam.label}</FormLabel>
+                        <FormLabel className="font-normal text-xs sm:text-sm">{exam.label}</FormLabel>
                       </FormItem>
                     );
                   }}
@@ -62,9 +62,9 @@ export default function Step1ExamFocus() {
             name="otherExamName"
             render={({ field }) => (
                 <FormItem>
-                    <FormLabel>If 'Other', please specify <span className="text-destructive">*</span></FormLabel>
+                    <FormLabel className="text-sm sm:text-base">If 'Other', please specify <span className="text-destructive">*</span></FormLabel>
                     <FormControl>
-                        <Input placeholder="E.g., GRE, GMAT, Specific State PSC" {...field} />
+                        <Input placeholder="E.g., GRE, GMAT, Specific State PSC" {...field} className="text-sm sm:text-base"/>
                     </FormControl>
                     <FormMessage />
                 </FormItem>
@@ -78,16 +78,16 @@ export default function Step1ExamFocus() {
         name="examAttemptYear"
         render={({ field }) => (
           <FormItem>
-            <FormLabel className="font-semibold">Primary Exam Attempt Year <span className="text-destructive">*</span></FormLabel>
+            <FormLabel className="text-sm sm:text-base font-semibold">Primary Exam Attempt Year <span className="text-destructive">*</span></FormLabel>
             <Select onValueChange={field.onChange} defaultValue={field.value}>
               <FormControl>
-                <SelectTrigger>
+                <SelectTrigger className="text-sm sm:text-base">
                   <SelectValue placeholder="Select year" />
                 </SelectTrigger>
               </FormControl>
               <SelectContent>
                 {EXAM_ATTEMPT_YEARS().map(year => (
-                  <SelectItem key={year.value} value={year.value}>{year.label}</SelectItem>
+                  <SelectItem key={year.value} value={year.value} className="text-sm sm:text-base">{year.label}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -101,16 +101,16 @@ export default function Step1ExamFocus() {
         name="languageMedium"
         render={({ field }) => (
           <FormItem>
-            <FormLabel className="font-semibold">Medium of Language for Exam <span className="text-destructive">*</span></FormLabel>
+            <FormLabel className="text-sm sm:text-base font-semibold">Medium of Language for Exam <span className="text-destructive">*</span></FormLabel>
             <Select onValueChange={field.onChange} defaultValue={field.value}>
               <FormControl>
-                <SelectTrigger>
+                <SelectTrigger className="text-sm sm:text-base">
                   <SelectValue placeholder="Select language medium" />
                 </SelectTrigger>
               </FormControl>
               <SelectContent>
                 {LANGUAGE_MEDIUMS.map(medium => (
-                  <SelectItem key={medium.value} value={medium.value}>{medium.label}</SelectItem>
+                  <SelectItem key={medium.value} value={medium.value} className="text-sm sm:text-base">{medium.label}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -123,21 +123,21 @@ export default function Step1ExamFocus() {
         control={control}
         name="studyMode"
         render={({ field }) => (
-          <FormItem className="space-y-3">
-            <FormLabel className="font-semibold">Study Mode</FormLabel>
-             <FormDescription>How are you primarily preparing?</FormDescription>
+          <FormItem className="space-y-2 sm:space-y-3">
+            <FormLabel className="text-sm sm:text-base font-semibold">Study Mode</FormLabel>
+             <FormDescription className="text-xs sm:text-sm">How are you primarily preparing?</FormDescription>
             <FormControl>
               <RadioGroup
                 onValueChange={field.onChange}
                 value={field.value || ''}
-                className="flex flex-col space-y-1 sm:flex-row sm:space-y-0 sm:space-x-4"
+                className="flex flex-col space-y-1 sm:flex-row sm:flex-wrap sm:space-y-0 sm:gap-x-4 sm:gap-y-2"
               >
                 {STUDY_MODES.map(mode => (
                   <FormItem key={mode.value} className="flex items-center space-x-2 space-y-0">
                     <FormControl>
                       <RadioGroupItem value={mode.value} />
                     </FormControl>
-                    <FormLabel className="font-normal text-sm">{mode.label}</FormLabel>
+                    <FormLabel className="font-normal text-xs sm:text-sm">{mode.label}</FormLabel>
                   </FormItem>
                 ))}
               </RadioGroup>
@@ -152,17 +152,17 @@ export default function Step1ExamFocus() {
         name="examPhase"
         render={({ field }) => (
           <FormItem>
-            <FormLabel className="font-semibold">Current Exam Phase</FormLabel>
-            <FormDescription>What stage of preparation are you in?</FormDescription>
+            <FormLabel className="text-sm sm:text-base font-semibold">Current Exam Phase</FormLabel>
+            <FormDescription className="text-xs sm:text-sm">What stage of preparation are you in?</FormDescription>
             <Select onValueChange={field.onChange} value={field.value || ''}>
               <FormControl>
-                <SelectTrigger>
+                <SelectTrigger className="text-sm sm:text-base">
                   <SelectValue placeholder="Select current phase" />
                 </SelectTrigger>
               </FormControl>
               <SelectContent>
                 {EXAM_PHASES.map(phase => (
-                  <SelectItem key={phase.value} value={phase.value}>{phase.label}</SelectItem>
+                  <SelectItem key={phase.value} value={phase.value} className="text-sm sm:text-base">{phase.label}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -176,16 +176,16 @@ export default function Step1ExamFocus() {
         name="previousAttempts"
         render={({ field }) => (
           <FormItem>
-            <FormLabel className="font-semibold">Previous Attempts (if any)</FormLabel>
+            <FormLabel className="text-sm sm:text-base font-semibold">Previous Attempts (if any)</FormLabel>
             <Select onValueChange={field.onChange} value={field.value || ''}>
               <FormControl>
-                <SelectTrigger>
+                <SelectTrigger className="text-sm sm:text-base">
                   <SelectValue placeholder="Select number of previous attempts" />
                 </SelectTrigger>
               </FormControl>
               <SelectContent>
                 {PREVIOUS_ATTEMPTS_OPTIONS.map(attempt => (
-                  <SelectItem key={attempt.value} value={attempt.value}>{attempt.label}</SelectItem>
+                  <SelectItem key={attempt.value} value={attempt.value} className="text-sm sm:text-base">{attempt.label}</SelectItem>
                 ))}
               </SelectContent>
             </Select>

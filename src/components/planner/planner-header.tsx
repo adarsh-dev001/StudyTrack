@@ -17,8 +17,6 @@ import {
   SelectValue 
 } from "@/components/ui/select"
 
-// Re-defining subjects here for the filter dropdown.
-// Ensure these values match those used in PlannerView for consistency.
 const filterSubjects = [
   { id: "physics", name: "Physics" },
   { id: "chemistry", name: "Chemistry" },
@@ -36,8 +34,7 @@ interface PlannerHeaderProps {
   onDateChange: Dispatch<SetStateAction<Date | undefined>>;
   selectedSubject: string;
   onSubjectChange: Dispatch<SetStateAction<string>>;
-  allSubjectsValue: string; // e.g., "all"
-  // onAddTask is handled by PlannerView's dialog for now
+  allSubjectsValue: string;
 }
 
 export function PlannerHeader({
@@ -51,19 +48,19 @@ export function PlannerHeader({
 }: PlannerHeaderProps) {
 
   return (
-    <div className="flex flex-col space-y-3 sm:space-y-0 sm:flex-row sm:justify-between sm:items-center pb-2 border-b">
-      <h1 className="text-2xl font-bold tracking-tight md:text-3xl">Study Planner</h1>
+    <div className="flex flex-col space-y-3 sm:space-y-0 sm:flex-row sm:justify-between sm:items-center pb-3 sm:pb-4 border-b">
+      <h1 className="text-xl sm:text-2xl font-bold tracking-tight md:text-3xl whitespace-nowrap">Study Planner</h1>
       
       <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-2">
         <ToggleGroup 
           type="single" 
           value={currentView} 
           onValueChange={(value) => { if (value) onViewChange(value as 'day' | 'week' | 'month'); }}
-          className="w-full sm:w-auto"
+          className="w-full sm:w-auto rounded-md overflow-hidden"
         >
-          <ToggleGroupItem value="day" aria-label="Day view" className="flex-1 sm:flex-none">Day</ToggleGroupItem>
-          <ToggleGroupItem value="week" aria-label="Week view" className="flex-1 sm:flex-none">Week</ToggleGroupItem>
-          <ToggleGroupItem value="month" aria-label="Month view" className="flex-1 sm:flex-none">Month</ToggleGroupItem>
+          <ToggleGroupItem value="day" aria-label="Day view" className="flex-1 sm:flex-none text-xs sm:text-sm px-2 py-1.5 sm:px-3 sm:py-2 h-9 sm:h-10">Day</ToggleGroupItem>
+          <ToggleGroupItem value="week" aria-label="Week view" className="flex-1 sm:flex-none text-xs sm:text-sm px-2 py-1.5 sm:px-3 sm:py-2 h-9 sm:h-10">Week</ToggleGroupItem>
+          <ToggleGroupItem value="month" aria-label="Month view" className="flex-1 sm:flex-none text-xs sm:text-sm px-2 py-1.5 sm:px-3 sm:py-2 h-9 sm:h-10">Month</ToggleGroupItem>
         </ToggleGroup>
         
         <Popover>
@@ -71,11 +68,11 @@ export function PlannerHeader({
             <Button
               variant={"outline"}
               className={cn(
-                "justify-start text-left font-normal w-full sm:w-[200px]",
+                "justify-start text-left font-normal w-full sm:w-[180px] md:w-[200px] text-xs sm:text-sm h-9 sm:h-10 px-2 sm:px-3",
                 !selectedDate && "text-muted-foreground"
               )}
             >
-              <CalendarIcon className="mr-2 h-4 w-4" />
+              <CalendarIcon className="mr-1.5 h-3.5 w-3.5 sm:h-4 sm:w-4" />
               {selectedDate ? format(selectedDate, "PPP") : <span>Pick a date</span>}
             </Button>
           </PopoverTrigger>
@@ -90,14 +87,14 @@ export function PlannerHeader({
         </Popover>
 
         <Select value={selectedSubject} onValueChange={onSubjectChange}>
-          <SelectTrigger className="w-full sm:w-[180px]">
-            <Filter className="mr-2 h-4 w-4 flex-shrink-0" />
+          <SelectTrigger className="w-full sm:w-[160px] md:w-[180px] text-xs sm:text-sm h-9 sm:h-10 px-2 sm:px-3">
+            <Filter className="mr-1.5 h-3.5 w-3.5 sm:h-4 sm:w-4 flex-shrink-0" />
             <SelectValue placeholder="Filter by subject" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value={allSubjectsValue}>All Subjects</SelectItem>
+            <SelectItem value={allSubjectsValue} className="text-xs sm:text-sm">All Subjects</SelectItem>
             {filterSubjects.map(subject => (
-              <SelectItem key={subject.id} value={subject.id}>{subject.name}</SelectItem>
+              <SelectItem key={subject.id} value={subject.id} className="text-xs sm:text-sm">{subject.name}</SelectItem>
             ))}
           </SelectContent>
         </Select>

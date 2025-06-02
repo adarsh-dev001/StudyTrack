@@ -47,46 +47,46 @@ export default async function BlogPostPage({ params }: { params: { slug: string 
   }
 
   return (
-    <div className="container mx-auto px-4 py-8 md:px-6 lg:px-8 max-w-3xl">
-      <div className="mb-6">
-        <Button variant="outline" size="sm" asChild>
+    <div className="container mx-auto px-4 py-6 sm:py-8 md:px-6 lg:px-8 max-w-3xl">
+      <div className="mb-4 sm:mb-6">
+        <Button variant="outline" size="sm" asChild className="text-xs sm:text-sm">
           <Link href="/blog">
-            <ChevronLeft className="mr-2 h-4 w-4" />
+            <ChevronLeft className="mr-1.5 h-3.5 w-3.5 sm:mr-2 sm:h-4 sm:w-4" />
             Back to Blog
           </Link>
         </Button>
       </div>
       <article>
-        <header className="mb-8">
+        <header className="mb-6 sm:mb-8">
           {postData.metadata.featuredImage && (
-            <div className="relative w-full aspect-[16/9] md:aspect-[2/1] rounded-lg overflow-hidden mb-6 shadow-lg">
+            <div className="relative w-full aspect-[16/9] rounded-lg overflow-hidden mb-4 sm:mb-6 shadow-lg">
               <Image
                 src={postData.metadata.featuredImage}
                 alt={postData.metadata.title}
-                fill // Changed layout="fill"
-                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw" // Example sizes
-                style={{ objectFit: 'cover' }} // Changed objectFit
+                fill
+                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                style={{ objectFit: 'cover' }}
                 data-ai-hint="article banner"
-                priority // For LCP
+                priority
               />
             </div>
           )}
           {!postData.metadata.featuredImage && (
-             <div className="relative w-full aspect-[16/9] md:aspect-[2/1] rounded-lg overflow-hidden mb-6 shadow-lg bg-muted">
+             <div className="relative w-full aspect-[16/9] rounded-lg overflow-hidden mb-4 sm:mb-6 shadow-lg bg-muted">
               <Image
                 src="https://placehold.co/800x450.png"
                 alt="Placeholder Image"
-                fill // Changed layout="fill"
-                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw" // Example sizes
-                style={{ objectFit: 'cover' }} // Changed objectFit
+                fill
+                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                style={{ objectFit: 'cover' }}
                 data-ai-hint="article banner placeholder"
               />
             </div>
           )}
-          <h1 className="font-headline text-3xl font-bold tracking-tight text-foreground md:text-4xl lg:text-5xl mb-3">
+          <h1 className="font-headline text-2xl font-bold tracking-tight text-foreground sm:text-3xl md:text-4xl mb-2 sm:mb-3">
             {postData.metadata.title}
           </h1>
-          <div className="text-sm text-muted-foreground flex flex-wrap gap-x-2 gap-y-1">
+          <div className="text-xs sm:text-sm text-muted-foreground flex flex-col sm:flex-row sm:flex-wrap gap-x-2 gap-y-0.5 sm:gap-y-1">
             <span>By {postData.metadata.author}</span>
             <span className="hidden sm:inline">|</span>
             <span>Published on {format(new Date(postData.metadata.date), 'MMMM d, yyyy')}</span>
@@ -95,7 +95,7 @@ export default async function BlogPostPage({ params }: { params: { slug: string 
           </div>
         </header>
         
-        <div className="prose prose-lg lg:prose-xl max-w-none dark:prose-invert text-foreground prose-headings:text-foreground prose-a:text-primary hover:prose-a:text-primary/80 prose-strong:text-foreground prose-blockquote:border-primary prose-blockquote:text-muted-foreground prose-code:text-foreground prose-code:bg-muted prose-code:p-1 prose-code:rounded-md prose-table:border prose-th:bg-muted prose-li:marker:text-primary">
+        <div className="prose prose-base sm:prose-lg max-w-none dark:prose-invert text-foreground prose-headings:text-foreground prose-a:text-primary hover:prose-a:text-primary/80 prose-strong:text-foreground prose-blockquote:border-primary prose-blockquote:text-muted-foreground prose-code:text-foreground prose-code:bg-muted prose-code:p-1 prose-code:rounded-md prose-table:border prose-th:bg-muted prose-li:marker:text-primary">
           <MdxContentRenderer source={postData.mdxSource} />
         </div>
       </article>
