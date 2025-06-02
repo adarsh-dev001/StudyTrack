@@ -12,6 +12,7 @@ import { useAuth } from '@/contexts/auth-context';
 import { db } from '@/lib/firebase';
 import { doc, Timestamp, runTransaction, getDoc } from 'firebase/firestore';
 import { isToday, startOfDay } from 'date-fns';
+import { DEFAULT_THEME_ID } from '@/lib/themes'; // Import for initializing activeThemeId
 
 interface ChallengeDefinition {
   id: string;
@@ -21,7 +22,6 @@ interface ChallengeDefinition {
   goalValue: number;
   rewardXP: number;
   rewardCoins: number;
-  // currentProgress and isCompleted will be managed in active state
 }
 
 interface ActiveChallenge extends ChallengeDefinition {
@@ -141,39 +141,54 @@ export default function DailyChallengesCard() {
     try {
       await runTransaction(db, async (transaction) => {
         const profileDoc = await transaction.get(userProfileDocRef);
-        if (!profileDoc.exists()) {
-          // Create profile if it doesn't exist, then retry or handle error
-          // For simplicity, we'll assume profile is usually created by streaks page or first coin earn
-          throw new Error("User profile not found. Please visit the Streaks page first.");
+        
+        let currentCoins = 0;
+        let currentXP = 0;
+        let currentChallengeStatus = {};
+        let currentEarnedBadgeIds: string[] = [];
+        let currentPurchasedItemIds: string[] = [];
+        let currentActiveThemeId: string | null = DEFAULT_THEME_ID;
+
+
+        if (profileDoc.exists()) {
+            const currentData = profileDoc.data();
+            currentCoins = currentData.coins || 0;
+            currentXP = currentData.xp || 0;
+            currentChallengeStatus = currentData.dailyChallengeStatus || {};
+            currentEarnedBadgeIds = currentData.earnedBadgeIds || [];
+            currentPurchasedItemIds = currentData.purchasedItemIds || [];
+            currentActiveThemeId = currentData.activeThemeId === undefined ? DEFAULT_THEME_ID : currentData.activeThemeId;
         }
 
-        const currentData = profileDoc.data();
-        const currentCoins = currentData.coins || 0;
-        const currentXP = currentData.xp || 0;
-        const currentChallengeStatus = currentData.dailyChallengeStatus || {};
-
-        // Check again inside transaction if already completed today
-        const existingStatus = currentChallengeStatus[challengeId];
+        const existingStatus = (currentChallengeStatus as any)[challengeId];
         if (existingStatus && existingStatus.completedOn instanceof Timestamp && isToday(existingStatus.completedOn.toDate())) {
-            // Already completed by another means or race condition
             setActiveChallenges(prev => prev.map(c => c.id === challengeId ? {...c, isCompletedToday: true, currentProgress: c.goalValue } : c));
             toast({ title: 'Already Done!', description: 'You already completed this challenge today.', variant: 'default' });
-            return; // Exit transaction
+            return; 
         }
-
 
         const newCoins = currentCoins + challengeToComplete.rewardCoins;
         const newXP = currentXP + challengeToComplete.rewardXP;
-        const newChallengeStatus = {
-          ...currentChallengeStatus,
-          [challengeId]: { completedOn: Timestamp.fromDate(startOfDay(new Date())) } // Store start of day for easier daily checks
+        const updatedChallengeStatus = {
+          ...(currentChallengeStatus as any),
+          [challengeId]: { completedOn: Timestamp.fromDate(startOfDay(new Date())) }
         };
 
-        transaction.update(userProfileDocRef, {
-          coins: newCoins,
-          xp: newXP,
-          dailyChallengeStatus: newChallengeStatus
-        });
+        const profilePayload = {
+            coins: newCoins,
+            xp: newXP,
+            dailyChallengeStatus: updatedChallengeStatus,
+            earnedBadgeIds: currentEarnedBadgeIds,
+            purchasedItemIds: currentPurchasedItemIds,
+            activeThemeId: currentActiveThemeId,
+        };
+
+        if (profileDoc.exists()) {
+            transaction.update(userProfileDocRef, profilePayload);
+        } else {
+            // Create the profile with these values if it doesn't exist
+            transaction.set(userProfileDocRef, profilePayload);
+        }
       });
 
       setActiveChallenges(prevChallenges =>
@@ -268,7 +283,7 @@ export default function DailyChallengesCard() {
                 <span className="text-muted-foreground">Progress:</span>
                 <span className="font-medium text-foreground">{challenge.isCompletedToday ? challenge.goalValue : challenge.currentProgress} / {challenge.goalValue}</span>
               </div>
-              <Progress value={( (challenge.isCompletedToday ? challenge.goalValue : challenge.currentProgress) / challenge.goalValue) * 100} className="h-2.5" />
+              <Progress value={((challenge.isCompletedToday ? challenge.goalValue : challenge.currentProgress) / challenge.goalValue) * 100} className="h-2.5" />
             </div>
 
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 pt-2">

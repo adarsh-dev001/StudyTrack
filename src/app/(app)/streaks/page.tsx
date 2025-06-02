@@ -14,6 +14,7 @@ import { useToast } from '@/hooks/use-toast';
 import { isToday, isYesterday } from 'date-fns';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
+import { DEFAULT_THEME_ID } from '@/lib/themes';
 
 
 interface StreakData {
@@ -28,8 +29,8 @@ interface UserProfileData {
   xp: number;
   coins: number;
   purchasedItemIds: string[];
-  activeThemeId?: string | null; // Added for theme switching
-  dailyChallengeStatus?: { [challengeId: string]: { completedOn: Timestamp } }; // For daily challenge persistence
+  activeThemeId?: string | null; 
+  dailyChallengeStatus?: { [challengeId: string]: { completedOn: Timestamp } }; 
 }
 
 const initialStreakData: StreakData = {
@@ -43,7 +44,7 @@ const initialUserProfileData: UserProfileData = {
   xp: 0,
   coins: 0,
   purchasedItemIds: [],
-  activeThemeId: null,
+  activeThemeId: DEFAULT_THEME_ID, // Use DEFAULT_THEME_ID for initialization
   dailyChallengeStatus: {},
 };
 
@@ -135,7 +136,7 @@ export default function StreaksPage() {
           xp: typeof rawData.xp === 'number' ? rawData.xp : 0,
           coins: typeof rawData.coins === 'number' ? rawData.coins : 0,
           purchasedItemIds: Array.isArray(rawData.purchasedItemIds) ? rawData.purchasedItemIds : [],
-          activeThemeId: typeof rawData.activeThemeId === 'string' ? rawData.activeThemeId : null,
+          activeThemeId: typeof rawData.activeThemeId === 'string' ? rawData.activeThemeId : DEFAULT_THEME_ID,
           dailyChallengeStatus: typeof rawData.dailyChallengeStatus === 'object' ? rawData.dailyChallengeStatus : {},
         });
       } else {
@@ -179,12 +180,14 @@ export default function StreaksPage() {
       ]);
 
       let currentDbStreakData = streakDocSnap.exists() ? streakDocSnap.data() as StreakData : initialStreakData;
-      let currentDbProfileData = profileDocSnap.exists() ? profileDocSnap.data() as UserProfileData : initialUserProfileData;
+      // Use initialUserProfileData as a base for a new profile, ensuring all fields including activeThemeId are set
+      let currentDbProfileData = profileDocSnap.exists() ? profileDocSnap.data() as UserProfileData : {...initialUserProfileData}; 
       
       // Ensure arrays and objects exist on profile data
       currentDbProfileData.earnedBadgeIds = currentDbProfileData.earnedBadgeIds || [];
       currentDbProfileData.purchasedItemIds = currentDbProfileData.purchasedItemIds || [];
       currentDbProfileData.dailyChallengeStatus = currentDbProfileData.dailyChallengeStatus || {};
+      currentDbProfileData.activeThemeId = currentDbProfileData.activeThemeId === undefined ? DEFAULT_THEME_ID : currentDbProfileData.activeThemeId;
 
 
       if (currentDbStreakData.lastCheckInDate && isToday(currentDbStreakData.lastCheckInDate.toDate())) {
@@ -227,20 +230,17 @@ export default function StreaksPage() {
       const updatedCoins = (currentDbProfileData.coins || 0) + coinsFromCheckIn;
       const updatedXp = (currentDbProfileData.xp || 0) + xpFromCheckIn;
 
-      // Prepare profile updates
-      const profileUpdates: Partial<UserProfileData> = {
+      // Prepare profile updates, ensuring all fields from UserProfileData are included if creating anew
+      const profileUpdates: UserProfileData = {
         earnedBadgeIds: updatedEarnedBadgeIds,
         coins: updatedCoins,
         xp: updatedXp,
+        purchasedItemIds: currentDbProfileData.purchasedItemIds, // Persist existing or default []
+        activeThemeId: currentDbProfileData.activeThemeId,     // Persist existing or default
+        dailyChallengeStatus: currentDbProfileData.dailyChallengeStatus, // Persist existing or default {}
       };
-      // Ensure other fields are not accidentally overwritten if profile didn't exist
-      if (!profileDocSnap.exists()) {
-        profileUpdates.purchasedItemIds = [];
-        profileUpdates.activeThemeId = null;
-        profileUpdates.dailyChallengeStatus = {};
-      }
-
-      await setDoc(userProfileDocRef, profileUpdates, { merge: true });
+      
+      await setDoc(userProfileDocRef, profileUpdates, { merge: true }); // merge ensures we don't wipe other fields
       
       newlyEarnedBadges.forEach(badge => {
         toast({
