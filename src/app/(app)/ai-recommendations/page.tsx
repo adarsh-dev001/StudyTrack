@@ -18,13 +18,13 @@ import {
     Loader2, AlertTriangle, Lightbulb, BookOpen, CheckSquare, Award, Clock,
     Target as TargetIcon, Zap, LineChart, Brain, UserCheck, ListChecks, Repeat, Flag, Rocket, CheckCircle
 } from 'lucide-react';
-import type { LucideIcon } from 'lucide-react'; // Import LucideIcon type
+import type { LucideIcon } from 'lucide-react';
 import Link from 'next/link';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
 interface ProgressStep {
   text: string;
-  icon: LucideIcon; // Use LucideIcon type
+  icon: LucideIcon;
 }
 
 const progressSteps: ProgressStep[] = [
@@ -97,8 +97,16 @@ export default function AiRecommendationsPage() {
         setError(null);
         setCurrentProgressStepIndex(0);
         setCurrentTipIndex(0);
+        
         const aiOutput = await generatePersonalizedRecommendations(aiInput);
-        setRecommendations(aiOutput);
+        
+        if (aiOutput.fallback) {
+            setError("⚠️ AI is currently overloaded. Please try again shortly for personalized recommendations.");
+            setRecommendations(null); // Do not show generic plan if user only wants error message
+        } else {
+            setRecommendations(aiOutput);
+        }
+
       } catch (err: any) {
         console.error("Error fetching profile or generating recommendations:", err);
         setError(err.message || "An error occurred while generating recommendations.");
@@ -120,7 +128,7 @@ export default function AiRecommendationsPage() {
             const nextIndex = prevIndex + 1;
             return nextIndex >= progressSteps.length ? progressSteps.length -1 : nextIndex;
         });
-      }, 1500);
+      }, 1500); 
     }
     return () => clearInterval(progressInterval);
   }, [isLoadingRecommendations]);
@@ -130,7 +138,7 @@ export default function AiRecommendationsPage() {
     if (isLoadingRecommendations) {
       tipInterval = setInterval(() => {
         setCurrentTipIndex(prevIndex => (prevIndex + 1) % motivationalTips.length);
-      }, 3000);
+      }, 3000); 
     }
     return () => clearInterval(tipInterval);
   }, [isLoadingRecommendations]);
@@ -147,18 +155,18 @@ export default function AiRecommendationsPage() {
 
   if (isLoadingRecommendations) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[calc(100vh-150px)] text-center p-6 space-y-8">
-        <Loader2 className="h-12 w-12 animate-spin text-primary mb-3" />
+      <div className="flex flex-col items-center justify-center min-h-[calc(100vh-150px)] text-center p-4 sm:p-6 space-y-6 sm:space-y-8">
+        <Loader2 className="h-10 w-10 sm:h-12 sm:w-12 animate-spin text-primary mb-2 sm:mb-3" />
         <div className="space-y-2">
-            <h1 className="text-3xl md:text-4xl font-bold text-foreground">
+            <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-foreground">
                 🎓✨ Hold on, we’re crafting your perfect study journey...
             </h1>
-            <p className="text-lg text-muted-foreground max-w-xl">
+            <p className="text-md sm:text-lg text-muted-foreground max-w-lg sm:max-w-xl">
                 Based on your profile, we’re building a customized timetable, goal tracker, and focus plan just for your exam prep!
             </p>
         </div>
 
-        <div className="w-full max-w-md space-y-3">
+        <div className="w-full max-w-md space-y-2.5 sm:space-y-3">
             {progressSteps.map((step, index) => {
                 const IconComponent = step.icon;
                 const isCompleted = index < currentProgressStepIndex;
@@ -167,18 +175,18 @@ export default function AiRecommendationsPage() {
                 return (
                  <div
                     key={step.text}
-                    className={`flex items-center p-3 rounded-lg transition-all duration-500 ease-in-out
+                    className={`flex items-center p-2.5 sm:p-3 rounded-lg transition-all duration-500 ease-in-out text-xs sm:text-sm
                                 ${isActive || isCompleted ? 'opacity-100' : 'opacity-40'}
                                 ${isActive ? 'bg-primary/10 scale-105 shadow-md' :
                                  isCompleted ? 'bg-green-500/10 text-green-700 dark:text-green-300' :
                                  'bg-muted/50'}`}
                 >
                     {isCompleted ? (
-                        <CheckCircle className="h-5 w-5 text-green-500 mr-2 shrink-0" />
+                        <CheckCircle className="h-4 w-4 sm:h-5 sm:w-5 text-green-500 mr-2 shrink-0" />
                     ) : (
-                        <IconComponent className={`h-5 w-5 mr-2 shrink-0 ${isActive ? 'text-primary' : 'text-primary'}`} />
+                        <IconComponent className={`h-4 w-4 sm:h-5 sm:w-5 mr-2 shrink-0 ${isActive ? 'text-primary' : 'text-primary'}`} />
                     )}
-                    <span className={`font-medium text-sm ${
+                    <span className={`font-medium ${
                         isActive ? 'text-primary dark:text-primary-foreground' : 
                         isCompleted ? 'text-green-700 dark:text-green-300' :
                         'text-muted-foreground'}`}
@@ -190,34 +198,34 @@ export default function AiRecommendationsPage() {
         </div>
 
         <Card className="w-full max-w-md bg-accent/10 border-accent/30 shadow-sm">
-            <CardContent className="pt-5">
-                <p className="text-md font-medium text-accent-foreground text-center">
+            <CardContent className="pt-4 sm:pt-5">
+                <p className="text-sm sm:text-md font-medium text-accent-foreground text-center">
                     {motivationalTips[currentTipIndex]}
                 </p>
             </CardContent>
         </Card>
-         <div className="mt-6">
+         <div className="mt-4 sm:mt-6">
             <Button
             disabled
-            className="bg-primary/80 text-primary-foreground px-6 py-2 rounded-full font-semibold shadow-lg transition cursor-not-allowed"
+            className="bg-primary/80 text-primary-foreground px-5 sm:px-6 py-2 rounded-full font-semibold shadow-lg transition cursor-not-allowed text-sm sm:text-base"
             size="lg"
             >
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 Generating AI Plan...
             </Button>
-            <p className="mt-2 text-sm text-muted-foreground">Please wait a few seconds…</p>
+            <p className="mt-1.5 sm:mt-2 text-xs sm:text-sm text-muted-foreground">Please wait a few seconds…</p>
         </div>
       </div>
     );
   }
 
 
-  if (error && !isLoadingRecommendations) {
+  if (error && !isLoadingRecommendations) { // This will now also catch the fallback message
     return (
       <div className="flex flex-col items-center justify-center min-h-[calc(100vh-150px)] text-center p-6">
-        <Alert variant="destructive" className="max-w-md">
+        <Alert variant={error.startsWith("⚠️") ? "default" : "destructive"} className="max-w-md">
           <AlertTriangle className="h-5 w-5" />
-          <AlertTitle>Error</AlertTitle>
+          <AlertTitle>{error.startsWith("⚠️") ? "Service Information" : "Error"}</AlertTitle>
           <AlertDescription>{error}</AlertDescription>
         </Alert>
         <Button asChild className="mt-6">
@@ -250,47 +258,47 @@ export default function AiRecommendationsPage() {
 
   return (
     <ScrollArea className="h-[calc(100vh-100px)]">
-    <div className="w-full space-y-8 p-1 md:p-4 lg:p-6">
-      <header className="space-y-2">
-        <h1 className="text-3xl font-bold tracking-tight md:text-4xl flex items-center">
-          <Brain className="mr-3 h-8 w-8 text-primary" /> Your AI Study Blueprint
+    <div className="w-full space-y-6 sm:space-y-8 p-2 md:p-4 lg:p-6">
+      <header className="space-y-1.5 sm:space-y-2">
+        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight md:text-4xl flex items-center">
+          <Brain className="mr-2 sm:mr-3 h-7 w-7 sm:h-8 sm:w-8 text-primary" /> Your AI Study Blueprint
         </h1>
-        <p className="text-lg text-muted-foreground">
+        <p className="text-md sm:text-lg text-muted-foreground">
           Personalized recommendations to help you ace your {profile?.targetExams?.join(', ') || 'exams'}!
           This plan is AI-generated; adapt it to your needs and always cross-verify critical information.
         </p>
       </header>
 
       {!isLoadingRecommendations && recommendations && (
-        <div className="space-y-6">
+        <div className="space-y-4 sm:space-y-6">
           <Card className="shadow-lg">
-            <CardHeader>
-              <CardTitle className="text-xl flex items-center"><Zap className="mr-2 h-5 w-5 text-accent" />Overall Strategy</CardTitle>
+            <CardHeader className="p-4 sm:p-6">
+              <CardTitle className="text-lg sm:text-xl flex items-center"><Zap className="mr-2 h-5 w-5 text-accent" />Overall Strategy</CardTitle>
             </CardHeader>
-            <CardContent>
-              <p className="text-muted-foreground leading-relaxed">{recommendations.overallStrategyStatement}</p>
+            <CardContent className="p-4 sm:p-6 pt-0">
+              <p className="text-muted-foreground leading-relaxed text-sm sm:text-base">{recommendations.overallStrategyStatement}</p>
             </CardContent>
           </Card>
 
-          <div className="grid md:grid-cols-2 gap-6">
+          <div className="grid md:grid-cols-2 gap-4 sm:gap-6">
             <Card className="shadow-md">
-              <CardHeader>
-                <CardTitle className="text-lg flex items-center"><BookOpen className="mr-2 h-5 w-5 text-primary" /> Weekly Focus</CardTitle>
-                <CardDescription>Key areas for your typical study week.</CardDescription>
+              <CardHeader className="p-4 sm:p-6">
+                <CardTitle className="text-md sm:text-lg flex items-center"><BookOpen className="mr-2 h-5 w-5 text-primary" /> Weekly Focus</CardTitle>
+                <CardDescription className="text-xs sm:text-sm">Key areas for your typical study week.</CardDescription>
               </CardHeader>
-              <CardContent>
-                <ul className="list-disc list-inside space-y-1.5 text-sm text-muted-foreground">
+              <CardContent className="p-4 sm:p-6 pt-0">
+                <ul className="list-disc list-inside space-y-1 sm:space-y-1.5 text-xs sm:text-sm text-muted-foreground">
                   {recommendations.suggestedWeeklyTimetableFocus.map((item, idx) => <li key={`weekly-${idx}`}>{item}</li>)}
                 </ul>
               </CardContent>
             </Card>
             <Card className="shadow-md">
-              <CardHeader>
-                <CardTitle className="text-lg flex items-center"><CheckSquare className="mr-2 h-5 w-5 text-primary" /> Monthly Goals</CardTitle>
-                <CardDescription>High-level objectives for the month.</CardDescription>
+              <CardHeader className="p-4 sm:p-6">
+                <CardTitle className="text-md sm:text-lg flex items-center"><CheckSquare className="mr-2 h-5 w-5 text-primary" /> Monthly Goals</CardTitle>
+                <CardDescription className="text-xs sm:text-sm">High-level objectives for the month.</CardDescription>
               </CardHeader>
-              <CardContent>
-                 <ul className="list-disc list-inside space-y-1.5 text-sm text-muted-foreground">
+              <CardContent className="p-4 sm:p-6 pt-0">
+                 <ul className="list-disc list-inside space-y-1 sm:space-y-1.5 text-xs sm:text-sm text-muted-foreground">
                   {recommendations.suggestedMonthlyGoals.map((item, idx) => <li key={`monthly-${idx}`}>{item}</li>)}
                 </ul>
               </CardContent>
@@ -298,24 +306,24 @@ export default function AiRecommendationsPage() {
           </div>
 
           <Card className="shadow-md">
-            <CardHeader>
-                <CardTitle className="text-lg flex items-center"><Clock className="mr-2 h-5 w-5 text-primary" /> Study Cycle Suggestion</CardTitle>
+            <CardHeader className="p-4 sm:p-6">
+                <CardTitle className="text-md sm:text-lg flex items-center"><Clock className="mr-2 h-5 w-5 text-primary" /> Study Cycle Suggestion</CardTitle>
             </CardHeader>
-            <CardContent>
-                <p className="text-md font-medium text-foreground">{recommendations.studyCycleRecommendation}</p>
+            <CardContent className="p-4 sm:p-6 pt-0">
+                <p className="text-sm sm:text-md font-medium text-foreground">{recommendations.studyCycleRecommendation}</p>
                 <p className="text-xs text-muted-foreground mt-1">Adjust based on your energy levels and task difficulty.</p>
             </CardContent>
           </Card>
 
-          <div className="grid md:grid-cols-2 gap-6">
+          <div className="grid md:grid-cols-2 gap-4 sm:gap-6">
             <Card className="shadow-md">
-              <CardHeader>
-                <CardTitle className="text-lg flex items-center"><TargetIcon className="mr-2 h-5 w-5 text-primary" /> Short-Term Goals</CardTitle>
+              <CardHeader className="p-4 sm:p-6">
+                <CardTitle className="text-md sm:text-lg flex items-center"><TargetIcon className="mr-2 h-5 w-5 text-primary" /> Short-Term Goals</CardTitle>
               </CardHeader>
-              <CardContent>
-                <ul className="space-y-2.5 text-sm">
+              <CardContent className="p-4 sm:p-6 pt-0">
+                <ul className="space-y-2 sm:space-y-2.5 text-xs sm:text-sm">
                   {recommendations.shortTermGoals.map((goal, idx) => (
-                    <li key={`stg-${idx}`} className="p-2 border-l-2 border-accent pl-3 bg-accent/10 rounded-r-md">
+                    <li key={`stg-${idx}`} className="p-2 border-l-2 border-accent pl-2.5 sm:pl-3 bg-accent/10 rounded-r-md">
                       <p className="font-medium text-accent-foreground">{goal.goal}</p>
                       {goal.timeline && <p className="text-xs text-muted-foreground">Timeline: {goal.timeline}</p>}
                     </li>
@@ -324,13 +332,13 @@ export default function AiRecommendationsPage() {
               </CardContent>
             </Card>
              <Card className="shadow-md">
-              <CardHeader>
-                <CardTitle className="text-lg flex items-center"><LineChart className="mr-2 h-5 w-5 text-primary" /> Long-Term Goals</CardTitle>
+              <CardHeader className="p-4 sm:p-6">
+                <CardTitle className="text-md sm:text-lg flex items-center"><LineChart className="mr-2 h-5 w-5 text-primary" /> Long-Term Goals</CardTitle>
               </CardHeader>
-              <CardContent>
-                <ul className="space-y-2.5 text-sm">
+              <CardContent className="p-4 sm:p-6 pt-0">
+                <ul className="space-y-2 sm:space-y-2.5 text-xs sm:text-sm">
                   {recommendations.longTermGoals.map((goal, idx) => (
-                     <li key={`ltg-${idx}`} className="p-2 border-l-2 border-primary pl-3 bg-primary/10 rounded-r-md">
+                     <li key={`ltg-${idx}`} className="p-2 border-l-2 border-primary pl-2.5 sm:pl-3 bg-primary/10 rounded-r-md">
                       <p className="font-medium text-primary-foreground">{goal.goal}</p>
                       {goal.timeline && <p className="text-xs text-muted-foreground">Timeline: {goal.timeline}</p>}
                     </li>
@@ -341,43 +349,43 @@ export default function AiRecommendationsPage() {
           </div>
 
           <Card className="shadow-md">
-            <CardHeader>
-              <CardTitle className="text-lg flex items-center"><Award className="mr-2 h-5 w-5 text-primary" /> Milestone Suggestions</CardTitle>
+            <CardHeader className="p-4 sm:p-6">
+              <CardTitle className="text-md sm:text-lg flex items-center"><Award className="mr-2 h-5 w-5 text-primary" /> Milestone Suggestions</CardTitle>
             </CardHeader>
-            <CardContent>
-              <ul className="list-disc list-inside space-y-1.5 text-sm text-muted-foreground">
+            <CardContent className="p-4 sm:p-6 pt-0">
+              <ul className="list-disc list-inside space-y-1 sm:space-y-1.5 text-xs sm:text-sm text-muted-foreground">
                 {recommendations.milestoneSuggestions.map((item, idx) => <li key={`milestone-${idx}`}>{item}</li>)}
               </ul>
             </CardContent>
           </Card>
 
           <Card className="shadow-lg">
-            <CardHeader>
-              <CardTitle className="text-xl flex items-center"><Lightbulb className="mr-2 h-5 w-5 text-yellow-400" /> Personalized Tips</CardTitle>
+            <CardHeader className="p-4 sm:p-6">
+              <CardTitle className="text-lg sm:text-xl flex items-center"><Lightbulb className="mr-2 h-5 w-5 text-yellow-400" /> Personalized Tips</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-3 sm:space-y-4 p-4 sm:p-6 pt-0">
               <div>
-                <h4 className="font-semibold text-md text-foreground mb-1">Time Management:</h4>
-                <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground pl-4">
+                <h4 className="font-semibold text-sm sm:text-md text-foreground mb-1">Time Management:</h4>
+                <ul className="list-disc list-inside space-y-0.5 sm:space-y-1 text-xs sm:text-sm text-muted-foreground pl-3 sm:pl-4">
                   {recommendations.personalizedTips.timeManagement.map((tip, idx) => <li key={`tm-${idx}`}>{tip}</li>)}
                 </ul>
               </div>
               <div>
-                <h4 className="font-semibold text-md text-foreground mb-1">Subject-Specific Study:</h4>
-                <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground pl-4">
+                <h4 className="font-semibold text-sm sm:text-md text-foreground mb-1">Subject-Specific Study:</h4>
+                <ul className="list-disc list-inside space-y-0.5 sm:space-y-1 text-xs sm:text-sm text-muted-foreground pl-3 sm:pl-4">
                   {recommendations.personalizedTips.subjectSpecificStudy.map((tip, idx) => <li key={`ss-${idx}`}>{tip}</li>)}
                 </ul>
               </div>
               <div>
-                <h4 className="font-semibold text-md text-foreground mb-1">Motivational Nudges:</h4>
-                <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground pl-4">
+                <h4 className="font-semibold text-sm sm:text-md text-foreground mb-1">Motivational Nudges:</h4>
+                <ul className="list-disc list-inside space-y-0.5 sm:space-y-1 text-xs sm:text-sm text-muted-foreground pl-3 sm:pl-4">
                   {recommendations.personalizedTips.motivationalNudges.map((tip, idx) => <li key={`mn-${idx}`}>{tip}</li>)}
                 </ul>
               </div>
             </CardContent>
           </Card>
-           <div className="text-center pt-4">
-                <Button asChild size="lg">
+           <div className="text-center pt-3 sm:pt-4">
+                <Button asChild size="lg" className="text-sm sm:text-base">
                     <Link href="/dashboard">Go to Dashboard</Link>
                 </Button>
             </div>
@@ -403,3 +411,4 @@ export default function AiRecommendationsPage() {
     </ScrollArea>
   );
 }
+
