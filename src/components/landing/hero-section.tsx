@@ -33,7 +33,7 @@ export function HeroSection() {
           </div>
           <div className="relative mx-auto aspect-video overflow-hidden rounded-xl lg:aspect-[4/3] xl:aspect-video">
             <Image
-              src="https://placehold.co/650x400.png"
+              src="https://placehold.co/650x400.pnghttps://cdn1.byjus.com/wp-content/uploads/blog/2022/05/12204745/Exam-Mindset_blog-banner-2.https://assets.skyfilabs.com/images/blog/top-competetive-exams-for-engineering-students.webp"
               alt="StudyTrack Dashboard Preview"
               layout="fill"
               objectFit="cover"

@@ -31,10 +31,10 @@ export default function AppLayout({
   const [loadingCoins, setLoadingCoins] = useState(true);
 
   useEffect(() => {
-    if (!loading && !currentUser) {
+    if (!authLoading && !currentUser) {
       router.push('/login');
     }
-  }, [currentUser, loading, router]);
+  }, [currentUser, authLoading, router]);
 
   useEffect(() => {
     let unsubscribeCoins: Unsubscribe | undefined;
