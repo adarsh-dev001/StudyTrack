@@ -39,7 +39,7 @@ export function HeroSection() {
               objectFit="cover"
               className="rounded-xl shadow-2xl"
               data-ai-hint="study plan"
-              priority
+              priority // Added priority
             />
              <div className="absolute inset-0 bg-gradient-to-t from-black/10 to-transparent rounded-xl"></div>
           </div>

@@ -67,7 +67,7 @@ export default async function BlogPostPage({ params }: { params: { slug: string 
                 sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                 style={{ objectFit: 'cover' }}
                 data-ai-hint="article banner"
-                priority
+                priority // Added priority
               />
             </div>
           )}
@@ -80,6 +80,7 @@ export default async function BlogPostPage({ params }: { params: { slug: string 
                 sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                 style={{ objectFit: 'cover' }}
                 data-ai-hint="article banner placeholder"
+                priority // Added priority for placeholder if it's the main image
               />
             </div>
           )}

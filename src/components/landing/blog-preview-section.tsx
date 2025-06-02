@@ -30,7 +30,7 @@ export async function BlogPreviewSection() {
           <p className="text-center text-muted-foreground text-sm sm:text-base">No blog posts available yet. Check back soon!</p>
         ) : (
           <div className="grid gap-6 sm:gap-8 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
-            {recentPosts.map((post) => (
+            {recentPosts.map((post, index) => (
               <Card key={post.slug} className="flex flex-col overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-300 transform hover:-translate-y-1">
                 <Link href={`/blog/${post.slug}`} className="block aspect-[16/9] relative w-full overflow-hidden">
                   <Image 
@@ -40,6 +40,7 @@ export async function BlogPreviewSection() {
                     objectFit="cover"
                     className="hover:scale-105 transition-transform duration-300"
                     data-ai-hint="article highlight"
+                    priority={index < 2} // Prioritize the first two images in the preview
                   />
                 </Link>
                 <CardHeader className="p-4 sm:p-5">
