@@ -6,13 +6,14 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { TimerIcon, PlayIcon, PauseIcon, RotateCcwIcon, Music2, VolumeX, Volume2 } from 'lucide-react';
+import { TimerIcon, PlayIcon, PauseIcon, RotateCcwIcon, Music2, VolumeX } from 'lucide-react'; // Removed Volume2 as player handles it
 import { useAuth } from '@/contexts/auth-context';
 import { db } from '@/lib/firebase';
-import { doc, getDoc, setDoc, updateDoc, Timestamp, onSnapshot } from 'firebase/firestore';
+import { doc, getDoc, setDoc, updateDoc, onSnapshot } from 'firebase/firestore'; // Removed Timestamp as it's not directly used here for new features
 import { useToast } from '@/hooks/use-toast';
 import { ALL_SOUNDTRACK_DEFINITIONS, type SoundtrackDefinition } from '@/lib/soundtracks';
 import { DEFAULT_THEME_ID } from '@/lib/themes';
+import FocusAudioPlayer from '@/components/audio/FocusAudioPlayer'; // Import the new player
 
 const POMODORO_DURATION = 25 * 60; 
 const SHORT_BREAK_DURATION = 5 * 60; 
@@ -39,7 +40,7 @@ export function PomodoroTimer() {
   const [purchasedSoundtrackIds, setPurchasedSoundtrackIds] = useState<string[]>([]);
   const [availableSoundtracks, setAvailableSoundtracks] = useState<SoundtrackDefinition[]>([]);
   const [selectedSoundtrackPath, setSelectedSoundtrackPath] = useState<string | null>(null);
-  const audioRef = useRef<HTMLAudioElement>(null);
+  // audioRef is no longer needed here, FocusAudioPlayer manages its own audio element.
 
   useEffect(() => {
     if (!currentUser?.uid || !db) {
@@ -85,7 +86,7 @@ export function PomodoroTimer() {
         coins: 0,
         xp: 0,
         earnedBadgeIds: [],
-        purchasedItemIds: purchasedSoundtrackIds, // Use current state if creating
+        purchasedItemIds: purchasedSoundtrackIds, 
         activeThemeId: DEFAULT_THEME_ID,
         dailyChallengeStatus: {}
       };
@@ -131,9 +132,10 @@ export function PomodoroTimer() {
 
   useEffect(() => {
     if (timeRemaining === 0 && isRunning) {
-      setIsRunning(false); 
-      if (audioRef.current) audioRef.current.pause();
-
+      // setIsRunning(false); // Keep isRunning true to allow audio to play for the new mode until user pauses or resets.
+                              // Or, if sound should stop immediately, then set isRunning to false.
+                              // For now, sound will stop because isRunning changes below.
+      
       if (mode === 'pomodoro') {
         awardCoinsForPomodoro();
         const newPomodorosCompleted = pomodorosCompletedCycle + 1;
@@ -146,31 +148,16 @@ export function PomodoroTimer() {
       } else { 
         setMode('pomodoro');
       }
+      // isRunning will be set to false in the mode change effect if we want audio to stop on mode auto-switch
     }
-  }, [timeRemaining, mode, pomodorosCompletedCycle, isRunning, awardCoinsForPomodoro]);
+  }, [timeRemaining, mode, pomodorosCompletedCycle, isRunning, awardCoinsForPomodoro]); // awardCoinsForPomodoro added to dependencies
 
   useEffect(() => {
     setTimeRemaining(modeDurations[mode]);
-    setIsRunning(false);
-    if (audioRef.current) {
-        audioRef.current.pause();
-        if (selectedSoundtrackPath) { // If a path is selected, load new audio for the mode
-            audioRef.current.src = selectedSoundtrackPath;
-            // Don't auto-play here, wait for user to press play
-        }
-    }
-  }, [mode, selectedSoundtrackPath]);
+    setIsRunning(false); // Stop timer and audio when mode changes
+  }, [mode]);
 
-  useEffect(() => {
-    if (audioRef.current) {
-      if (isRunning && selectedSoundtrackPath) {
-        audioRef.current.src = selectedSoundtrackPath;
-        audioRef.current.play().catch(e => console.error("Error playing audio:", e));
-      } else {
-        audioRef.current.pause();
-      }
-    }
-  }, [isRunning, selectedSoundtrackPath]);
+  // No longer need useEffect for direct audioRef manipulation, FocusAudioPlayer handles it.
 
   const handleStartPause = () => {
     setIsRunning((prev) => !prev);
@@ -179,34 +166,21 @@ export function PomodoroTimer() {
   const handleReset = useCallback(() => {
     setIsRunning(false);
     setTimeRemaining(modeDurations[mode]);
-    if (audioRef.current) {
-        audioRef.current.pause();
-        audioRef.current.currentTime = 0;
-    }
   }, [mode]);
 
   const handleModeChange = (newModeString: string) => {
     const newMode = newModeString as Mode;
     setMode(newMode);
+    // isRunning and timeRemaining are reset by the mode effect
   };
   
   const handleSoundtrackChange = (soundtrackId: string) => {
     if (soundtrackId === "none") {
       setSelectedSoundtrackPath(null);
-      if (audioRef.current) {
-        audioRef.current.pause();
-        audioRef.current.src = ""; // Clear src
-      }
     } else {
       const track = ALL_SOUNDTRACK_DEFINITIONS.find(t => t.id === soundtrackId);
       if (track) {
         setSelectedSoundtrackPath(track.filePath);
-        if (audioRef.current) {
-          audioRef.current.src = track.filePath; // Set new src
-          if (isRunning) { // If timer is already running, play new track
-            audioRef.current.play().catch(e => console.error("Error playing audio:", e));
-          }
-        }
       }
     }
   };
@@ -306,7 +280,7 @@ export function PomodoroTimer() {
                 {availableSoundtracks.length === 0 && <p className="text-xs text-muted-foreground text-center mt-1.5">Purchase soundtracks in the Shop!</p>}
             </div>
         )}
-        <audio ref={audioRef} loop />
+        <FocusAudioPlayer src={selectedSoundtrackPath} isPlaying={isRunning && !!selectedSoundtrackPath} loop={true} volume={0.5} />
          {/* USER ACTION REQUIRED: 
              The 'filePath' in src/lib/soundtracks.ts currently uses placeholders like '/sounds/placeholder_lofi_1.mp3'.
              You need to:
