@@ -1,5 +1,5 @@
 
-'use client'; // Sidebar components often use client-side hooks for state
+'use client'; 
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -8,12 +8,13 @@ import {
   LayoutDashboard,
   CalendarDays,
   ClipboardCheck,
-  BrainCircuit,
+  BrainCircuit, // Existing
+  Brain,        // New for AI Coach/Recommendations
   Timer,
   Flame,
   BarChart3,
   Settings,
-  ShoppingCart, // Added ShoppingCart icon
+  ShoppingCart, 
 } from 'lucide-react';
 import {
   Sidebar,
@@ -32,10 +33,11 @@ const mainNavItems = [
   { href: '/study-planner', label: 'Study Planner', icon: CalendarDays },
   { href: '/tasks', label: 'Tasks', icon: ClipboardCheck },
   { href: '/ai-tools', label: 'AI Tools', icon: BrainCircuit },
+  { href: '/ai-recommendations', label: 'AI Coach', icon: Brain }, // New Item
   { href: '/pomodoro', label: 'Pomodoro Timer', icon: Timer },
   { href: '/streaks', label: 'Study Streaks', icon: Flame },
   { href: '/analytics', label: 'Analytics', icon: BarChart3 },
-  { href: '/rewards-shop', label: 'Rewards Shop', icon: ShoppingCart }, // Added Rewards Shop
+  { href: '/rewards-shop', label: 'Rewards Shop', icon: ShoppingCart }, 
 ];
 
 export function AppSidebar() {
@@ -60,7 +62,7 @@ export function AppSidebar() {
               <SidebarMenuButton 
                 asChild 
                 tooltip={{ children: item.label, side: 'right', align: 'center' }}
-                isActive={pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href))}
+                isActive={pathname === item.href || (item.href !== '/dashboard' && item.href !== '/ai-recommendations' && pathname.startsWith(item.href)) || (item.href === '/ai-recommendations' && pathname === item.href) }
               >
                 <Link href={item.href}>
                   <item.icon />
@@ -90,3 +92,5 @@ export function AppSidebar() {
     </Sidebar>
   );
 }
+
+    
