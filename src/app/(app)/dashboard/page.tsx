@@ -1,20 +1,52 @@
 
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { useAuth } from '@/contexts/auth-context';
 import { db } from '@/lib/firebase';
 import { doc, onSnapshot, type Timestamp } from 'firebase/firestore';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Flame, ListChecks, CalendarDays, ArrowRight, User, Loader2 } from 'lucide-react';
+import { Flame, ListChecks, CalendarDays, ArrowRight, User, Loader2, BrainCircuit } from 'lucide-react'; // Added BrainCircuit
 import type { Task } from '@/components/tasks/task-item'; // Assuming Task type is exported
+import DailyChallengesCard from '@/components/dashboard/DailyChallengesCard'; // Import the new component
 
 interface StreakData {
   currentStreak: number;
   lastCheckInDate: Timestamp | null;
 }
+
+function DailyChallengesFallback() {
+    return (
+      <Card className="shadow-lg">
+        <CardHeader>
+          <CardTitle className="text-xl font-semibold flex items-center">
+            <Loader2 className="mr-3 h-6 w-6 animate-spin text-primary" /> Daily Challenges
+          </CardTitle>
+          <CardDescription>Loading today's challenges...</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {[1, 2].map(i => (
+            <div key={i} className="p-4 border rounded-lg bg-card/40 shadow-sm space-y-3">
+              <div className="flex items-start gap-3">
+                <div className="bg-muted p-2 rounded-md mt-1 animate-pulse">
+                  <User className="h-6 w-6 text-muted-foreground" />
+                </div>
+                <div className="w-full">
+                  <div className="h-5 w-3/4 bg-muted rounded animate-pulse mb-1.5"></div>
+                  <div className="h-3 w-full bg-muted rounded animate-pulse"></div>
+                </div>
+              </div>
+              <div className="h-2.5 w-full bg-muted rounded animate-pulse mt-2"></div>
+              <div className="h-8 w-1/3 bg-muted rounded animate-pulse mt-3 ml-auto"></div>
+            </div>
+          ))}
+        </CardContent>
+      </Card>
+    );
+  }
+
 
 export default function DashboardPage() {
   const { currentUser, loading: authLoading } = useAuth();
@@ -77,6 +109,14 @@ export default function DashboardPage() {
           Here&apos;s your study overview. Keep up the great work!
         </p>
       </div>
+      
+      {/* Daily Challenges Card - Placed near the top for visibility */}
+      {currentUser && (
+        <Suspense fallback={<DailyChallengesFallback />}>
+            <DailyChallengesCard />
+        </Suspense>
+      )}
+
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         {/* Current Streak Card */}
@@ -172,13 +212,13 @@ export default function DashboardPage() {
                 </Link>
             </Button>
             <Button variant="default" size="lg" asChild className="w-full">
-                <Link href="/tasks#addTask"> {/* Assuming you might want to focus the form */}
+                <Link href="/tasks#addTask"> 
                     <ListChecks className="mr-2 h-5 w-5" /> Add New Task
                 </Link>
             </Button>
              <Button variant="default" size="lg" asChild className="w-full">
                 <Link href="/ai-tools">
-                    <User className="mr-2 h-5 w-5" /> Explore AI Tools
+                    <BrainCircuit className="mr-2 h-5 w-5" /> Explore AI Tools {/* Changed icon */}
                 </Link>
             </Button>
         </CardContent>
