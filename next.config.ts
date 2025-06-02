@@ -158,6 +158,12 @@ const nextConfig: NextConfig = {
         hostname: 'www.google.com', 
         port: '',
         pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'eduauraapublic.s3.ap-south-1.amazonaws.com',
+        port: '',
+        pathname: '/**',
       }
     ],
   },

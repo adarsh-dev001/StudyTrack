@@ -33,12 +33,13 @@ export function HeroSection() {
           </div>
           <div className="relative mx-auto aspect-video overflow-hidden rounded-xl lg:aspect-[4/3] xl:aspect-video">
             <Image
-              src="https://placehold.co/650x400.pnghttps://cdn1.byjus.com/wp-content/uploads/blog/2022/05/12204745/Exam-Mindset_blog-banner-2.https://assets.skyfilabs.com/images/blog/top-competetive-exams-for-engineering-students.webp"
-              alt="StudyTrack Dashboard Preview"
+              src="https://eduauraapublic.s3.ap-south-1.amazonaws.com/webassets/images/blogs/effective-study-plan.jpg"
+              alt="Effective Study Plan Illustration"
               layout="fill"
               objectFit="cover"
               className="rounded-xl shadow-2xl"
-              data-ai-hint="student dashboard"
+              data-ai-hint="study plan"
+              priority
             />
              <div className="absolute inset-0 bg-gradient-to-t from-black/10 to-transparent rounded-xl"></div>
           </div>
