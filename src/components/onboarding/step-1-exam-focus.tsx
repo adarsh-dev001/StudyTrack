@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { TARGET_EXAMS, EXAM_ATTEMPT_YEARS, LANGUAGE_MEDIUMS, STUDY_MODES, EXAM_PHASES } from '@/lib/constants';
+import { TARGET_EXAMS, EXAM_ATTEMPT_YEARS, LANGUAGE_MEDIUMS, STUDY_MODES, EXAM_PHASES, PREVIOUS_ATTEMPTS_OPTIONS } from '@/lib/constants';
 import type { OnboardingFormData } from './onboarding-form';
 
 export default function Step1ExamFocus() {
@@ -24,7 +24,7 @@ export default function Step1ExamFocus() {
           <FormItem>
             <FormLabel className="text-base font-semibold">Target Exam(s) <span className="text-destructive">*</span></FormLabel>
             <FormDescription>Select the competitive exam(s) you are preparing for.</FormDescription>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-3 pt-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-3 pt-2">
               {TARGET_EXAMS.map((exam) => (
                 <FormField
                   key={exam.value}
@@ -163,6 +163,29 @@ export default function Step1ExamFocus() {
               <SelectContent>
                 {EXAM_PHASES.map(phase => (
                   <SelectItem key={phase.value} value={phase.value}>{phase.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+
+      <FormField
+        control={control}
+        name="previousAttempts"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel className="font-semibold">Previous Attempts (if any)</FormLabel>
+            <Select onValueChange={field.onChange} value={field.value || ''}>
+              <FormControl>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select number of previous attempts" />
+                </SelectTrigger>
+              </FormControl>
+              <SelectContent>
+                {PREVIOUS_ATTEMPTS_OPTIONS.map(attempt => (
+                  <SelectItem key={attempt.value} value={attempt.value}>{attempt.label}</SelectItem>
                 ))}
               </SelectContent>
             </Select>

@@ -6,6 +6,7 @@ import { useFormContext } from 'react-hook-form';
 import { FormField, FormItem, FormLabel, FormControl, FormMessage, FormDescription } from '@/components/ui/form';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Textarea } from '@/components/ui/textarea';
 import { DAILY_STUDY_HOURS_OPTIONS, PREFERRED_STUDY_TIMES, SUBJECT_OPTIONS } from '@/lib/constants';
 import type { OnboardingFormData } from './onboarding-form';
 
@@ -83,7 +84,7 @@ export default function Step2StudyHabits() {
           <FormItem>
             <FormLabel className="text-base font-semibold">Weak Subject(s) (Optional)</FormLabel>
             <FormDescription>Which subjects do you find challenging?</FormDescription>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-x-4 gap-y-3 pt-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-3 pt-2">
               {SUBJECT_OPTIONS.map((subject) => (
                 <FormField
                   key={subject.id + "-weak"}
@@ -122,7 +123,7 @@ export default function Step2StudyHabits() {
           <FormItem>
             <FormLabel className="text-base font-semibold">Strong Subject(s) (Optional)</FormLabel>
             <FormDescription>Which subjects are you confident in?</FormDescription>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-x-4 gap-y-3 pt-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-3 pt-2">
               {SUBJECT_OPTIONS.map((subject) => (
                 <FormField
                   key={subject.id + "-strong"}
@@ -149,6 +150,25 @@ export default function Step2StudyHabits() {
                 />
               ))}
             </div>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+
+      <FormField
+        control={control}
+        name="distractionStruggles"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel className="font-semibold">Distraction Struggles (Optional)</FormLabel>
+            <FormDescription>What are your main distractions or challenges in staying focused?</FormDescription>
+            <FormControl>
+              <Textarea
+                placeholder="e.g., Social media, noise, procrastination..."
+                className="resize-y min-h-[80px]"
+                {...field}
+              />
+            </FormControl>
             <FormMessage />
           </FormItem>
         )}

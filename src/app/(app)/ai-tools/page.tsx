@@ -42,7 +42,7 @@ export default function AiToolsPage() {
         <p className="text-lg text-muted-foreground">Leverage artificial intelligence for smarter studying and enhanced productivity.</p>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
         {aiTools.map((tool) => (
           <Card key={tool.title} className="shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 flex flex-col">
             <CardHeader className="flex flex-row items-start gap-4 space-y-0 pb-3">

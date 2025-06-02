@@ -143,10 +143,10 @@ export default function SyllabusSuggesterPage() {
                          <SelectItem value="Other">Other (Specify if not listed)</SelectItem>
                       </SelectContent>
                     </Select>
-                    {field.value === "Other" && (
+                    {form.watch('examType') === "Other" && ( // Use form.watch here
                         <Input
                             placeholder="Specify other exam type"
-                            onChange={(e) => field.onChange(e.target.value)}
+                            onChange={(e) => field.onChange(e.target.value)} // This is fine
                             className="mt-2"
                         />
                     )}
@@ -169,7 +169,7 @@ export default function SyllabusSuggesterPage() {
                         Select all subjects you want to include in the syllabus.
                       </FormDescription>
                     </div>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-x-4 gap-y-2">
+                    <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-x-4 gap-y-2">
                     {commonSubjects.map((item) => (
                       <FormField
                         key={item.id}
@@ -209,7 +209,7 @@ export default function SyllabusSuggesterPage() {
                 )}
               />
 
-              <div className="grid md:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <FormField
                   control={form.control}
                   name="timeAvailablePerDay"
@@ -273,7 +273,7 @@ export default function SyllabusSuggesterPage() {
               </div>
             </CardContent>
             <CardFooter>
-              <Button type="submit" disabled={isLoading} size="lg">
+              <Button type="submit" disabled={isLoading} size="lg" className="w-full sm:w-auto">
                 {isLoading ? (
                   <>
                     <Loader2 className="mr-2 h-5 w-5 animate-spin" />
@@ -362,4 +362,3 @@ export default function SyllabusSuggesterPage() {
     </div>
   );
 }
-

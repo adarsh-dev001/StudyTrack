@@ -321,7 +321,7 @@ export default function StreaksPage() {
         <p className="text-lg text-muted-foreground">Track your daily consistency, build strong habits, and unlock cool badges!</p>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-3">
+      <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
         <Card className="shadow-xl transform hover:scale-105 transition-transform duration-300">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-xl font-semibold">Current Streak</CardTitle>
@@ -353,7 +353,7 @@ export default function StreaksPage() {
                 <p className="text-xs text-muted-foreground pt-1">Earn by checking in, completing challenges & streaks!</p>
             </CardContent>
             <CardFooter>
-                 <Button variant="outline" size="sm" asChild>
+                 <Button variant="outline" size="sm" asChild className="w-full sm:w-auto">
                     <Link href="/rewards-shop">
                         Visit Shop <Gift className="ml-2 h-4 w-4" />
                     </Link>
@@ -400,7 +400,7 @@ export default function StreaksPage() {
                 </div>
                 <h3 className="font-semibold text-lg mb-0.5">{badge.name}</h3>
                 <p className="text-xs opacity-90 mb-2">{badge.description}</p>
-                <Button variant="outline" size="sm" onClick={() => handleShareBadge(badge.name)} className="mt-auto border-current hover:bg-current/20">
+                <Button variant="outline" size="sm" onClick={() => handleShareBadge(badge.name)} className="mt-auto border-current hover:bg-current/20 w-full sm:w-auto">
                   {copiedBadgeId === badge.id ? <Check className="mr-2 h-4 w-4" /> : <Copy className="mr-2 h-4 w-4" />}
                   {copiedBadgeId === badge.id ? 'Copied!' : 'Share'}
                 </Button>

@@ -4,7 +4,7 @@
 import React from 'react';
 import { useFormContext } from 'react-hook-form';
 import { FormField, FormItem, FormLabel, FormControl, FormMessage, FormDescription } from '@/components/ui/form';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { PREFERRED_LEARNING_STYLES, MOTIVATION_TYPES } from '@/lib/constants';
@@ -80,7 +80,64 @@ export default function Step3LearningMotivation() {
           </FormItem>
         )}
       />
-      {/* Placeholders for Social Visibility, Distraction Struggles etc. */}
+
+      <FormField
+        control={control}
+        name="age"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel className="font-semibold">Age (Optional)</FormLabel>
+            <FormControl>
+              <Input 
+                type="number" 
+                placeholder="e.g., 21" 
+                {...field} 
+                value={field.value === null ? '' : field.value} // Handle null for input display
+                onChange={e => field.onChange(e.target.value === '' ? null : Number(e.target.value))} // Convert to number or null
+              />
+            </FormControl>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+
+      <FormField
+        control={control}
+        name="location"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel className="font-semibold">Location (Optional)</FormLabel>
+            <FormDescription>City or Region.</FormDescription>
+            <FormControl>
+              <Input placeholder="e.g., New Delhi, India" {...field} />
+            </FormControl>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+
+      <FormField
+        control={control}
+        name="socialVisibilityPublic"
+        render={({ field }) => (
+          <FormItem className="flex flex-row items-center space-x-3 space-y-0 rounded-md border p-4 shadow-sm bg-background">
+            <FormControl>
+              <Checkbox
+                checked={field.value}
+                onCheckedChange={field.onChange}
+              />
+            </FormControl>
+            <div className="space-y-1 leading-none">
+              <FormLabel className="font-semibold">
+                Make Profile Public (Optional)
+              </FormLabel>
+              <FormDescription>
+                Allow others to see your anonymized progress on leaderboards or community features.
+              </FormDescription>
+            </div>
+          </FormItem>
+        )}
+      />
     </div>
   );
 }

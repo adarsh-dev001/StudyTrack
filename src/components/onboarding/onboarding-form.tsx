@@ -29,6 +29,18 @@ const baseStep1ObjectSchema = z.object({
   previousAttempts: z.string().optional(),
 });
 
+// Step 1 schema with refinement
+const step1Schema = baseStep1ObjectSchema.refine(data => {
+  if (data.targetExams?.includes('other') && (!data.otherExamName || data.otherExamName.trim() === '')) {
+    return false; 
+  }
+  return true;
+}, {
+  message: "Please specify the exam name if 'Other' is selected.",
+  path: ['otherExamName'],
+});
+
+
 const step2Schema = z.object({
   dailyStudyHours: z.string().min(1, "Please select your daily study hours."),
   preferredStudyTime: z.array(z.string()).min(1, "Select at least one preferred study time."),
@@ -46,17 +58,17 @@ const step3Schema = z.object({
 });
 
 // Combine schemas for the full form
-const fullOnboardingSchema = baseStep1ObjectSchema
+const fullOnboardingSchema = baseStep1ObjectSchema // Use the base object for merging
   .merge(step2Schema)
   .merge(step3Schema)
-  .refine(data => {
+  .refine(data => { // Re-apply the refinement to the full schema
     if (data.targetExams?.includes('other') && (!data.otherExamName || data.otherExamName.trim() === '')) {
-      return false; // Error if 'other' is selected but otherExamName is empty
+      return false;
     }
     return true;
   }, {
     message: "Please specify the exam name if 'Other' is selected.",
-    path: ['otherExamName'], // Apply this error to the otherExamName field
+    path: ['otherExamName'],
   });
 
 
@@ -75,8 +87,8 @@ export default function OnboardingForm({ userId, onOnboardingSuccess }: Onboardi
   const { toast } = useToast();
 
   const methods = useForm<OnboardingFormData>({
-    resolver: zodResolver(fullOnboardingSchema),
-    mode: 'onBlur', // Changed from 'onChange'
+    resolver: zodResolver(fullOnboardingSchema), // Use the full schema for the main resolver
+    mode: 'onBlur',
     defaultValues: {
       targetExams: [],
       otherExamName: '',
@@ -95,7 +107,7 @@ export default function OnboardingForm({ userId, onOnboardingSuccess }: Onboardi
       age: null,
       location: '',
       socialVisibilityPublic: false,
-      onboardingCompleted: false, // Default onboardingCompleted to false
+      onboardingCompleted: false, 
     },
   });
 
@@ -113,7 +125,7 @@ export default function OnboardingForm({ userId, onOnboardingSuccess }: Onboardi
             'dailyStudyHours', 'preferredStudyTime', 'weakSubjects',
             'strongSubjects', 'distractionStruggles'
         ]);
-    } else if (currentStep === 3) { // Should not happen if currentStep < TOTAL_STEPS
+    } else if (currentStep === 3) { 
         isValid = await trigger([
             'preferredLearningStyles', 'motivationType', 'age',
             'location', 'socialVisibilityPublic'
@@ -140,29 +152,17 @@ export default function OnboardingForm({ userId, onOnboardingSuccess }: Onboardi
     if (!data.targetExams?.includes('other')) {
       finalData.otherExamName = '';
     }
-     // Ensure age is not sent as null if it's empty, send undefined instead, or omit
     if (finalData.age === null || finalData.age === 0) {
-        delete (finalData as any).age; // Firestore doesn't like null for number fields if not explicitly handled
+        delete (finalData as any).age; 
     }
-
 
     const profilePayload: Partial<UserProfileData> = {
       ...finalData,
       onboardingCompleted: true,
     };
     
-    // If age was deleted, it won't be in profilePayload, which is fine.
-    // Or, ensure type compatibility:
-    // const profilePayload: UserProfileData = {
-    //   ...finalData,
-    //   age: finalData.age === null || finalData.age === 0 ? undefined : finalData.age,
-    //   onboardingCompleted: true,
-    // };
-
-
     try {
       await setDoc(userProfileRef, profilePayload, { merge: true });
-      // Toast is now handled by onOnboardingSuccess in the parent page
       onOnboardingSuccess();
     } catch (error: any) {
       console.error('Error saving onboarding data:', error);
@@ -179,7 +179,7 @@ export default function OnboardingForm({ userId, onOnboardingSuccess }: Onboardi
   const progressValue = (currentStep / TOTAL_STEPS) * 100;
 
   return (
-    <Card className="w-full max-w-xl shadow-2xl">
+    <Card className="w-full max-w-xl shadow-2xl my-8">
       <CardHeader className="text-center">
         <Sparkles className="mx-auto h-10 w-10 text-primary mb-2" />
         <CardTitle className="text-2xl md:text-3xl font-bold">Personalize Your StudyTrack</CardTitle>
@@ -197,16 +197,16 @@ export default function OnboardingForm({ userId, onOnboardingSuccess }: Onboardi
           </form>
         </FormProvider>
       </CardContent>
-      <CardFooter className="flex justify-between pt-6 border-t">
-        <Button variant="outline" onClick={handlePrevStep} disabled={currentStep === 1 || isLoading}>
+      <CardFooter className="flex flex-col sm:flex-row justify-between pt-6 border-t gap-3 sm:gap-0">
+        <Button variant="outline" onClick={handlePrevStep} disabled={currentStep === 1 || isLoading} className="w-full sm:w-auto">
           Previous
         </Button>
         {currentStep < TOTAL_STEPS ? (
-          <Button onClick={handleNextStep} disabled={isLoading}>
+          <Button onClick={handleNextStep} disabled={isLoading} className="w-full sm:w-auto">
             Next
           </Button>
         ) : (
-          <Button onClick={handleSubmit(onSubmit)} disabled={isLoading}>
+          <Button onClick={handleSubmit(onSubmit)} disabled={isLoading} className="w-full sm:w-auto">
             {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Finish Setup'}
           </Button>
         )}
@@ -214,4 +214,3 @@ export default function OnboardingForm({ userId, onOnboardingSuccess }: Onboardi
     </Card>
   );
 }
-

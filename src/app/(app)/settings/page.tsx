@@ -8,6 +8,7 @@ import { z } from 'zod';
 import { useAuth } from '@/contexts/auth-context';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from '@/components/ui/form';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -29,6 +30,7 @@ import {
   MOTIVATION_TYPES,
   STUDY_MODES,
   EXAM_PHASES,
+  PREVIOUS_ATTEMPTS_OPTIONS,
 } from '@/lib/constants';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
@@ -43,14 +45,19 @@ const settingsSchema = z.object({
   languageMedium: z.string().min(1, "Please select your language medium.").optional(),
   studyMode: z.string().optional(),
   examPhase: z.string().optional(),
+  previousAttempts: z.string().optional(),
   
   dailyStudyHours: z.string().min(1, "Please select your daily study hours.").optional(),
   preferredStudyTime: z.array(z.string()).min(1, "Select at least one preferred study time.").optional(),
   weakSubjects: z.array(z.string()).optional(),
   strongSubjects: z.array(z.string()).optional(),
+  distractionStruggles: z.string().max(500, "Response too long (max 500 chars).").optional(),
   
   preferredLearningStyles: z.array(z.string()).min(1, "Select at least one learning style.").optional(),
   motivationType: z.string().min(1, "Please select your motivation type.").optional(),
+  age: z.coerce.number().positive("Age must be a positive number").min(10, "Age seems too low").max(100, "Age seems too high").optional().nullable(),
+  location: z.string().max(100, "Location too long (max 100 chars).").optional(),
+  socialVisibilityPublic: z.boolean().optional(),
   
   onboardingCompleted: z.boolean().optional(),
 }).refine(data => {
@@ -81,12 +88,17 @@ export default function SettingsPage() {
       languageMedium: '',
       studyMode: '',
       examPhase: '',
+      previousAttempts: '',
       dailyStudyHours: '',
       preferredStudyTime: [],
       weakSubjects: [],
       strongSubjects: [],
+      distractionStruggles: '',
       preferredLearningStyles: [],
       motivationType: '',
+      age: null,
+      location: '',
+      socialVisibilityPublic: false,
     },
   });
 
@@ -108,12 +120,17 @@ export default function SettingsPage() {
           languageMedium: profileData.languageMedium || '',
           studyMode: profileData.studyMode || '',
           examPhase: profileData.examPhase || '',
+          previousAttempts: profileData.previousAttempts || '',
           dailyStudyHours: profileData.dailyStudyHours || '',
           preferredStudyTime: profileData.preferredStudyTime || [],
           weakSubjects: profileData.weakSubjects || [],
           strongSubjects: profileData.strongSubjects || [],
+          distractionStruggles: profileData.distractionStruggles || '',
           preferredLearningStyles: profileData.preferredLearningStyles || [],
           motivationType: profileData.motivationType || '',
+          age: profileData.age === undefined ? null : profileData.age, // Handle undefined from DB
+          location: profileData.location || '',
+          socialVisibilityPublic: profileData.socialVisibilityPublic || false,
         });
       }).catch(error => {
         console.error("Error fetching profile for settings:", error);
@@ -137,13 +154,29 @@ export default function SettingsPage() {
       
       const userProfileRef = doc(db, 'users', currentUser.uid, 'userProfile', 'profile');
       const firestorePayload: Partial<UserProfileData> = {};
-      for (const key in data) {
-        if (Object.prototype.hasOwnProperty.call(data, key) && (data as any)[key] !== undefined) {
-          (firestorePayload as any)[key] = (data as any)[key];
-        }
+
+      // Create a mutable copy of data to work with
+      const mutableData = { ...data };
+
+      if (!mutableData.targetExams?.includes('other')) {
+        mutableData.otherExamName = ''; 
       }
-      if (!firestorePayload.targetExams?.includes('other')) {
-        firestorePayload.otherExamName = ''; // Clear if 'other' not selected
+      if (mutableData.age === null || mutableData.age === 0) {
+         delete (mutableData as any).age;
+      }
+
+
+      for (const key in mutableData) {
+        if (Object.prototype.hasOwnProperty.call(mutableData, key) && (mutableData as any)[key] !== undefined) {
+          // Ensure age is correctly typed or removed if not applicable
+          if (key === 'age' && (mutableData as any)[key] === null) {
+            // Firestore might prefer 'delete' or a specific value for "not set" rather than null for numbers
+            // For now, we delete it if it's null, assuming optional field
+            // Or, ensure UserProfileData allows age to be number | undefined
+          } else {
+            (firestorePayload as any)[key] = (mutableData as any)[key];
+          }
+        }
       }
       
       await setDoc(userProfileRef, firestorePayload, { merge: true });
@@ -154,13 +187,13 @@ export default function SettingsPage() {
       });
       reset(data); 
        
-    } catch (error: any) {
+    } catch (error: any) { // Added opening brace for catch block
       toast({
         title: 'Update Failed',
         description: error.message,
         variant: 'destructive',
       });
-    }
+    } // Added closing brace for catch block
   };
   
   if (authLoading || isProfileLoading) {
@@ -192,6 +225,12 @@ export default function SettingsPage() {
               <FormField control={control} name="email" render={({ field }) => (
                   <FormItem><FormLabel htmlFor="email">Email Address</FormLabel><FormControl><Input id="email" type="email" {...field} disabled /></FormControl><FormDescription>Email address cannot be changed here.</FormDescription><FormMessage /></FormItem>
               )} />
+              <FormField control={control} name="age" render={({ field }) => (
+                  <FormItem><FormLabel htmlFor="age">Age</FormLabel><FormControl><Input id="age" type="number" {...field} value={field.value === null ? '' : field.value} onChange={e => field.onChange(e.target.value === '' ? null : Number(e.target.value))} /></FormControl><FormMessage /></FormItem>
+              )} />
+              <FormField control={control} name="location" render={({ field }) => (
+                <FormItem><FormLabel htmlFor="location">Location</FormLabel><FormControl><Input id="location" placeholder="City, Country" {...field} /></FormControl><FormMessage /></FormItem>
+              )} />
             </CardContent>
           </Card>
 
@@ -201,7 +240,7 @@ export default function SettingsPage() {
               <FormField control={control} name="targetExams" render={() => (
                   <FormItem>
                     <FormLabel className="text-base font-semibold">Target Exam(s)</FormLabel>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-3 pt-2">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-3 pt-2">
                       {TARGET_EXAMS.map((exam) => (
                         <FormField key={exam.value} control={control} name="targetExams" render={({ field }) => (
                             <FormItem className="flex flex-row items-center space-x-2 space-y-0">
@@ -228,6 +267,9 @@ export default function SettingsPage() {
               <FormField control={control} name="examPhase" render={({ field }) => (
                 <FormItem><FormLabel className="font-semibold">Current Exam Phase</FormLabel><Select onValueChange={field.onChange} value={field.value || ''}><FormControl><SelectTrigger><SelectValue placeholder="Select phase" /></SelectTrigger></FormControl><SelectContent>{EXAM_PHASES.map(p => <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>
               )} />
+               <FormField control={control} name="previousAttempts" render={({ field }) => (
+                <FormItem><FormLabel className="font-semibold">Previous Attempts</FormLabel><Select onValueChange={field.onChange} value={field.value || ''}><FormControl><SelectTrigger><SelectValue placeholder="Select attempts" /></SelectTrigger></FormControl><SelectContent>{PREVIOUS_ATTEMPTS_OPTIONS.map(opt => <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>
+              )} />
             </CardContent>
           </Card>
 
@@ -240,7 +282,7 @@ export default function SettingsPage() {
               <FormField control={control} name="preferredStudyTime" render={() => (
                   <FormItem>
                     <FormLabel className="text-base font-semibold">Preferred Study Time(s)</FormLabel>
-                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-3 pt-2">
+                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-3 pt-2">
                       {PREFERRED_STUDY_TIMES.map((time) => (
                         <FormField key={time.id} control={control} name="preferredStudyTime" render={({ field }) => (
                             <FormItem className="flex flex-row items-center space-x-2 space-y-0">
@@ -252,7 +294,7 @@ export default function SettingsPage() {
               <FormField control={control} name="weakSubjects" render={() => (
                   <FormItem>
                     <FormLabel className="text-base font-semibold">Weak Subject(s)</FormLabel>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-x-4 gap-y-3 pt-2">
+                    <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-4 gap-y-3 pt-2">
                       {SUBJECT_OPTIONS.map((subject) => (
                         <FormField key={subject.id + "-weak"} control={control} name="weakSubjects" render={({ field }) => (
                             <FormItem className="flex flex-row items-center space-x-2 space-y-0">
@@ -264,7 +306,7 @@ export default function SettingsPage() {
               <FormField control={control} name="strongSubjects" render={() => (
                   <FormItem>
                     <FormLabel className="text-base font-semibold">Strong Subject(s)</FormLabel>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-x-4 gap-y-3 pt-2">
+                    <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-4 gap-y-3 pt-2">
                       {SUBJECT_OPTIONS.map((subject) => (
                         <FormField key={subject.id + "-strong"} control={control} name="strongSubjects" render={({ field }) => (
                             <FormItem className="flex flex-row items-center space-x-2 space-y-0">
@@ -273,6 +315,9 @@ export default function SettingsPage() {
                             </FormItem>)} />
                       ))}</div><FormMessage />
                   </FormItem>)} />
+              <FormField control={control} name="distractionStruggles" render={({ field }) => (
+                <FormItem><FormLabel htmlFor="distractionStruggles">Distraction Struggles</FormLabel><FormControl><Textarea id="distractionStruggles" placeholder="Describe your main distractions..." {...field} /></FormControl><FormMessage /></FormItem>
+              )} />
             </CardContent>
           </Card>
 
@@ -282,7 +327,7 @@ export default function SettingsPage() {
               <FormField control={control} name="preferredLearningStyles" render={() => (
                   <FormItem>
                     <FormLabel className="text-base font-semibold">Preferred Learning Style(s)</FormLabel>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-3 pt-2">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-3 pt-2">
                       {PREFERRED_LEARNING_STYLES.map((style) => (
                          <FormField key={style.id} control={control} name="preferredLearningStyles" render={({ field }) => (
                             <FormItem className="flex flex-row items-center space-x-2 space-y-0">
@@ -301,6 +346,12 @@ export default function SettingsPage() {
                           </FormItem>))}
                     </RadioGroup></FormControl><FormMessage />
                   </FormItem>)} />
+              <FormField control={control} name="socialVisibilityPublic" render={({ field }) => (
+                <FormItem className="flex flex-row items-center space-x-3 space-y-0 rounded-md border p-4 shadow-sm">
+                  <FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} /></FormControl>
+                  <div className="space-y-1 leading-none"><FormLabel>Make Profile Public</FormLabel><FormDescription>Allow others to see your anonymized progress on leaderboards.</FormDescription></div>
+                </FormItem>
+              )} />
             </CardContent>
           </Card>
 

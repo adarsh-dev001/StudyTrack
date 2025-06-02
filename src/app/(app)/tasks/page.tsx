@@ -58,6 +58,7 @@ export default function TasksPage() {
           xp: 0, 
           earnedBadgeIds: [],
           purchasedItemIds: []
+          // Ensure other default profile fields are set here if needed
         }, { merge: true });
       }
       toast({
@@ -116,7 +117,7 @@ export default function TasksPage() {
         </CardContent>
       </Card>
       
-      <div className="grid gap-6 md:grid-cols-2">
+      <div className="grid gap-6 grid-cols-1 md:grid-cols-2">
         <Card className="shadow-lg">
           <CardHeader>
             <CardTitle className="text-xl font-semibold">Pending Tasks ({pendingTasks.length})</CardTitle>

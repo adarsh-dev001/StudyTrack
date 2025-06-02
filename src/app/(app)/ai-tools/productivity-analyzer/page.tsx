@@ -105,7 +105,7 @@ export default function ProductivityAnalyzerPage() {
               <CardDescription>Provide your study metrics for the past week to get AI feedback.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              <div className="grid md:grid-cols-2 gap-x-6 gap-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
                 <FormField
                   control={form.control}
                   name="studyHours"
@@ -139,7 +139,7 @@ export default function ProductivityAnalyzerPage() {
                     <CardTitle className="text-lg">Subject-wise Time Distribution (Hours) 📚</CardTitle>
                     <CardDescription className="text-sm">Enter hours spent on each subject this week. Leave blank or 0 if not applicable.</CardDescription>
                 </CardHeader>
-                <CardContent className="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-3">
+                <CardContent className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-3">
                     <FormField control={form.control} name="subjectPhysicsHours" render={({ field }) => (
                         <FormItem><FormLabel className="text-sm">Physics</FormLabel><FormControl><Input type="number" placeholder="e.g., 5" {...field} value={field.value || ''} /></FormControl><FormMessage /></FormItem>
                     )} />
@@ -158,7 +158,7 @@ export default function ProductivityAnalyzerPage() {
                 </CardContent>
               </Card>
 
-              <div className="grid md:grid-cols-2 gap-x-6 gap-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
                 <FormField
                   control={form.control}
                   name="streakLength"
@@ -190,7 +190,7 @@ export default function ProductivityAnalyzerPage() {
               </div>
             </CardContent>
             <CardFooter>
-              <Button type="submit" disabled={isLoading} size="lg">
+              <Button type="submit" disabled={isLoading} size="lg" className="w-full sm:w-auto">
                 {isLoading ? (
                   <>
                     <Loader2 className="mr-2 h-5 w-5 animate-spin" />

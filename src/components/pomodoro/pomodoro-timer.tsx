@@ -105,7 +105,9 @@ export function PomodoroTimer() {
   useEffect(() => {
     if (timeRemaining === 0 && isRunning) {
       if (mode === 'pomodoro') {
-        awardCoinsForPomodoro();
+        if (currentUser) { // Only award coins if user is logged in
+          awardCoinsForPomodoro();
+        }
         const newPomodorosCompleted = pomodorosCompletedCycle + 1;
         setPomodorosCompletedCycle(newPomodorosCompleted);
         if (newPomodorosCompleted % POMODOROS_UNTIL_LONG_BREAK === 0) {
@@ -117,7 +119,7 @@ export function PomodoroTimer() {
         setMode('pomodoro');
       }
     }
-  }, [timeRemaining, mode, pomodorosCompletedCycle, isRunning, awardCoinsForPomodoro]);
+  }, [timeRemaining, mode, pomodorosCompletedCycle, isRunning, awardCoinsForPomodoro, currentUser]);
 
   useEffect(() => {
     setTimeRemaining(modeDurations[mode]);
@@ -167,7 +169,7 @@ export function PomodoroTimer() {
   }, [timeRemaining, isRunning, mode]);
 
   return (
-    <Card className="w-full shadow-xl">
+    <Card className="w-full max-w-md mx-auto shadow-xl">
       <CardHeader className="text-center">
         <CardTitle className="font-headline text-2xl flex items-center justify-center">
           <TimerIcon className="mr-2 h-7 w-7 text-primary" />
@@ -187,10 +189,10 @@ export function PomodoroTimer() {
           {formatTime(timeRemaining)}
         </div>
 
-        <div className="flex space-x-4">
+        <div className="flex flex-col sm:flex-row space-y-3 sm:space-y-0 sm:space-x-4 w-full max-w-xs">
           <Button 
             onClick={handleStartPause} 
-            className="w-32 text-lg py-6" 
+            className="flex-1 text-lg py-6" 
             size="lg"
             aria-label={isRunning ? "Pause timer" : "Start timer"}
             disabled={!currentUser && mode === 'pomodoro'} // Disable start for pomodoro if not logged in
@@ -201,7 +203,7 @@ export function PomodoroTimer() {
           <Button 
             onClick={handleReset} 
             variant="outline" 
-            className="w-32 text-lg py-6" 
+            className="flex-1 text-lg py-6" 
             size="lg"
             aria-label="Reset timer"
           >
@@ -258,5 +260,3 @@ export function PomodoroTimer() {
     </Card>
   );
 }
-
-    

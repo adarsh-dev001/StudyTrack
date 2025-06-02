@@ -63,8 +63,9 @@ export default async function BlogPostPage({ params }: { params: { slug: string 
               <Image
                 src={postData.metadata.featuredImage}
                 alt={postData.metadata.title}
-                layout="fill"
-                objectFit="cover"
+                fill // Changed layout="fill"
+                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw" // Example sizes
+                style={{ objectFit: 'cover' }} // Changed objectFit
                 data-ai-hint="article banner"
                 priority // For LCP
               />
@@ -75,8 +76,9 @@ export default async function BlogPostPage({ params }: { params: { slug: string 
               <Image
                 src="https://placehold.co/800x450.png"
                 alt="Placeholder Image"
-                layout="fill"
-                objectFit="cover"
+                fill // Changed layout="fill"
+                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw" // Example sizes
+                style={{ objectFit: 'cover' }} // Changed objectFit
                 data-ai-hint="article banner placeholder"
               />
             </div>
@@ -84,8 +86,12 @@ export default async function BlogPostPage({ params }: { params: { slug: string 
           <h1 className="font-headline text-3xl font-bold tracking-tight text-foreground md:text-4xl lg:text-5xl mb-3">
             {postData.metadata.title}
           </h1>
-          <div className="text-sm text-muted-foreground">
-            <span>By {postData.metadata.author}</span> | <span>Published on {format(new Date(postData.metadata.date), 'MMMM d, yyyy')}</span> | <span>Category: {postData.metadata.category}</span>
+          <div className="text-sm text-muted-foreground flex flex-wrap gap-x-2 gap-y-1">
+            <span>By {postData.metadata.author}</span>
+            <span className="hidden sm:inline">|</span>
+            <span>Published on {format(new Date(postData.metadata.date), 'MMMM d, yyyy')}</span>
+            <span className="hidden sm:inline">|</span>
+            <span>Category: {postData.metadata.category}</span>
           </div>
         </header>
         

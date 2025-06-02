@@ -82,8 +82,8 @@ export default function MonthView({
   const daysInMonthGrid = useMemo(() => {
     const monthStart = startOfMonth(currentDisplayMonth);
     const monthEnd = endOfMonth(currentDisplayMonth);
-    const startDate = startOfWeek(monthStart);
-    const endDate = endOfWeek(monthEnd);
+    const startDate = startOfWeek(monthStart, { weekStartsOn: 0 }); // Ensure week starts on Sunday for consistency
+    const endDate = endOfWeek(monthEnd, { weekStartsOn: 0 });
     return eachDayOfInterval({ start: startDate, end: endDate });
   }, [currentDisplayMonth]);
 
@@ -126,18 +126,18 @@ export default function MonthView({
 
   return (
     <Card className="shadow-lg flex-grow flex flex-col">
-      <CardHeader className="flex flex-row items-center justify-between pb-4 pt-5 px-4 sm:px-6">
+      <CardHeader className="flex flex-row items-center justify-between pb-4 pt-5 px-2 sm:px-4 md:px-6">
         <Button variant="outline" size="icon" onClick={handlePrevMonth} aria-label="Previous month">
           <ChevronLeft className="h-5 w-5" />
         </Button>
-        <CardTitle className="text-xl sm:text-2xl font-bold text-center">
+        <CardTitle className="text-lg sm:text-xl md:text-2xl font-bold text-center">
           {format(currentDisplayMonth, 'MMMM yyyy')}
         </CardTitle>
         <Button variant="outline" size="icon" onClick={handleNextMonth} aria-label="Next month">
           <ChevronRight className="h-5 w-5" />
         </Button>
       </CardHeader>
-      <CardContent className="flex-grow flex flex-col p-1 sm:p-2 md:p-3">
+      <CardContent className="flex-grow flex flex-col p-1 sm:p-2">
         {isLoadingTasks && (
           <div className="flex-grow flex items-center justify-center">
             <Loader2 className="h-10 w-10 animate-spin text-primary" />
@@ -146,7 +146,7 @@ export default function MonthView({
         {!isLoadingTasks && (
           <div className="grid grid-cols-7 gap-px bg-border flex-grow border-l border-t">
             {dayHeaders.map(header => (
-              <div key={header} className="py-2 text-center text-xs font-medium text-muted-foreground bg-muted/50 border-r border-b">
+              <div key={header} className="py-1.5 sm:py-2 text-center text-xs sm:text-sm font-medium text-muted-foreground bg-muted/50 border-r border-b">
                 {header}
               </div>
             ))}
@@ -161,7 +161,7 @@ export default function MonthView({
                 <div
                   key={day.toString()}
                   className={cn(
-                    'p-1.5 sm:p-2 min-h-[60px] sm:min-h-[80px] md:min-h-[100px] cursor-pointer relative transition-colors duration-150 ease-in-out border-r border-b',
+                    'p-1 sm:p-1.5 min-h-[50px] xs:min-h-[60px] sm:min-h-[70px] md:min-h-[90px] cursor-pointer relative transition-colors duration-150 ease-in-out border-r border-b flex flex-col',
                     isCurrentMonth ? 'bg-background hover:bg-secondary/60' : 'bg-muted/30 text-muted-foreground/50 hover:bg-muted/50',
                     isSelected && 'bg-primary/20 ring-2 ring-primary z-10',
                     isToday && !isSelected && 'bg-accent/10'
@@ -169,17 +169,19 @@ export default function MonthView({
                   onClick={() => handleDayClick(day)}
                 >
                   <span className={cn(
-                    'text-xs sm:text-sm',
+                    'text-xs sm:text-sm self-start',
                     isToday && 'font-bold text-primary'
                   )}>
                     {format(day, 'd')}
                   </span>
                   {isCurrentMonth && tasksOnThisDayOfWeek.length > 0 && (
-                    <div className="absolute bottom-1 right-1 sm:bottom-1.5 sm:right-1.5 flex flex-wrap justify-end gap-0.5">
-                       {tasksOnThisDayOfWeek.slice(0,3).map(task => (
-                         <Dot key={task.id} className={cn("h-3 w-3 sm:h-4 sm:w-4", getSubjectInfo(task.subject).textColor)} />
+                     <div className="flex flex-wrap gap-0.5 mt-auto justify-start items-end">
+                       {tasksOnThisDayOfWeek.slice(0, window.innerWidth < 400 ? 1 : window.innerWidth < 640 ? 2 : 3).map(task => ( // Show fewer dots on smaller screens
+                         <Dot key={task.id} className={cn("h-2.5 w-2.5 sm:h-3 sm:w-3", getSubjectInfo(task.subject).textColor)} />
                        ))}
-                       {tasksOnThisDayOfWeek.length > 3 && <span className="text-xs text-muted-foreground leading-tight sm:leading-normal">+ {tasksOnThisDayOfWeek.length - 3}</span>}
+                       {tasksOnThisDayOfWeek.length > (window.innerWidth < 400 ? 1 : window.innerWidth < 640 ? 2 : 3) && 
+                         <span className="text-[10px] sm:text-xs text-muted-foreground leading-tight">+ {tasksOnThisDayOfWeek.length - (window.innerWidth < 400 ? 1 : window.innerWidth < 640 ? 2 : 3)}</span>
+                       }
                     </div>
                   )}
                 </div>
@@ -191,5 +193,3 @@ export default function MonthView({
     </Card>
   );
 }
-
-    

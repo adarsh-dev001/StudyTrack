@@ -191,8 +191,8 @@ export default function DayView({ selectedDate, selectedSubjectFilter }: DayView
     return (
       <Card key={task.id} className={cn("mb-3 shadow-md border", subjectInfo.color, task.status === "completed" ? "opacity-60 line-through" : "")}>
         <CardHeader className="pb-2 pt-3 px-3">
-          <div className="flex justify-between items-start">
-            <CardTitle className={cn("text-base font-semibold leading-tight", subjectInfo.textColor)} title={task.title}>
+          <div className="flex justify-between items-start gap-2">
+            <CardTitle className={cn("text-base font-semibold leading-tight break-words", subjectInfo.textColor)} title={task.title}>
               {task.title}
             </CardTitle>
             <div className="flex items-center space-x-1 shrink-0">
@@ -206,17 +206,17 @@ export default function DayView({ selectedDate, selectedSubjectFilter }: DayView
           </div>
           <div className={cn("text-xs opacity-90", subjectInfo.textColor)}>
             <span className="font-medium">{subjectInfo.name}</span>
-            {task.topic && <span className="ml-1"> - {task.topic}</span>}
+            {task.topic && <span className="ml-1 break-all"> - {task.topic}</span>}
           </div>
         </CardHeader>
         <CardContent className="px-3 pb-3 text-xs">
-          {task.description && <p className={cn("mb-2 opacity-80", subjectInfo.textColor)}>{task.description}</p>}
-          <div className="flex justify-between items-center">
+          {task.description && <p className={cn("mb-2 opacity-80 break-words", subjectInfo.textColor)}>{task.description}</p>}
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-1 sm:gap-2">
             <div className={cn("flex items-center opacity-80", subjectInfo.textColor)}>
               <Clock className="h-3 w-3 mr-1" />
               <span>{hourToDisplayTime(task.startHour)} ({task.duration} {task.duration === 1 ? "hr" : "hrs"})</span>
             </div>
-            <Badge variant={priorityInfo.variant} className={priorityInfo.className}>{priorityInfo.text}</Badge>
+            <Badge variant={priorityInfo.variant} className={cn("mt-1 sm:mt-0", priorityInfo.className)}>{priorityInfo.text}</Badge>
           </div>
         </CardContent>
       </Card>
@@ -255,13 +255,13 @@ export default function DayView({ selectedDate, selectedSubjectFilter }: DayView
 
   return (
     <div className="flex-grow flex flex-col p-1">
-      <div className="flex justify-between items-center mb-4 px-2">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 px-2 gap-2">
         <h2 className="text-xl font-bold text-foreground">
           Tasks for: {format(selectedDate, "EEEE, MMMM d, yyyy")}
         </h2>
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
-            <Button size="sm">
+            <Button size="sm" className="w-full sm:w-auto">
               <Plus className="mr-2 h-4 w-4" /> Add Task
             </Button>
           </DialogTrigger>
@@ -307,10 +307,10 @@ export default function DayView({ selectedDate, selectedSubjectFilter }: DayView
           <div className="space-y-0 pr-3">
             {hours.map((hour) => (
               <div key={hour} className="flex items-start py-2 border-b last:border-b-0">
-                <div className="w-20 text-xs text-muted-foreground font-medium pt-1 text-right pr-3 shrink-0">
+                <div className="w-16 sm:w-20 text-xs text-muted-foreground font-medium pt-1 text-right pr-2 sm:pr-3 shrink-0">
                   {hourToDisplayTime(hour)}
                 </div>
-                <div className="flex-grow pl-3 border-l min-h-[3rem]">
+                <div className="flex-grow pl-2 sm:pl-3 border-l min-h-[3rem]">
                   {tasksByHour[hour] && tasksByHour[hour].length > 0 ? (
                     tasksByHour[hour].map(task => renderTaskCard(task))
                   ) : (

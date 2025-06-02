@@ -118,7 +118,7 @@ export default function DashboardPage() {
       )}
 
 
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
         {/* Current Streak Card */}
         <Card className="shadow-lg hover:shadow-xl transition-shadow duration-300_transform hover:-translate-y-1">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">

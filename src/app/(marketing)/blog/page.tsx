@@ -14,10 +14,10 @@ export default async function BlogIndexPage() {
   return (
     <div className="container mx-auto px-4 py-8 md:px-6 lg:px-8">
       <header className="mb-12 text-center">
-        <h1 className="font-headline text-4xl font-bold tracking-tight text-foreground md:text-5xl lg:text-6xl">
+        <h1 className="font-headline text-4xl font-bold tracking-tight text-foreground sm:text-5xl md:text-6xl">
           StudyTrack Blog
         </h1>
-        <p className="mt-4 text-lg text-muted-foreground md:text-xl">
+        <p className="mt-4 text-lg text-muted-foreground md:text-xl max-w-2xl mx-auto">
           Your go-to resource for study tips, exam strategies, and productivity hacks.
         </p>
       </header>

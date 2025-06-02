@@ -41,7 +41,7 @@ const featuresRow2 = [
 export function FeaturesSection() {
   return (
     <section id="features" className="w-full py-12 md:py-24 lg:py-32 bg-background">
-      <div className="px-4 md:px-6"> {/* Removed 'container' class */}
+      <div className="container mx-auto px-4 md:px-6">
         <div className="flex flex-col items-center justify-center space-y-4 text-center mb-12">
           <div className="inline-block rounded-lg bg-secondary px-3 py-1 text-sm text-secondary-foreground">Key Features</div>
           <h2 className="font-headline text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl text-foreground">
@@ -51,7 +51,7 @@ export function FeaturesSection() {
             Everything you need to organize your studies, stay focused, and achieve your exam goals.
           </p>
         </div>
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 mb-12">
+        <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 mb-12">
           {featuresRow1.map((feature) => (
             <FeatureCard key={feature.title} {...feature} />
           ))}
@@ -64,7 +64,7 @@ export function FeaturesSection() {
             Powerful tools designed to enhance your productivity and learning efficiency.
           </p>
         </div>
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
           {featuresRow2.map((feature) => (
             <FeatureCard key={feature.title} {...feature} />
           ))}

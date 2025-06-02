@@ -54,11 +54,16 @@ export function PlannerHeader({
     <div className="flex flex-col space-y-3 sm:space-y-0 sm:flex-row sm:justify-between sm:items-center pb-2 border-b">
       <h1 className="text-2xl font-bold tracking-tight md:text-3xl">Study Planner</h1>
       
-      <div className="flex flex-wrap items-center gap-2">
-        <ToggleGroup type="single" value={currentView} onValueChange={(value) => { if (value) onViewChange(value as 'day' | 'week' | 'month'); }}>
-          <ToggleGroupItem value="day" aria-label="Day view">Day</ToggleGroupItem>
-          <ToggleGroupItem value="week" aria-label="Week view">Week</ToggleGroupItem>
-          <ToggleGroupItem value="month" aria-label="Month view">Month</ToggleGroupItem>
+      <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-2">
+        <ToggleGroup 
+          type="single" 
+          value={currentView} 
+          onValueChange={(value) => { if (value) onViewChange(value as 'day' | 'week' | 'month'); }}
+          className="w-full sm:w-auto"
+        >
+          <ToggleGroupItem value="day" aria-label="Day view" className="flex-1 sm:flex-none">Day</ToggleGroupItem>
+          <ToggleGroupItem value="week" aria-label="Week view" className="flex-1 sm:flex-none">Week</ToggleGroupItem>
+          <ToggleGroupItem value="month" aria-label="Month view" className="flex-1 sm:flex-none">Month</ToggleGroupItem>
         </ToggleGroup>
         
         <Popover>
@@ -97,11 +102,6 @@ export function PlannerHeader({
           </SelectContent>
         </Select>
         
-        {/* The "New Task" button is part of PlannerView's dialog trigger, 
-            so it's not duplicated here unless a different global add is needed. */}
-        {/* <Button>
-          <Plus className="mr-2 h-4 w-4" /> New Task
-        </Button> */}
       </div>
     </div>
   )

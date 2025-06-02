@@ -7,11 +7,11 @@ export default function TermsOfServicePage() {
     <div className="flex min-h-screen flex-col">
       <Header />
       <main className="flex-1 py-12 md:py-16 lg:py-20">
-        <div className="px-4 md:px-6"> {/* Removed 'container' class */}
+        <div className="container mx-auto px-4 md:px-6">
           <h1 className="font-headline text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl mb-8">
             Terms of Service
           </h1>
-          <div className="prose prose-lg max-w-none text-foreground">
+          <div className="prose prose-lg max-w-none text-foreground dark:prose-invert">
             <p>Last updated: {new Date().toLocaleDateString()}</p>
             <p>Please read these Terms of Service ("Terms", "Terms of Service") carefully before using the StudyTrack website (the "Service") operated by StudyTrack ("us", "we", or "our").</p>
             <p>Your access to and use of the Service is conditioned on your acceptance of and compliance with these Terms. These Terms apply to all visitors, users and others who access or use the Service.</p>

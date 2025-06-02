@@ -4,7 +4,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/auth-context';
 import { db } from '@/lib/firebase';
-import { doc, getDoc, updateDoc, runTransaction, type Unsubscribe, onSnapshot } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, runTransaction, type Unsubscribe, onSnapshot, setDoc } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
@@ -230,6 +230,7 @@ export default function RewardsShopPage() {
                 variant="outline" 
                 onClick={handleRevertToDefaultTheme}
                 disabled={actionItemId === "revert_default_theme_action" || userProfile.activeThemeId === DEFAULT_THEME_ID || userProfile.activeThemeId === null}
+                className="w-full sm:w-auto"
             >
                 {actionItemId === "revert_default_theme_action" ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
                 Revert to Default Theme

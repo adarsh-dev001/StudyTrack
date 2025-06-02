@@ -151,7 +151,7 @@ export default function MaterialSummarizerPage() {
               />
             </CardContent>
             <CardFooter>
-              <Button type="submit" disabled={isLoading} size="lg">
+              <Button type="submit" disabled={isLoading} size="lg" className="w-full sm:w-auto">
                 {isLoading ? (
                   <>
                     <Loader2 className="mr-2 h-5 w-5 animate-spin" />
@@ -172,7 +172,7 @@ export default function MaterialSummarizerPage() {
       {analysisResult && (
         <>
           <Tabs defaultValue="summary" className="w-full animate-in fade-in-50 duration-500">
-            <TabsList className="grid w-full grid-cols-3">
+            <TabsList className="grid w-full grid-cols-1 sm:grid-cols-3">
               <TabsTrigger value="summary"><ClipboardList className="mr-2 h-4 w-4" />Summary</TabsTrigger>
               <TabsTrigger value="keyConcepts"><Sparkles className="mr-2 h-4 w-4" />Key Concepts</TabsTrigger>
               <TabsTrigger value="quiz"><HelpCircle className="mr-2 h-4 w-4" />Quick Quiz</TabsTrigger>
@@ -181,7 +181,7 @@ export default function MaterialSummarizerPage() {
             <TabsContent value="summary">
               <Card className="shadow-md">
                 <CardHeader>
-                  <CardTitle className="flex items-center"><ClipboardList className="mr-2 h-5 w-5 text-primary" /> 📌 Summary of Your Material</CardTitle>
+                  <CardTitle className="flex items-center text-lg sm:text-xl"><ClipboardList className="mr-2 h-5 w-5 text-primary" /> 📌 Summary of Your Material</CardTitle>
                   <CardDescription>Topic: {form.getValues('topic')}</CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -195,7 +195,7 @@ export default function MaterialSummarizerPage() {
             <TabsContent value="keyConcepts">
               <Card className="shadow-md">
                 <CardHeader>
-                  <CardTitle className="flex items-center"><Sparkles className="mr-2 h-5 w-5 text-primary" /> 🧠 Core Concepts Unpacked</CardTitle>
+                  <CardTitle className="flex items-center text-lg sm:text-xl"><Sparkles className="mr-2 h-5 w-5 text-primary" /> 🧠 Core Concepts Unpacked</CardTitle>
                   <CardDescription>The main ideas from your material.</CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -214,7 +214,7 @@ export default function MaterialSummarizerPage() {
             <TabsContent value="quiz">
               <Card className="shadow-md">
                 <CardHeader>
-                  <CardTitle className="flex items-center"><HelpCircle className="mr-2 h-5 w-5 text-primary" /> Quick Quiz: Test Your Knowledge! 🧩</CardTitle>
+                  <CardTitle className="flex items-center text-lg sm:text-xl"><HelpCircle className="mr-2 h-5 w-5 text-primary" /> Quick Quiz: Test Your Knowledge! 🧩</CardTitle>
                   <CardDescription>See how well you've grasped the concepts.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
@@ -298,4 +298,3 @@ export default function MaterialSummarizerPage() {
     </div>
   );
 }
-
