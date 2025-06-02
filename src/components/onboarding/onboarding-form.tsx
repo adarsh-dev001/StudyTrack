@@ -18,7 +18,6 @@ import Step1ExamFocus from './step-1-exam-focus';
 import Step2StudyHabits from './step-2-study-habits';
 import Step3LearningMotivation from './step-3-learning-motivation';
 
-// Define Zod schemas for each step
 // Base object schema for step 1
 const baseStep1ObjectSchema = z.object({
   targetExams: z.array(z.string()).min(1, "Please select at least one target exam."),
@@ -30,7 +29,7 @@ const baseStep1ObjectSchema = z.object({
   previousAttempts: z.string().min(1, "Please select number of previous attempts").optional(),
 });
 
-// Refined schema for step 1 validation
+// Refined schema for step 1 validation (used for triggering step 1 validation)
 const step1Schema = baseStep1ObjectSchema.refine(data => {
     if (data.targetExams.includes('other') && (!data.otherExamName || data.otherExamName.trim() === '')) {
       return false;
@@ -58,10 +57,10 @@ const step3Schema = z.object({
 });
 
 // Combine schemas for the full form, merging base objects and then applying refinements if necessary
-const fullOnboardingSchema = baseStep1ObjectSchema // Use the base object schema here
+const fullOnboardingSchema = baseStep1ObjectSchema
   .merge(step2Schema)
   .merge(step3Schema)
-  .refine(data => { // Re-apply the refinement from step1Schema if it's relevant for the full form
+  .refine(data => {
     if (data.targetExams.includes('other') && (!data.otherExamName || data.otherExamName.trim() === '')) {
       return false;
     }
@@ -87,11 +86,7 @@ export default function OnboardingForm({ userId, onOnboardingSuccess }: Onboardi
   const { toast } = useToast();
 
   const methods = useForm<OnboardingFormData>({
-    resolver: zodResolver(
-      currentStep === 1 ? step1Schema :
-      currentStep === 2 ? step2Schema :
-      step3Schema
-    ),
+    resolver: zodResolver(fullOnboardingSchema), // Use the full schema for the resolver
     mode: 'onChange', 
     defaultValues: {
       targetExams: [],
@@ -118,14 +113,33 @@ export default function OnboardingForm({ userId, onOnboardingSuccess }: Onboardi
 
   const handleNextStep = async () => {
     let isValid = false;
-    if (currentStep === 1) isValid = await trigger(['targetExams', 'examAttemptYear', 'languageMedium', 'studyMode', 'examPhase', 'otherExamName', 'previousAttempts']);
-    else if (currentStep === 2) isValid = await trigger(['dailyStudyHours', 'preferredStudyTime', 'weakSubjects', 'strongSubjects', 'distractionStruggles']);
-    else if (currentStep === 3) isValid = await trigger(['preferredLearningStyles', 'motivationType', 'age', 'location', 'socialVisibilityPublic']);
+    // Trigger validation against the specific step's schema or fields
+    if (currentStep === 1) {
+        // For step 1, we need to ensure the refinement on otherExamName is checked
+        // by validating against step1Schema which includes that refinement.
+        // However, react-hook-form's trigger validates against the resolver's schema.
+        // We'll trigger specific fields and rely on the fullOnboardingSchema's refinement.
+        isValid = await trigger([
+            'targetExams', 'otherExamName', 'examAttemptYear', 
+            'languageMedium', 'studyMode', 'examPhase', 'previousAttempts'
+        ]);
+    } else if (currentStep === 2) {
+        isValid = await trigger([
+            'dailyStudyHours', 'preferredStudyTime', 'weakSubjects', 
+            'strongSubjects', 'distractionStruggles'
+        ]);
+    } else if (currentStep === 3) {
+        isValid = await trigger([
+            'preferredLearningStyles', 'motivationType', 'age', 
+            'location', 'socialVisibilityPublic'
+        ]);
+    }
 
 
     if (isValid && currentStep < TOTAL_STEPS) {
       setCurrentStep(prev => prev + 1);
     } else if (isValid && currentStep === TOTAL_STEPS) {
+        // This is for the "Finish Setup" button
         await handleSubmit(onSubmit)();
     }
   };
@@ -142,8 +156,8 @@ export default function OnboardingForm({ userId, onOnboardingSuccess }: Onboardi
     if (!data.targetExams?.includes('other')) {
       finalData.otherExamName = '';
     }
-    if (data.age === null || data.age === undefined || data.age === 0) { // Handle empty or zero age
-        finalData.age = undefined; // Store as undefined if not provided or zero
+    if (data.age === null || data.age === undefined || data.age === 0) {
+        finalData.age = undefined; 
     }
 
 
@@ -151,7 +165,6 @@ export default function OnboardingForm({ userId, onOnboardingSuccess }: Onboardi
       ...finalData, 
       onboardingCompleted: true,
     };
-    // Remove age if it's undefined to avoid writing undefined to Firestore
     if (profilePayload.age === undefined) {
         delete profilePayload.age;
     }
@@ -214,3 +227,4 @@ export default function OnboardingForm({ userId, onOnboardingSuccess }: Onboardi
     </Card>
   );
 }
+
