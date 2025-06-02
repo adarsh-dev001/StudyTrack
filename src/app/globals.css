@@ -3,9 +3,12 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Remove direct body font-family, as next/font and tailwind.config.ts will handle it */
+/*
 body {
   font-family: Arial, Helvetica, sans-serif;
 }
+*/
 
 @layer base {
   :root {
@@ -109,3 +112,4 @@ body {
   }
   /* Redundant table styles removed as they are handled by mdx-components.tsx and Tailwind Typography */
 }
+

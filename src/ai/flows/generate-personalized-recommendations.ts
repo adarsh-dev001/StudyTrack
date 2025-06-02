@@ -23,7 +23,6 @@ const PersonalizedRecommendationsInputSchema = z.object({
   strongSubjects: z.array(z.string()).optional().describe("Subjects the user is confident in."),
   preferredLearningStyles: z.array(z.string()).optional().describe("Preferred learning methods (e.g., ['videos', 'notes'])."),
   motivationType: z.string().optional().describe("What motivates the user (e.g., 'xp_badges', 'personal_goals')."),
-  // Add other relevant fields from UserProfileData as needed by the prompt
   languageMedium: z.string().optional().describe("Language medium for the exam."),
   studyMode: z.string().optional().describe("Primary mode of study (e.g., 'self_study', 'coaching')."),
   examPhase: z.string().optional().describe("Current phase of exam preparation (e.g., 'prelims', 'mains')."),
@@ -36,6 +35,7 @@ const GoalSchema = z.object({
 });
 
 const PersonalizedRecommendationsOutputSchema = z.object({
+  fallback: z.boolean().optional().describe("Indicates if the response is a fallback due to AI service issues."),
   suggestedWeeklyTimetableFocus: z.array(z.string()).min(3).max(7)
     .describe("An array of 3-7 bullet points outlining key focus areas or subjects for a typical study week. Be generic enough if specific subject list is short."),
   suggestedMonthlyGoals: z.array(z.string()).min(2).max(5)
@@ -61,8 +61,6 @@ export type PersonalizedRecommendationsOutput = z.infer<typeof PersonalizedRecom
 export async function generatePersonalizedRecommendations(
   input: PersonalizedRecommendationsInput
 ): Promise<PersonalizedRecommendationsOutput> {
-  // Basic validation or transformation if needed before calling the flow
-  // For example, combine targetExams and otherExamName if 'other' is present
   let examDisplay = input.targetExams?.join(', ');
   if (input.targetExams?.includes('other') && input.otherExamName) {
     examDisplay = input.targetExams.map(e => e === 'other' ? input.otherExamName : e).join(', ');
@@ -70,7 +68,7 @@ export async function generatePersonalizedRecommendations(
 
   const flowInput = {
     ...input,
-    examDisplay, // Pass a combined display name for exams
+    examDisplay,
   };
 
   return personalizedRecommendationsFlow(flowInput);
@@ -108,12 +106,15 @@ Please provide the following, ensuring they are tailored to the user's specific 
     *   motivationalNudges: 1-3 nudges. If motivationType is 'xp_badges', suggest tracking progress. If 'calm_mode', suggest minimizing distractions.
 8.  **overallStrategyStatement**: A concise (2-3 sentences) strategic statement summarizing the approach.
 
-Structure your entire output as a single JSON object that strictly adheres to the PersonalizedRecommendationsOutputSchema.
+Structure your entire output as a single JSON object that strictly adheres to the PersonalizedRecommendationsOutputSchema. Ensure 'fallback' is not present unless explicitly set by the flow logic for an error case.
 Ensure the advice is practical and actionable for the user preparing for {{{examDisplay}}}.
 Prioritize core subjects for the given exam. For example, for NEET, focus on Physics, Chemistry, Biology. For UPSC, general studies and optionals.
 If subject information is sparse, provide more general planning advice.
 `,
 });
+
+const MAX_RETRIES = 3;
+const INITIAL_DELAY_MS = 1000;
 
 const personalizedRecommendationsFlow = ai.defineFlow(
   {
@@ -121,11 +122,86 @@ const personalizedRecommendationsFlow = ai.defineFlow(
     inputSchema: PersonalizedRecommendationsInputSchema.extend({ examDisplay: z.string().optional() }),
     outputSchema: PersonalizedRecommendationsOutputSchema,
   },
-  async (input) => {
-    const { output } = await recommendationsPrompt(input);
-    if (!output) {
-      throw new Error('The AI model did not return any recommendations. Please try again.');
+  async (input): Promise<PersonalizedRecommendationsOutput> => {
+    let attempts = 0;
+    let delay = INITIAL_DELAY_MS;
+
+    while (attempts < MAX_RETRIES) {
+      try {
+        const { output } = await recommendationsPrompt(input);
+        if (!output) {
+          // This case might indicate an issue with the prompt or model not returning expected structure,
+          // but not necessarily a 503. We'll treat it as a retriable error for now.
+          throw new Error('AI model did not return a valid output structure.');
+        }
+        return { ...output, fallback: false }; // Ensure fallback is explicitly false on success
+      } catch (error: any) {
+        attempts++;
+        console.error(`Attempt ${attempts} failed for personalizedRecommendationsFlow: ${error.message}`);
+        if (attempts >= MAX_RETRIES) {
+          console.error("Max retries reached. Returning fallback recommendations.");
+          // Construct and return fallback response
+          return {
+            fallback: true,
+            suggestedWeeklyTimetableFocus: [
+              "Focus on your core subjects this week.",
+              "Ensure regular revision of topics already covered.",
+              "Practice effective time management with dedicated study blocks."
+            ],
+            suggestedMonthlyGoals: [
+              "Aim to cover a significant portion of your syllabus for at least one subject.",
+              "Schedule and attempt at least one mock test or comprehensive quiz."
+            ],
+            studyCycleRecommendation: "Consider the Pomodoro Technique (e.g., 25 minutes study, 5 minutes break). Adjust based on your focus levels.",
+            shortTermGoals: [
+              { goal: "Complete one key module or unit of a core subject.", timeline: "This week" },
+              { goal: "Review all notes from the past 3 days of study.", timeline: "Daily" }
+            ],
+            longTermGoals: [
+              { goal: "Achieve mastery in fundamental concepts of all major subjects.", timeline: "Next 1-2 months" }
+            ],
+            milestoneSuggestions: [
+              "End of Week: Conduct a self-assessment quiz on topics studied during the week.",
+              "End of Month: Review all completed chapters and identify areas needing more attention."
+            ],
+            personalizedTips: {
+              timeManagement: [
+                "Prioritize your tasks daily using a to-do list or planner.",
+                "Minimize distractions during your dedicated study sessions."
+              ],
+              subjectSpecificStudy: [
+                "For complex topics, try breaking them down into smaller, manageable parts.",
+                "Use active recall techniques like flashcards or teaching the concept to someone else."
+              ],
+              motivationalNudges: [
+                "Keep your long-term exam goals in mind to stay focused.",
+                "Acknowledge and celebrate small victories and progress made."
+              ]
+            },
+            overallStrategyStatement: "The AI coach is currently experiencing high demand and has provided a general plan. Please try again later for fully personalized recommendations. In the meantime, focus on consistent study habits, regular revision of material, and effective time management to make progress towards your exam goals."
+          };
+        }
+        await new Promise(resolve => setTimeout(resolve, delay));
+        delay *= 2; // Exponential backoff
+      }
     }
-    return output;
+    // This part should ideally not be reached if MAX_RETRIES logic is correct,
+    // but as a failsafe, return the fallback.
+    return {
+        fallback: true,
+        suggestedWeeklyTimetableFocus: ["Generic focus 1", "Generic focus 2", "Generic focus 3"],
+        suggestedMonthlyGoals: ["Generic goal 1", "Generic goal 2"],
+        studyCycleRecommendation: "Standard Pomodoro",
+        shortTermGoals: [{ goal: "Generic short term", timeline: "Soon" }],
+        longTermGoals: [{ goal: "Generic long term", timeline: "Later" }],
+        milestoneSuggestions: ["Generic milestone 1", "Generic milestone 2"],
+        personalizedTips: {
+            timeManagement: ["Generic time tip"],
+            subjectSpecificStudy: ["Generic subject tip"],
+            motivationalNudges: ["Generic nudge"]
+        },
+        overallStrategyStatement: "AI service is currently unavailable. Please try again later."
+    };
   }
 );
+
