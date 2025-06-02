@@ -1,0 +1,67 @@
+---
+title: "Example Post with a Featured Image"
+date: "2024-01-01"
+category: "Examples"
+author: "AI Prototyper"
+metaDescription: "This is an example blog post demonstrating how to use featured images."
+featuredImage: "https://placehold.co/800x450.png"
+---
+
+## Using Featured Images
+
+This post demonstrates how to add a featured image to your blog posts using the `featuredImage` property in the frontmatter.
+
+The image below is loaded from the URL specified in `featuredImage`:
+
+```yaml
+---
+title: "Your Post Title"
+# ... other frontmatter ...
+featuredImage: "https://your-image-url.com/image.jpg"
+---
+```
+
+### How it Works:
+
+1.  **Add the URL:** In the frontmatter of your `.mdx` file, add the `featuredImage` field and set its value to the direct URL of the image you want to display.
+    *   You can use images hosted on services like Unsplash, Pexels, or any publicly accessible image URL.
+    *   The example above uses a placeholder from `https://placehold.co`.
+
+2.  **`next/image` Optimization:**
+    *   The application uses Next.js's `next/image` component to display these images. This component automatically provides optimizations like:
+        *   Resizing images for different screen sizes.
+        *   Converting images to modern formats (like WebP).
+        *   Lazy loading images for better performance.
+
+3.  **Domain Configuration (Important for External Images):**
+    *   For `next/image` to optimize images from external domains, those domains must be whitelisted in the `remotePatterns` section of your `next.config.ts` file.
+    *   Currently, `placehold.co` is configured. If you use images from other domains (e.g., `images.unsplash.com`, `cdn.yourhost.com`), you'll need to add them.
+
+    Example `next.config.ts` update:
+    ```javascript
+    images: {
+      remotePatterns: [
+        {
+          protocol: 'https',
+          hostname: 'placehold.co',
+          port: '',
+          pathname: '/**',
+        },
+        { // Add a new pattern for Unsplash
+          protocol: 'https',
+          hostname: 'images.unsplash.com',
+          port: '',
+          pathname: '/**',
+        }
+      ],
+    },
+    ```
+
+### Long-Term Strategy
+
+While using external URLs is great for getting started, for long-term scalability and control, consider:
+*   **Firebase Storage:** Upload images here and use their public URLs. Integrates well with your existing Firebase setup.
+*   **Dedicated Image CDN (e.g., Cloudinary):** Offers advanced optimization and transformation features.
+*   **Headless CMS:** If you manage blog content this way, many offer built-in image handling.
+
+By adding the `featuredImage` URL to your posts, they will now display correctly. Remember to configure any new image domains in `next.config.ts`!
