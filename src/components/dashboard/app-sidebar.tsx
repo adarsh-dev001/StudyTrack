@@ -36,7 +36,7 @@ const mainNavItems = [
   { href: '/ai-recommendations', label: 'AI Coach', icon: Brain }, // New Item
   { href: '/pomodoro', label: 'Pomodoro Timer', icon: Timer },
   { href: '/streaks', label: 'Study Streaks', icon: Flame },
-  { href: '/analytics', label: 'Analytics', icon: BarChart3 },
+  // { href: '/analytics', label: 'Analytics', icon: BarChart3 }, // Temporarily disabled
   { href: '/rewards-shop', label: 'Rewards Shop', icon: ShoppingCart }, 
 ];
 
