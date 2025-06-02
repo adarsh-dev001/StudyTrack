@@ -35,11 +35,12 @@ export function HeroSection() {
             <Image
               src="https://eduauraapublic.s3.ap-south-1.amazonaws.com/webassets/images/blogs/effective-study-plan.jpg"
               alt="Effective Study Plan Illustration"
-              layout="fill"
-              objectFit="cover"
+              fill
+              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 550px"
+              style={{ objectFit: 'cover' }}
               className="rounded-xl shadow-2xl"
               data-ai-hint="study plan"
-              priority // Added priority
+              priority
             />
              <div className="absolute inset-0 bg-gradient-to-t from-black/10 to-transparent rounded-xl"></div>
           </div>
@@ -48,3 +49,4 @@ export function HeroSection() {
     </section>
   );
 }
+

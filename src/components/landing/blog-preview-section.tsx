@@ -36,11 +36,12 @@ export async function BlogPreviewSection() {
                   <Image 
                     src={post.featuredImage || "https://placehold.co/600x338.png"}
                     alt={post.title}
-                    layout="fill"
-                    objectFit="cover"
+                    fill
+                    sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                    style={{ objectFit: 'cover' }}
                     className="hover:scale-105 transition-transform duration-300"
                     data-ai-hint="article highlight"
-                    priority={index < 2} // Prioritize the first two images in the preview
+                    priority={index < 2}
                   />
                 </Link>
                 <CardHeader className="p-4 sm:p-5">
@@ -82,3 +83,4 @@ export async function BlogPreviewSection() {
     </section>
   );
 }
+
