@@ -14,27 +14,34 @@ import {
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { 
-    Loader2, AlertTriangle, Lightbulb, BookOpen, CheckSquare, Award, Clock, 
+import {
+    Loader2, AlertTriangle, Lightbulb, BookOpen, CheckSquare, Award, Clock,
     Target as TargetIcon, Zap, LineChart, Brain, UserCheck, ListChecks, Repeat, Flag, Rocket, CheckCircle
 } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react'; // Import LucideIcon type
 import Link from 'next/link';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
-const progressSteps = [
-  { text: "Analyzing your exam, subjects & focus patterns…", icon: <Brain className="h-5 w-5 text-primary mr-2" /> },
-  { text: "Matching with latest syllabus & deadlines…", icon: <ListChecks className="h-5 w-5 text-primary mr-2" /> },
-  { text: "Building study–break cycles that work for you…", icon: <Repeat className="h-5 w-5 text-primary mr-2" /> },
-  { text: "Setting personalized goals & checkpoints…", icon: <TargetIcon className="h-5 w-5 text-primary mr-2" /> },
-  { text: "Finalizing your AI-powered plan…", icon: <Rocket className="h-5 w-5 text-primary mr-2" /> },
+interface ProgressStep {
+  text: string;
+  icon: LucideIcon; // Use LucideIcon type
+}
+
+const progressSteps: ProgressStep[] = [
+  { text: "Analyzing your exam, subjects & focus patterns…", icon: Brain },
+  { text: "Matching with latest syllabus & deadlines…", icon: ListChecks },
+  { text: "Building study–break cycles that work for you…", icon: Repeat },
+  { text: "Setting personalized goals & checkpoints…", icon: TargetIcon },
+  { text: "Finalizing your AI-powered plan…", icon: Rocket },
 ];
 
 const motivationalTips = [
-  "💡 Did you know? Studying 2 hours in deep focus is more effective than 5 hours with distractions.",
-  "🎯 Tip: Break big goals into 7-day challenges — it's easier to stay consistent.",
+  "💡 2 hours of deep focus beats 5 hours of distraction.",
+  "📆 Break big goals into 7-day mini goals for consistency.",
   "🔁 Revise every 3 days — your brain loves repetition.",
   "🧘 Stay calm and focused — your progress is compounding.",
 ];
+
 
 export default function AiRecommendationsPage() {
   const { currentUser } = useAuth();
@@ -88,8 +95,8 @@ export default function AiRecommendationsPage() {
 
         setIsLoadingRecommendations(true);
         setError(null);
-        setCurrentProgressStepIndex(0); 
-        setCurrentTipIndex(0); 
+        setCurrentProgressStepIndex(0);
+        setCurrentTipIndex(0);
         const aiOutput = await generatePersonalizedRecommendations(aiInput);
         setRecommendations(aiOutput);
       } catch (err: any) {
@@ -104,17 +111,16 @@ export default function AiRecommendationsPage() {
 
     fetchProfileAndGenerateRecommendations();
   }, [currentUser?.uid]);
-  
+
   useEffect(() => {
     let progressInterval: NodeJS.Timeout;
     if (isLoadingRecommendations) {
       progressInterval = setInterval(() => {
         setCurrentProgressStepIndex(prevIndex => {
             const nextIndex = prevIndex + 1;
-            // Stop advancing if it reaches the end of steps, or let it loop if desired
             return nextIndex >= progressSteps.length ? progressSteps.length -1 : nextIndex;
         });
-      }, 1500); // Updated interval
+      }, 1500);
     }
     return () => clearInterval(progressInterval);
   }, [isLoadingRecommendations]);
@@ -124,7 +130,7 @@ export default function AiRecommendationsPage() {
     if (isLoadingRecommendations) {
       tipInterval = setInterval(() => {
         setCurrentTipIndex(prevIndex => (prevIndex + 1) % motivationalTips.length);
-      }, 3000); // Updated interval
+      }, 3000);
     }
     return () => clearInterval(tipInterval);
   }, [isLoadingRecommendations]);
@@ -138,7 +144,7 @@ export default function AiRecommendationsPage() {
       </div>
     );
   }
-  
+
   if (isLoadingRecommendations) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[calc(100vh-150px)] text-center p-6 space-y-8">
@@ -153,24 +159,36 @@ export default function AiRecommendationsPage() {
         </div>
 
         <div className="w-full max-w-md space-y-3">
-            {progressSteps.map((step, index) => (
+            {progressSteps.map((step, index) => {
+                const IconComponent = step.icon;
+                const isCompleted = index < currentProgressStepIndex;
+                const isActive = index === currentProgressStepIndex;
+
+                return (
                  <div
                     key={step.text}
-                    className={`flex items-center p-3 rounded-lg transition-opacity duration-500 ease-in-out 
-                                ${index <= currentProgressStepIndex ? 'opacity-100' : 'opacity-40'}
-                                ${index === currentProgressStepIndex ? 'bg-primary/10 scale-105 shadow-md' : 
-                                 index < currentProgressStepIndex ? 'bg-green-500/10 text-green-700 dark:text-green-300' : 
+                    className={`flex items-center p-3 rounded-lg transition-all duration-500 ease-in-out
+                                ${isActive || isCompleted ? 'opacity-100' : 'opacity-40'}
+                                ${isActive ? 'bg-primary/10 scale-105 shadow-md' :
+                                 isCompleted ? 'bg-green-500/10 text-green-700 dark:text-green-300' :
                                  'bg-muted/50'}`}
                 >
-                    {index < currentProgressStepIndex ? <CheckCircle className="h-5 w-5 text-green-500 mr-2 shrink-0" /> : React.cloneElement(step.icon, { className: "h-5 w-5 text-primary mr-2 shrink-0" })}
-                    <span className={`font-medium text-sm ${index === currentProgressStepIndex ? 'text-primary-foreground dark:text-primary' : index < currentProgressStepIndex ? '' : 'text-muted-foreground'}`}>
+                    {isCompleted ? (
+                        <CheckCircle className="h-5 w-5 text-green-500 mr-2 shrink-0" />
+                    ) : (
+                        <IconComponent className={`h-5 w-5 mr-2 shrink-0 ${isActive ? 'text-primary' : 'text-primary'}`} />
+                    )}
+                    <span className={`font-medium text-sm ${
+                        isActive ? 'text-primary dark:text-primary-foreground' : 
+                        isCompleted ? 'text-green-700 dark:text-green-300' :
+                        'text-muted-foreground'}`}
+                    >
                         {step.text}
                     </span>
-                    {index < currentProgressStepIndex && <CheckCircle className="h-5 w-5 text-green-500 ml-auto shrink-0" />}
                 </div>
-            ))}
+            )})}
         </div>
-        
+
         <Card className="w-full max-w-md bg-accent/10 border-accent/30 shadow-sm">
             <CardContent className="pt-5">
                 <p className="text-md font-medium text-accent-foreground text-center">
@@ -181,7 +199,7 @@ export default function AiRecommendationsPage() {
          <div className="mt-6">
             <Button
             disabled
-            className="bg-primary/80 text-primary-foreground px-6 py-2 rounded-full font-semibold shadow-lg transition opacity-75 cursor-not-allowed"
+            className="bg-primary/80 text-primary-foreground px-6 py-2 rounded-full font-semibold shadow-lg transition cursor-not-allowed"
             size="lg"
             >
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -208,7 +226,7 @@ export default function AiRecommendationsPage() {
       </div>
     );
   }
-  
+
   if (!profile && !isLoadingProfile && !error) {
      return (
       <div className="flex flex-col items-center justify-center min-h-[calc(100vh-150px)] text-center p-6">
@@ -321,7 +339,7 @@ export default function AiRecommendationsPage() {
               </CardContent>
             </Card>
           </div>
-          
+
           <Card className="shadow-md">
             <CardHeader>
               <CardTitle className="text-lg flex items-center"><Award className="mr-2 h-5 w-5 text-primary" /> Milestone Suggestions</CardTitle>
@@ -365,7 +383,7 @@ export default function AiRecommendationsPage() {
             </div>
         </div>
       )}
-      
+
        {!isLoadingProfile && !isLoadingRecommendations && !recommendations && !error && profile && (
          <div className="flex flex-col items-center justify-center min-h-[calc(100vh-300px)] text-center p-6">
             <Alert className="max-w-md">
@@ -385,5 +403,3 @@ export default function AiRecommendationsPage() {
     </ScrollArea>
   );
 }
-
-    
