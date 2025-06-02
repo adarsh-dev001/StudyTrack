@@ -3,27 +3,27 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { PlayIcon, PauseIcon, Volume2, VolumeX } from 'lucide-react'; // Added Volume2
-import { Slider } from '@/components/ui/slider'; // For volume control
+import { PlayIcon, PauseIcon, Volume2, VolumeX } from 'lucide-react';
+import { Slider } from '@/components/ui/slider'; 
 import { cn } from '@/lib/utils';
 
 interface FocusAudioPlayerProps {
   src: string | null;
   loop?: boolean;
-  volume?: number; // 0.0 to 1.0 - Acts as initial/controlled volume
+  volume?: number; 
 
-  isPlaying?: boolean; // If provided, component is in controlled mode
+  isPlaying?: boolean; 
   onEnded?: () => void;
 
-  label?: string; // If provided and isPlaying is not, component is in UI mode
-  autoPlay?: boolean; // Effective only in UI mode
+  label?: string; 
+  autoPlay?: boolean; 
   className?: string;
 }
 
 const FocusAudioPlayer: React.FC<FocusAudioPlayerProps> = ({
   src,
   loop = true,
-  volume = 0.7, // Default initial/controlled volume
+  volume = 0.7, 
   isPlaying: controlledIsPlaying,
   onEnded,
   label,
@@ -36,7 +36,7 @@ const FocusAudioPlayer: React.FC<FocusAudioPlayerProps> = ({
   const isUIMode = !isControlledMode && !!label;
 
   const [selfManagedIsPlaying, setSelfManagedIsPlaying] = useState(isUIMode && autoPlay && !!src);
-  const [uiVolume, setUiVolume] = useState<number>(volume); // For UI mode slider
+  const [uiVolume, setUiVolume] = useState<number>(volume); 
 
   const actualIsPlaying = isControlledMode ? controlledIsPlaying : selfManagedIsPlaying;
 
@@ -51,7 +51,7 @@ const FocusAudioPlayer: React.FC<FocusAudioPlayerProps> = ({
     if (audioElement) {
       if (isControlledMode) {
         audioElement.volume = Math.max(0, Math.min(1, volume));
-      } else { // UI Mode
+      } else { 
         audioElement.volume = Math.max(0, Math.min(1, uiVolume));
       }
     }
@@ -142,12 +142,12 @@ const FocusAudioPlayer: React.FC<FocusAudioPlayerProps> = ({
                 disabled={!src}
             />
         </div>
-        <audio ref={audioRef} playsInline aria-hidden="true" />
+        <audio ref={audioRef} playsInline preload="auto" aria-hidden="true" />
       </div>
     );
   }
 
-  return <audio ref={audioRef} playsInline aria-hidden="true" />;
+  return <audio ref={audioRef} playsInline preload="auto" aria-hidden="true" />;
 };
 
 export default FocusAudioPlayer;

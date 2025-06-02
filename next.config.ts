@@ -4,11 +4,106 @@ import withPWAInit from 'next-pwa';
 
 const withPWA = withPWAInit({
   dest: 'public',
-  register: false, // Temporarily disable service worker registration for testing
+  register: true, // Enabled service worker registration for PWA/offline features
   skipWaiting: true,
   disable: process.env.NODE_ENV === 'development',
-  // You can add more PWA configurations here if needed
-  // e.g., runtimeCaching: [...]
+  runtimeCaching: [ // Added runtimeCaching for assets
+    {
+      urlPattern: /^https:\/\/fonts\.(?:googleapis|gstatic)\.com\/.*/i,
+      handler: 'CacheFirst',
+      options: {
+        cacheName: 'google-fonts',
+        expiration: {
+          maxEntries: 4,
+          maxAgeSeconds: 365 * 24 * 60 * 60, // 365 days
+        },
+      },
+    },
+    {
+      urlPattern: /\.(?:eot|otf|ttc|ttf|woff|woff2|font.css)$/i,
+      handler: 'StaleWhileRevalidate',
+      options: {
+        cacheName: 'static-font-assets',
+        expiration: {
+          maxEntries: 4,
+          maxAgeSeconds: 7 * 24 * 60 * 60, // 7 days
+        },
+      },
+    },
+    {
+      urlPattern: /\.(?:jpg|jpeg|gif|png|svg|ico|webp)$/i,
+      handler: 'StaleWhileRevalidate',
+      options: {
+        cacheName: 'static-image-assets',
+        expiration: {
+          maxEntries: 64,
+          maxAgeSeconds: 30 * 24 * 60 * 60, // 30 days
+        },
+      },
+    },
+    {
+      urlPattern: /\.(?:js)$/i,
+      handler: 'StaleWhileRevalidate',
+      options: {
+        cacheName: 'static-js-assets',
+        expiration: {
+          maxEntries: 32,
+          maxAgeSeconds: 24 * 60 * 60, // 24 hours
+        },
+      },
+    },
+    {
+      urlPattern: /\.(?:css|less)$/i,
+      handler: 'StaleWhileRevalidate',
+      options: {
+        cacheName: 'static-style-assets',
+        expiration: {
+          maxEntries: 32,
+          maxAgeSeconds: 24 * 60 * 60, // 24 hours
+        },
+      },
+    },
+    {
+      urlPattern: /\.(?:json|xml|csv)$/i,
+      handler: 'NetworkFirst',
+      options: {
+        cacheName: 'static-data-assets',
+        expiration: {
+          maxEntries: 32,
+          maxAgeSeconds: 24 * 60 * 60, // 24 hours
+        },
+      },
+    },
+    {
+      urlPattern: /sounds\/.*/i, // Cache audio files from /public/sounds/
+      handler: 'CacheFirst',
+      options: {
+        cacheName: 'audio-cache',
+        expiration: {
+          maxEntries: 20, // Store up to 20 audio files
+          maxAgeSeconds: 30 * 24 * 60 * 60, // Cache for 30 days
+        },
+        cacheableResponse: { // Ensure we only cache successful responses
+          statuses: [0, 200],
+        },
+      },
+    },
+    {
+      urlPattern: /.*/i, // Default catch-all for other requests
+      handler: 'NetworkFirst',
+      options: {
+        cacheName: 'others',
+        networkTimeoutSeconds: 10, // If network fails, try cache
+        expiration: {
+          maxEntries: 32,
+          maxAgeSeconds: 24 * 60 * 60, // 24 hours
+        },
+        cacheableResponse: {
+          statuses: [0, 200],
+        },
+      },
+    },
+  ],
 });
 
 /** @type {import('next').NextConfig} */
@@ -36,7 +131,7 @@ const nextConfig: NextConfig = {
       },
       {
         protocol: 'https',
-        hostname: 'images.unsplash.com', // Added as a common source for future use
+        hostname: 'images.unsplash.com', 
         port: '',
         pathname: '/**',
       },
@@ -60,15 +155,12 @@ const nextConfig: NextConfig = {
       },
       {
         protocol: 'https',
-        hostname: 'www.google.com', // Added to resolve current error
+        hostname: 'www.google.com', 
         port: '',
         pathname: '/**',
       }
     ],
   },
-  // If you are sure you only use next-mdx-remote for MDX content (e.g., from /content)
-  // and don't intend to use .mdx files as pages directly in the /app or /pages directory,
-  // you can remove 'md' and 'mdx' from pageExtensions.
   pageExtensions: ['js', 'jsx', 'ts', 'tsx'],
 };
  
