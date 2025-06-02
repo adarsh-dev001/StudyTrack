@@ -28,6 +28,18 @@ const nextConfig: NextConfig = {
         port: '',
         pathname: '/**',
       },
+      {
+        protocol: 'https',
+        hostname: 'img.jagranjosh.com',
+        port: '',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'images.unsplash.com', // Added as a common source for future use
+        port: '',
+        pathname: '/**',
+      }
     ],
   },
   // If you are sure you only use next-mdx-remote for MDX content (e.g., from /content)
