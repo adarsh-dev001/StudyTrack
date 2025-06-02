@@ -110,11 +110,12 @@ export default function AppLayout({
          // For now, let it pass to avoid breaking marketing page access if user is logged out.
     }
   } else if (!currentUser && authLoading) {
-     return ( // Full screen loader if auth is still loading and no user yet.
-      <div className="flex min-h-screen items-center justify-center bg-background">
-        <Loader2 className="h-12 w-12 animate-spin text-primary" />
-      </div>
-    );
+     return (
+       // Full screen loader if auth is still loading and no user yet.
+       <div className="flex min-h-screen items-center justify-center bg-background">
+         <Loader2 className="h-12 w-12 animate-spin text-primary" />
+       </div>
+     );
   }
 
 

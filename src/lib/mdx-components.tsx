@@ -32,7 +32,7 @@ export const components = {
     <ol className={cn("my-4 list-decimal list-outside pl-5 space-y-2 marker:text-primary", props.className)} {...props} />
   ),
   li: (props: React.LiHTMLAttributes<HTMLLIElement>) => (
-    <li className={cn("pb-0.5", props.className)} {...props} /> // Add some bottom padding to list items if needed
+    (<li className={cn("pb-0.5", props.className)} {...props} />) // Add some bottom padding to list items if needed
   ),
   blockquote: (props: React.BlockquoteHTMLAttributes<HTMLQuoteElement>) => (
     <blockquote className={cn("my-6 border-l-4 border-primary pl-4 italic text-muted-foreground", props.className)} {...props} />
