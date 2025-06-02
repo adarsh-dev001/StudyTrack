@@ -24,50 +24,39 @@ const baseStep1ObjectSchema = z.object({
   otherExamName: z.string().optional(),
   examAttemptYear: z.string().min(1, "Please select your attempt year."),
   languageMedium: z.string().min(1, "Please select your language medium."),
-  studyMode: z.string().min(1, "Please select your study mode.").optional(),
-  examPhase: z.string().min(1, "Please select your current exam phase.").optional(),
-  previousAttempts: z.string().min(1, "Please select number of previous attempts").optional(),
+  studyMode: z.string().optional(),
+  examPhase: z.string().optional(),
+  previousAttempts: z.string().optional(),
 });
-
-// Refined schema for step 1 validation (used for triggering step 1 validation)
-const step1Schema = baseStep1ObjectSchema.refine(data => {
-    if (data.targetExams.includes('other') && (!data.otherExamName || data.otherExamName.trim() === '')) {
-      return false;
-    }
-    return true;
-  }, {
-    message: "Please specify the exam name if you selected 'Other'.",
-    path: ['otherExamName'],
-  });
 
 const step2Schema = z.object({
   dailyStudyHours: z.string().min(1, "Please select your daily study hours."),
   preferredStudyTime: z.array(z.string()).min(1, "Select at least one preferred study time."),
   weakSubjects: z.array(z.string()).optional(),
   strongSubjects: z.array(z.string()).optional(),
-  distractionStruggles: z.string().optional(),
+  distractionStruggles: z.string().max(500, "Response too long (max 500 chars).").optional(),
 });
 
 const step3Schema = z.object({
   preferredLearningStyles: z.array(z.string()).min(1, "Select at least one learning style."),
   motivationType: z.string().min(1, "Please select your motivation type."),
-  age: z.coerce.number().positive("Age must be a positive number").optional().nullable(),
-  location: z.string().optional(),
+  age: z.coerce.number().positive("Age must be a positive number").min(10, "Age seems too low").max(100, "Age seems too high").optional().nullable(),
+  location: z.string().max(100, "Location too long (max 100 chars).").optional(),
   socialVisibilityPublic: z.boolean().optional(),
 });
 
-// Combine schemas for the full form, merging base objects and then applying refinements if necessary
+// Combine schemas for the full form
 const fullOnboardingSchema = baseStep1ObjectSchema
   .merge(step2Schema)
   .merge(step3Schema)
   .refine(data => {
-    if (data.targetExams.includes('other') && (!data.otherExamName || data.otherExamName.trim() === '')) {
-      return false;
+    if (data.targetExams?.includes('other') && (!data.otherExamName || data.otherExamName.trim() === '')) {
+      return false; // Error if 'other' is selected but otherExamName is empty
     }
     return true;
   }, {
-    message: "Please specify the exam name if you selected 'Other'.",
-    path: ['otherExamName'],
+    message: "Please specify the exam name if 'Other' is selected.",
+    path: ['otherExamName'], // Apply this error to the otherExamName field
   });
 
 
@@ -86,8 +75,8 @@ export default function OnboardingForm({ userId, onOnboardingSuccess }: Onboardi
   const { toast } = useToast();
 
   const methods = useForm<OnboardingFormData>({
-    resolver: zodResolver(fullOnboardingSchema), // Use the full schema for the resolver
-    mode: 'onChange', 
+    resolver: zodResolver(fullOnboardingSchema),
+    mode: 'onBlur', // Changed from 'onChange'
     defaultValues: {
       targetExams: [],
       otherExamName: '',
@@ -106,31 +95,27 @@ export default function OnboardingForm({ userId, onOnboardingSuccess }: Onboardi
       age: null,
       location: '',
       socialVisibilityPublic: false,
+      onboardingCompleted: false, // Default onboardingCompleted to false
     },
   });
 
-  const { handleSubmit, trigger, getValues } = methods;
+  const { handleSubmit, trigger } = methods;
 
   const handleNextStep = async () => {
     let isValid = false;
-    // Trigger validation against the specific step's schema or fields
     if (currentStep === 1) {
-        // For step 1, we need to ensure the refinement on otherExamName is checked
-        // by validating against step1Schema which includes that refinement.
-        // However, react-hook-form's trigger validates against the resolver's schema.
-        // We'll trigger specific fields and rely on the fullOnboardingSchema's refinement.
         isValid = await trigger([
-            'targetExams', 'otherExamName', 'examAttemptYear', 
+            'targetExams', 'otherExamName', 'examAttemptYear',
             'languageMedium', 'studyMode', 'examPhase', 'previousAttempts'
         ]);
     } else if (currentStep === 2) {
         isValid = await trigger([
-            'dailyStudyHours', 'preferredStudyTime', 'weakSubjects', 
+            'dailyStudyHours', 'preferredStudyTime', 'weakSubjects',
             'strongSubjects', 'distractionStruggles'
         ]);
-    } else if (currentStep === 3) {
+    } else if (currentStep === 3) { // Should not happen if currentStep < TOTAL_STEPS
         isValid = await trigger([
-            'preferredLearningStyles', 'motivationType', 'age', 
+            'preferredLearningStyles', 'motivationType', 'age',
             'location', 'socialVisibilityPublic'
         ]);
     }
@@ -139,7 +124,6 @@ export default function OnboardingForm({ userId, onOnboardingSuccess }: Onboardi
     if (isValid && currentStep < TOTAL_STEPS) {
       setCurrentStep(prev => prev + 1);
     } else if (isValid && currentStep === TOTAL_STEPS) {
-        // This is for the "Finish Setup" button
         await handleSubmit(onSubmit)();
     }
   };
@@ -156,26 +140,29 @@ export default function OnboardingForm({ userId, onOnboardingSuccess }: Onboardi
     if (!data.targetExams?.includes('other')) {
       finalData.otherExamName = '';
     }
-    if (data.age === null || data.age === undefined || data.age === 0) {
-        finalData.age = undefined; 
+     // Ensure age is not sent as null if it's empty, send undefined instead, or omit
+    if (finalData.age === null || finalData.age === 0) {
+        delete (finalData as any).age; // Firestore doesn't like null for number fields if not explicitly handled
     }
 
 
     const profilePayload: Partial<UserProfileData> = {
-      ...finalData, 
+      ...finalData,
       onboardingCompleted: true,
     };
-    if (profilePayload.age === undefined) {
-        delete profilePayload.age;
-    }
+    
+    // If age was deleted, it won't be in profilePayload, which is fine.
+    // Or, ensure type compatibility:
+    // const profilePayload: UserProfileData = {
+    //   ...finalData,
+    //   age: finalData.age === null || finalData.age === 0 ? undefined : finalData.age,
+    //   onboardingCompleted: true,
+    // };
 
 
     try {
       await setDoc(userProfileRef, profilePayload, { merge: true });
-      toast({
-        title: 'Profile Setup Complete! 🎉',
-        description: "We've saved your preferences. Get ready for a personalized experience!",
-      });
+      // Toast is now handled by onOnboardingSuccess in the parent page
       onOnboardingSuccess();
     } catch (error: any) {
       console.error('Error saving onboarding data:', error);
