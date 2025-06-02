@@ -21,14 +21,26 @@ import Step3LearningMotivation from './step-3-learning-motivation';
 // Define Zod schemas for each step
 const step1Schema = z.object({
   targetExams: z.array(z.string()).min(1, "Please select at least one target exam."),
+  otherExamName: z.string().optional(), // Optional, only relevant if 'other' is chosen
   examAttemptYear: z.string().min(1, "Please select your attempt year."),
   languageMedium: z.string().min(1, "Please select your language medium."),
-});
+  studyMode: z.string().min(1, "Please select your study mode.").optional(), // Making it optional for now
+  examPhase: z.string().min(1, "Please select your current exam phase.").optional(), // Making it optional for now
+}).refine(data => {
+    if (data.targetExams.includes('other') && (!data.otherExamName || data.otherExamName.trim() === '')) {
+      return false; // Invalid if 'other' is selected but otherExamName is empty
+    }
+    return true;
+  }, {
+    message: "Please specify the exam name if you selected 'Other'.",
+    path: ['otherExamName'], // Path of error
+  });
 
 const step2Schema = z.object({
   dailyStudyHours: z.string().min(1, "Please select your daily study hours."),
   preferredStudyTime: z.array(z.string()).min(1, "Select at least one preferred study time."),
-  weakSubjects: z.array(z.string()).optional(), // Optional for now
+  weakSubjects: z.array(z.string()).optional(),
+  strongSubjects: z.array(z.string()).optional(),
 });
 
 const step3Schema = z.object({
@@ -36,7 +48,7 @@ const step3Schema = z.object({
   motivationType: z.string().min(1, "Please select your motivation type."),
 });
 
-// Combine schemas for the full form - adjust as more steps/fields are added
+// Combine schemas for the full form
 const fullOnboardingSchema = step1Schema.merge(step2Schema).merge(step3Schema);
 
 export type OnboardingFormData = z.infer<typeof fullOnboardingSchema>;
@@ -57,14 +69,22 @@ export default function OnboardingForm({ userId, onOnboardingSuccess }: Onboardi
     resolver: zodResolver(
       currentStep === 1 ? step1Schema :
       currentStep === 2 ? step2Schema :
-      step3Schema // For the last step, full schema is implicitly covered by prior steps or could use fullOnboardingSchema
+      step3Schema
     ),
-    mode: 'onChange', // Validate on change for better UX
+    mode: 'onChange', 
     defaultValues: {
       targetExams: [],
+      otherExamName: '',
+      examAttemptYear: '',
+      languageMedium: '',
+      studyMode: '',
+      examPhase: '',
+      dailyStudyHours: '',
       preferredStudyTime: [],
       weakSubjects: [],
+      strongSubjects: [],
       preferredLearningStyles: [],
+      motivationType: '',
     },
   });
 
@@ -72,14 +92,14 @@ export default function OnboardingForm({ userId, onOnboardingSuccess }: Onboardi
 
   const handleNextStep = async () => {
     let isValid = false;
-    if (currentStep === 1) isValid = await trigger(['targetExams', 'examAttemptYear', 'languageMedium']);
-    else if (currentStep === 2) isValid = await trigger(['dailyStudyHours', 'preferredStudyTime', 'weakSubjects']);
-    // No specific trigger for step 3 as it's the last before submit
+    if (currentStep === 1) isValid = await trigger(['targetExams', 'examAttemptYear', 'languageMedium', 'studyMode', 'examPhase', 'otherExamName']);
+    else if (currentStep === 2) isValid = await trigger(['dailyStudyHours', 'preferredStudyTime', 'weakSubjects', 'strongSubjects']);
+    else if (currentStep === 3) isValid = await trigger(['preferredLearningStyles', 'motivationType']);
+
 
     if (isValid && currentStep < TOTAL_STEPS) {
       setCurrentStep(prev => prev + 1);
     } else if (isValid && currentStep === TOTAL_STEPS) {
-        // This case is handled by onSubmit directly
         await handleSubmit(onSubmit)();
     }
   };
@@ -92,8 +112,15 @@ export default function OnboardingForm({ userId, onOnboardingSuccess }: Onboardi
     setIsLoading(true);
     const userProfileRef = doc(db, 'users', userId, 'userProfile', 'profile');
 
+    // Clean up otherExamName if 'other' is not selected
+    const finalData = { ...data };
+    if (!data.targetExams?.includes('other')) {
+      finalData.otherExamName = ''; // or delete finalData.otherExamName;
+    }
+
+
     const profilePayload: Partial<UserProfileData> = {
-      ...data, // Spread all collected data
+      ...finalData, 
       onboardingCompleted: true,
     };
 
@@ -134,7 +161,6 @@ export default function OnboardingForm({ userId, onOnboardingSuccess }: Onboardi
             {currentStep === 1 && <Step1ExamFocus />}
             {currentStep === 2 && <Step2StudyHabits />}
             {currentStep === 3 && <Step3LearningMotivation />}
-            {/* Add more steps here as needed */}
           </form>
         </FormProvider>
       </CardContent>

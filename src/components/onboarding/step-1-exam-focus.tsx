@@ -7,7 +7,8 @@ import { FormField, FormItem, FormLabel, FormControl, FormMessage, FormDescripti
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
-import { TARGET_EXAMS, EXAM_ATTEMPT_YEARS, LANGUAGE_MEDIUMS } from '@/lib/constants';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { TARGET_EXAMS, EXAM_ATTEMPT_YEARS, LANGUAGE_MEDIUMS, STUDY_MODES, EXAM_PHASES } from '@/lib/constants';
 import type { OnboardingFormData } from './onboarding-form';
 
 export default function Step1ExamFocus() {
@@ -58,10 +59,10 @@ export default function Step1ExamFocus() {
       {selectedExams.includes('other') && (
          <FormField
             control={control}
-            name="otherExamName" // You'll need to add this to your Zod schema if 'Other' is selected
+            name="otherExamName"
             render={({ field }) => (
                 <FormItem>
-                    <FormLabel>Specify Other Exam <span className="text-destructive">*</span></FormLabel>
+                    <FormLabel>If 'Other', please specify <span className="text-destructive">*</span></FormLabel>
                     <FormControl>
                         <Input placeholder="E.g., GRE, GMAT, Specific State PSC" {...field} />
                     </FormControl>
@@ -117,7 +118,58 @@ export default function Step1ExamFocus() {
           </FormItem>
         )}
       />
-       {/* Placeholder for future fields like Optional Subjects, Phase, etc. */}
+      
+      <FormField
+        control={control}
+        name="studyMode"
+        render={({ field }) => (
+          <FormItem className="space-y-3">
+            <FormLabel className="font-semibold">Study Mode</FormLabel>
+             <FormDescription>How are you primarily preparing?</FormDescription>
+            <FormControl>
+              <RadioGroup
+                onValueChange={field.onChange}
+                value={field.value || ''}
+                className="flex flex-col space-y-1 sm:flex-row sm:space-y-0 sm:space-x-4"
+              >
+                {STUDY_MODES.map(mode => (
+                  <FormItem key={mode.value} className="flex items-center space-x-2 space-y-0">
+                    <FormControl>
+                      <RadioGroupItem value={mode.value} />
+                    </FormControl>
+                    <FormLabel className="font-normal text-sm">{mode.label}</FormLabel>
+                  </FormItem>
+                ))}
+              </RadioGroup>
+            </FormControl>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+
+      <FormField
+        control={control}
+        name="examPhase"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel className="font-semibold">Current Exam Phase</FormLabel>
+            <FormDescription>What stage of preparation are you in?</FormDescription>
+            <Select onValueChange={field.onChange} value={field.value || ''}>
+              <FormControl>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select current phase" />
+                </SelectTrigger>
+              </FormControl>
+              <SelectContent>
+                {EXAM_PHASES.map(phase => (
+                  <SelectItem key={phase.value} value={phase.value}>{phase.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
     </div>
   );
 }

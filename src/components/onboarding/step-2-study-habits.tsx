@@ -83,10 +83,10 @@ export default function Step2StudyHabits() {
           <FormItem>
             <FormLabel className="text-base font-semibold">Weak Subject(s) (Optional)</FormLabel>
             <FormDescription>Which subjects do you find challenging?</FormDescription>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-3 pt-2">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-x-4 gap-y-3 pt-2">
               {SUBJECT_OPTIONS.map((subject) => (
                 <FormField
-                  key={subject.id}
+                  key={subject.id + "-weak"}
                   control={control}
                   name="weakSubjects"
                   render={({ field }) => {
@@ -110,11 +110,49 @@ export default function Step2StudyHabits() {
                 />
               ))}
             </div>
-            <FormMessage /> {/* Should ideally show if validation for min selection is added and fails */}
+            <FormMessage />
           </FormItem>
         )}
       />
-      {/* Placeholder for Strong Subjects if needed */}
+
+      <FormField
+        control={control}
+        name="strongSubjects"
+        render={() => (
+          <FormItem>
+            <FormLabel className="text-base font-semibold">Strong Subject(s) (Optional)</FormLabel>
+            <FormDescription>Which subjects are you confident in?</FormDescription>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-x-4 gap-y-3 pt-2">
+              {SUBJECT_OPTIONS.map((subject) => (
+                <FormField
+                  key={subject.id + "-strong"}
+                  control={control}
+                  name="strongSubjects"
+                  render={({ field }) => {
+                    return (
+                      <FormItem className="flex flex-row items-center space-x-2 space-y-0">
+                        <FormControl>
+                          <Checkbox
+                            checked={field.value?.includes(subject.id)}
+                            onCheckedChange={(checked) => {
+                              const currentSelection = field.value || [];
+                              return checked
+                                ? field.onChange([...currentSelection, subject.id])
+                                : field.onChange(currentSelection.filter((value) => value !== subject.id));
+                            }}
+                          />
+                        </FormControl>
+                        <FormLabel className="font-normal text-sm">{subject.label}</FormLabel>
+                      </FormItem>
+                    );
+                  }}
+                />
+              ))}
+            </div>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
     </div>
   );
 }

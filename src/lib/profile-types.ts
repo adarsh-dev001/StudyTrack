@@ -7,33 +7,27 @@ export interface UserProfileData {
   coins: number;
   xp: number;
   earnedBadgeIds: string[];
-  purchasedItemIds: string[]; // Soundtracks are free now, but field might be used for other items
+  purchasedItemIds: string[];
   activeThemeId?: string | null;
   dailyChallengeStatus?: { [challengeId: string]: { completedOn: Timestamp } };
 
   // Onboarding/Profile Fields
-  fullName?: string; // Can be pre-filled from auth, but editable here
-  // age?: number; // Example, can be added later
-  // location?: string; // Example, can be added later
+  fullName?: string;
 
   targetExams?: string[];
-  examAttemptYear?: string; // Storing as string as it's a selection
+  otherExamName?: string; // For when 'other' is selected in targetExams
+  examAttemptYear?: string;
   languageMedium?: string;
-  // optionalSubjects?: string[]; // For UPSC/PSC - can be added later
-  // currentExamPhase?: 'prelims' | 'mains' | 'interview' | 'not_started'; // Can be added later
-  // studyMode?: 'coaching' | 'self_study' | 'hybrid'; // Can be added later
-  // previousAttempts?: number; // Can be added later
+  studyMode?: string; // e.g., 'self_study', 'coaching', 'hybrid'
+  examPhase?: string; // e.g., 'prelims', 'mains', 'not_started'
+  
+  dailyStudyHours?: string;
+  preferredStudyTime?: string[];
+  weakSubjects?: string[];
+  strongSubjects?: string[];
 
-  dailyStudyHours?: string; // Storing as string from selection
-  preferredStudyTime?: string[]; // IDs of preferred times
-  weakSubjects?: string[]; // IDs of subjects
-  strongSubjects?: string[]; // IDs of subjects
-
-  preferredLearningStyles?: string[]; // IDs of learning styles
-  motivationType?: string; // Value from MOTIVATION_TYPES
-
-  // socialVisibility?: 'public' | 'friends_only' | 'private'; // Can be added later
-  // distractionStruggles?: string[]; // Can be added later
+  preferredLearningStyles?: string[];
+  motivationType?: string;
 
   onboardingCompleted?: boolean;
 }

@@ -42,7 +42,6 @@ export const PREFERRED_STUDY_TIMES = [
   { id: 'flexible', label: 'Flexible' },
 ];
 
-// Using commonSubjects from syllabus-suggester for consistency, can be expanded
 export const SUBJECT_OPTIONS = [
   { id: 'physics', label: 'Physics' },
   { id: 'chemistry', label: 'Chemistry' },
@@ -72,4 +71,18 @@ export const MOTIVATION_TYPES = [
   { value: 'leaderboard', label: 'Climbing the Leaderboard' },
   { value: 'personal_goals', label: 'Achieving Personal Goals' },
   { value: 'calm_mode', label: 'Calm, Focused Environment' },
+];
+
+export const STUDY_MODES = [
+  { value: 'self_study', label: 'Self-Study' },
+  { value: 'coaching', label: 'Coaching Classes' },
+  { value: 'hybrid', label: 'Hybrid (Self-Study + Coaching)' },
+];
+
+export const EXAM_PHASES = [
+  { value: 'not_started', label: 'Not Started Yet' },
+  { value: 'prelims', label: 'Preparing for Prelims' },
+  { value: 'mains', label: 'Preparing for Mains' },
+  { value: 'interview', label: 'Preparing for Interview' },
+  { value: 'completed_cycle', label: 'Completed a Full Cycle / Repeating' },
 ];
