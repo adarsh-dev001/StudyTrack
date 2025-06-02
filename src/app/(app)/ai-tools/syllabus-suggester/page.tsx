@@ -15,7 +15,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import { format, addDays } from "date-fns";
-import { Loader2, ListTree, CalendarIcon, ClockIcon } from 'lucide-react';
+import { Loader2, ListTree, CalendarIcon, Sparkles, BookOpen, CalendarDays, Target, Lightbulb } from 'lucide-react';
 import { suggestStudyTopics, type SuggestStudyTopicsInput, type SuggestStudyTopicsOutput } from '@/ai/flows/suggest-study-topics';
 import { useToast } from '@/hooks/use-toast';
 
@@ -67,7 +67,7 @@ export default function SyllabusSuggesterPage() {
       examType: '',
       subjects: [],
       timeAvailablePerDay: 4,
-      targetDate: addDays(new Date(), 90), // Default to 90 days from now
+      targetDate: addDays(new Date(), 90), 
     },
   });
 
@@ -78,7 +78,7 @@ export default function SyllabusSuggesterPage() {
 
     const inputForAI: SuggestStudyTopicsInput = {
       ...data,
-      targetDate: format(data.targetDate, 'yyyy-MM-dd'), // Convert Date to string for AI
+      targetDate: format(data.targetDate, 'yyyy-MM-dd'), 
     };
 
     try {
@@ -86,7 +86,7 @@ export default function SyllabusSuggesterPage() {
       setGeneratedSyllabus(result.generatedSyllabus);
       setOverallFeedback(result.overallFeedback || null);
       toast({
-        title: 'Syllabus Suggested!',
+        title: 'Syllabus Suggested! 🚀',
         description: `Your personalized syllabus for ${data.examType} has been generated.`,
       });
     } catch (error: any) {
@@ -94,7 +94,7 @@ export default function SyllabusSuggesterPage() {
       setGeneratedSyllabus(null);
       setOverallFeedback(null);
       toast({
-        title: 'Error Generating Suggestions',
+        title: 'Error Generating Suggestions 😥',
         description: error.message || 'An unexpected error occurred.',
         variant: 'destructive',
       });
@@ -118,7 +118,7 @@ export default function SyllabusSuggesterPage() {
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)}>
             <CardHeader>
-              <CardTitle>Your Study Profile</CardTitle>
+              <CardTitle>Your Study Profile 🧑‍🎓</CardTitle>
               <CardDescription>Provide details to generate a tailored syllabus.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
@@ -215,7 +215,7 @@ export default function SyllabusSuggesterPage() {
                   name="timeAvailablePerDay"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Daily Study Time (Hours) <span className="text-destructive">*</span></FormLabel>
+                      <FormLabel>Daily Study Time (Hours) <span className="text-destructive">*</span> ⏳</FormLabel>
                       <FormControl>
                         <Input type="number" step="0.5" placeholder="e.g., 4.5" {...field} />
                       </FormControl>
@@ -231,7 +231,7 @@ export default function SyllabusSuggesterPage() {
                   name="targetDate"
                   render={({ field }) => (
                     <FormItem className="flex flex-col">
-                      <FormLabel>Target Completion Date <span className="text-destructive">*</span></FormLabel>
+                      <FormLabel>Target Completion Date <span className="text-destructive">*</span> 🎯</FormLabel>
                       <Popover>
                         <PopoverTrigger asChild>
                           <FormControl>
@@ -271,8 +271,6 @@ export default function SyllabusSuggesterPage() {
                   )}
                 />
               </div>
-
-
             </CardContent>
             <CardFooter>
               <Button type="submit" disabled={isLoading} size="lg">
@@ -296,42 +294,57 @@ export default function SyllabusSuggesterPage() {
       {generatedSyllabus && generatedSyllabus.length > 0 && (
         <Card className="shadow-lg animate-in fade-in-50 duration-500 mt-6">
           <CardHeader>
-            <CardTitle>Your Personalized Study Syllabus for {form.getValues('examType')}</CardTitle>
+            <CardTitle className="text-2xl font-headline">Your Personalized Study Plan for <span className="text-primary">{form.getValues('examType')}</span> 🌟</CardTitle>
             <CardDescription>
               Target Completion: {format(form.getValues('targetDate'), "PPP")} ({form.getValues('timeAvailablePerDay')} hrs/day)
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
             {overallFeedback && (
-                <div className="p-4 bg-amber-50 border border-amber-200 rounded-md text-amber-700 dark:bg-amber-900/30 dark:border-amber-700 dark:text-amber-300">
-                    <p className="font-semibold">Overall Feedback & Advice:</p>
-                    <p className="text-sm">{overallFeedback}</p>
+                <div className="mt-2 mb-6 p-4 bg-sky-50 dark:bg-sky-900/40 border border-sky-300 dark:border-sky-700 rounded-lg shadow">
+                    <h3 className="text-lg font-semibold text-sky-700 dark:text-sky-300 mb-2 flex items-center">
+                        <Sparkles className="mr-2 h-5 w-5 text-sky-500" /> AI Coach's Wisdom: Overall Feedback
+                    </h3>
+                    <p className="text-sm text-muted-foreground leading-relaxed">{overallFeedback}</p>
                 </div>
             )}
             {generatedSyllabus.map((subjectSyllabus, subjectIndex) => (
-              <div key={subjectIndex} className="border p-4 rounded-lg bg-card/50">
-                <h3 className="text-xl font-semibold text-primary mb-3">{subjectSyllabus.subject}</h3>
+              <div key={subjectIndex} className="border p-4 rounded-lg bg-card/60 shadow-md">
+                <h3 className="text-xl font-semibold text-primary mb-3 flex items-center">
+                  <BookOpen className="mr-3 h-6 w-6" /> Subject: {subjectSyllabus.subject}
+                </h3>
                 {subjectSyllabus.summary && (
-                    <p className="text-sm text-muted-foreground mb-3 italic">{subjectSyllabus.summary}</p>
+                    <div className="mb-4 p-3 bg-muted/60 rounded-md border border-border">
+                        <p className="text-sm italic text-foreground/90"><Lightbulb className="inline-block mr-2 h-4 w-4 text-yellow-500 dark:text-yellow-400" /><strong>Quick Notes:</strong> {subjectSyllabus.summary}</p>
+                    </div>
                 )}
-                <div className="space-y-3">
+                <div className="space-y-4">
                   {subjectSyllabus.schedule.map((weeklyItem, weekIndex) => (
-                    <div key={`${subjectSyllabus.subject}-week-${weekIndex}`}>
-                      <h4 className="font-medium text-md text-foreground/90">{weeklyItem.weekLabel}:</h4>
+                    <div key={`${subjectSyllabus.subject}-week-${weekIndex}`} className="pl-2">
+                      <h4 className="font-medium text-md text-foreground/95 flex items-center mb-1">
+                        <CalendarDays className="mr-2 h-5 w-5 text-accent" /> {weeklyItem.weekLabel}:
+                      </h4>
                       {weeklyItem.topics.length > 0 ? (
-                        <ul className="list-disc space-y-1 pl-5 text-sm text-foreground/80">
+                        <ul className="list-none space-y-1.5 pl-7 mt-1">
                           {weeklyItem.topics.map((topic, topicIndex) => (
-                            <li key={topicIndex}>{topic}</li>
+                            <li key={topicIndex} className="flex items-start text-sm text-foreground/80">
+                                <Target className="mr-2.5 h-4 w-4 text-primary shrink-0 mt-1" />
+                                <span>{topic}</span>
+                            </li>
                           ))}
                         </ul>
                       ) : (
-                        <p className="text-sm text-muted-foreground pl-5">No specific topics listed for this week. It might be a buffer week or revision period.</p>
+                        <p className="text-sm text-muted-foreground pl-7">No specific topics listed for this week. It might be a buffer week or revision period. 🤔</p>
                       )}
                     </div>
                   ))}
                 </div>
               </div>
             ))}
+            <div className="mt-8 text-center pt-6 border-t">
+                <p className="text-lg font-semibold text-accent">🚀 You've got a plan! Stick to it and conquer your exams!</p>
+                <p className="text-muted-foreground mt-1">Remember, consistency is key. You can do this! 🙌</p>
+            </div>
           </CardContent>
         </Card>
       )}
@@ -339,7 +352,7 @@ export default function SyllabusSuggesterPage() {
       { (generatedSyllabus === null || generatedSyllabus.length === 0) && !isLoading && form.formState.isSubmitted && (
          <Card className="shadow-lg animate-in fade-in-50 duration-500 mt-6">
           <CardHeader>
-            <CardTitle>No Syllabus Generated</CardTitle>
+            <CardTitle>😕 No Syllabus Generated</CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-muted-foreground">The AI could not generate a syllabus based on the provided inputs, or the list was empty. Please review your selections and try again. Ensure all required fields are filled correctly.</p>
