@@ -44,7 +44,7 @@ const initialUserProfileData: UserProfileData = {
   xp: 0,
   coins: 0,
   purchasedItemIds: [],
-  activeThemeId: DEFAULT_THEME_ID, // Use DEFAULT_THEME_ID for initialization
+  activeThemeId: DEFAULT_THEME_ID,
   dailyChallengeStatus: {},
 };
 
@@ -332,7 +332,7 @@ export default function StreaksPage() {
             <p className="text-xs text-muted-foreground pt-1">{currentStreakValue === 1 ? 'day' : 'days'} of consistent study</p>
           </CardContent>
         </Card>
-        <Card className="shadow-lg">
+        <Card className="shadow-xl transform hover:scale-105 transition-transform duration-300">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-xl font-semibold">Longest Streak</CardTitle>
             <Award className="h-8 w-8 text-primary" />
@@ -342,7 +342,7 @@ export default function StreaksPage() {
             <p className="text-xs text-muted-foreground pt-1">Your personal best!</p>
           </CardContent>
         </Card>
-         <Card className="shadow-lg flex flex-col">
+         <Card className="shadow-xl flex flex-col transform hover:scale-105 transition-transform duration-300">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-xl font-semibold">Your Rewards</CardTitle>
                 <Star className="h-8 w-8 text-yellow-400" />
