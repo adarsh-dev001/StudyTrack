@@ -14,9 +14,28 @@ import {
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Loader2, AlertTriangle, Lightbulb, BookOpen, CheckSquare, Award, Clock, Target as TargetIcon, Zap, LineChart, Brain } from 'lucide-react';
+import { 
+    Loader2, AlertTriangle, Lightbulb, BookOpen, CheckSquare, Award, Clock, 
+    Target as TargetIcon, Zap, LineChart, Brain, UserCheck, ListChecks, Repeat, Flag, Rocket 
+} from 'lucide-react';
 import Link from 'next/link';
 import { ScrollArea } from '@/components/ui/scroll-area';
+
+const progressSteps = [
+  { text: "Analyzing your study habits...", icon: <UserCheck className="h-5 w-5 text-primary mr-2" /> },
+  { text: "Matching your syllabus and exam level...", icon: <ListChecks className="h-5 w-5 text-primary mr-2" /> },
+  { text: "Calculating study-break cycles...", icon: <Repeat className="h-5 w-5 text-primary mr-2" /> },
+  { text: "Setting short- and long-term goals...", icon: <TargetIcon className="h-5 w-5 text-primary mr-2" /> },
+  { text: "Preparing your personalized plan...", icon: <Rocket className="h-5 w-5 text-primary mr-2" /> },
+];
+
+const motivationalTips = [
+  "💡 Did you know? Studying 2 hours in deep focus is more effective than 5 hours with distractions.",
+  "🎯 Tip: Break big goals into 7-day challenges — it's easier to stay consistent.",
+  "📈 Students with streaks over 15 days saw a 40% boost in retention!",
+  "🧠 Consistent review, even for short periods, dramatically improves long-term memory.",
+  "✨ Taking regular short breaks can actually increase your overall productivity and focus."
+];
 
 export default function AiRecommendationsPage() {
   const { currentUser } = useAuth();
@@ -25,6 +44,9 @@ export default function AiRecommendationsPage() {
   const [isLoadingProfile, setIsLoadingProfile] = useState(true);
   const [isLoadingRecommendations, setIsLoadingRecommendations] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const [currentProgressStepIndex, setCurrentProgressStepIndex] = useState(0);
+  const [currentTipIndex, setCurrentTipIndex] = useState(0);
 
   useEffect(() => {
     async function fetchProfileAndGenerateRecommendations() {
@@ -50,7 +72,6 @@ export default function AiRecommendationsPage() {
         setProfile(userProfileData);
         setIsLoadingProfile(false);
 
-        // Prepare input for AI Flow
         const aiInput: PersonalizedRecommendationsInput = {
           targetExams: userProfileData.targetExams,
           otherExamName: userProfileData.otherExamName,
@@ -68,6 +89,8 @@ export default function AiRecommendationsPage() {
 
         setIsLoadingRecommendations(true);
         setError(null);
+        setCurrentProgressStepIndex(0); // Reset progress for new generation
+        setCurrentTipIndex(0); // Reset tips for new generation
         const aiOutput = await generatePersonalizedRecommendations(aiInput);
         setRecommendations(aiOutput);
       } catch (err: any) {
@@ -82,6 +105,27 @@ export default function AiRecommendationsPage() {
 
     fetchProfileAndGenerateRecommendations();
   }, [currentUser?.uid]);
+  
+  useEffect(() => {
+    let progressInterval: NodeJS.Timeout;
+    if (isLoadingRecommendations) {
+      progressInterval = setInterval(() => {
+        setCurrentProgressStepIndex(prevIndex => (prevIndex + 1) % progressSteps.length);
+      }, 2500); // Change progress step every 2.5 seconds
+    }
+    return () => clearInterval(progressInterval);
+  }, [isLoadingRecommendations]);
+
+  useEffect(() => {
+    let tipInterval: NodeJS.Timeout;
+    if (isLoadingRecommendations) {
+      tipInterval = setInterval(() => {
+        setCurrentTipIndex(prevIndex => (prevIndex + 1) % motivationalTips.length);
+      }, 4000); // Change tip every 4 seconds
+    }
+    return () => clearInterval(tipInterval);
+  }, [isLoadingRecommendations]);
+
 
   if (isLoadingProfile) {
     return (
@@ -91,6 +135,46 @@ export default function AiRecommendationsPage() {
       </div>
     );
   }
+  
+  if (isLoadingRecommendations) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[calc(100vh-150px)] text-center p-6 space-y-8">
+        <Loader2 className="h-16 w-16 animate-spin text-primary" />
+        <div className="space-y-2">
+            <h2 className="text-2xl font-semibold text-foreground">Generating Your Personalized Study Blueprint…</h2>
+            <p className="text-md text-muted-foreground max-w-md">
+                We’re analyzing your profile to create your ideal timetable, goals, and strategies.
+            </p>
+        </div>
+
+        <div className="w-full max-w-md space-y-3">
+            {progressSteps.map((step, index) => (
+                 <div
+                    key={step.text}
+                    className={`flex items-center p-3 rounded-lg transition-all duration-500 ease-in-out 
+                                ${index === currentProgressStepIndex ? 'bg-primary/10 text-primary-foreground scale-105 shadow-lg' : 
+                                 index < currentProgressStepIndex ? 'bg-green-500/10 text-green-700 dark:text-green-300 opacity-70' : 
+                                 'bg-muted/50 text-muted-foreground opacity-50'}`}
+                >
+                    {index < currentProgressStepIndex ? <CheckSquare className="h-5 w-5 text-green-500 mr-2" /> : step.icon}
+                    <span className={`font-medium text-sm ${index === currentProgressStepIndex ? 'text-primary' : ''}`}>
+                        {step.text}
+                    </span>
+                </div>
+            ))}
+        </div>
+        
+        <Card className="w-full max-w-md bg-accent/10 border-accent/30 shadow-sm animate-pulse">
+            <CardContent className="pt-5">
+                <p className="text-sm text-accent-foreground text-center">
+                    {motivationalTips[currentTipIndex]}
+                </p>
+            </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
 
   if (error && !isLoadingRecommendations) {
     return (
@@ -112,9 +196,9 @@ export default function AiRecommendationsPage() {
       <div className="flex flex-col items-center justify-center min-h-[calc(100vh-150px)] text-center p-6">
         <Alert className="max-w-md">
           <Lightbulb className="h-5 w-5" />
-          <AlertTitle>Profile Not Found</AlertTitle>
+          <AlertTitle>Profile Not Found or Incomplete</AlertTitle>
           <AlertDescription>
-            We couldn't find your profile information. Please ensure you've completed the onboarding process.
+            We couldn't find your profile information or it's not complete. Please ensure you've completed the onboarding process to get AI recommendations.
           </AlertDescription>
         </Alert>
          <Button asChild className="mt-6 mr-2" variant="default">
@@ -138,12 +222,6 @@ export default function AiRecommendationsPage() {
         <p className="text-lg text-muted-foreground">
           Personalized recommendations to help you ace your {profile?.targetExams?.join(', ') || 'exams'}!
         </p>
-         {isLoadingRecommendations && (
-          <div className="flex items-center text-primary pt-3">
-            <Loader2 className="h-6 w-6 animate-spin mr-2" />
-            <span>Generating your personalized plan... this may take a moment.</span>
-          </div>
-        )}
       </header>
 
       {!isLoadingRecommendations && recommendations && (
@@ -269,7 +347,6 @@ export default function AiRecommendationsPage() {
         </div>
       )}
       
-      {/* Placeholder for if recommendations are null and not loading and no error */}
        {!isLoadingProfile && !isLoadingRecommendations && !recommendations && !error && profile && (
          <div className="flex flex-col items-center justify-center min-h-[calc(100vh-300px)] text-center p-6">
             <Alert className="max-w-md">
