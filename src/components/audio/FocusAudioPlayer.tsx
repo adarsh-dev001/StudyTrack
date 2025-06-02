@@ -3,19 +3,18 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { PlayIcon, PauseIcon } from 'lucide-react';
+import { PlayIcon, PauseIcon, Volume2, VolumeX } from 'lucide-react'; // Added Volume2
+import { Slider } from '@/components/ui/slider'; // For volume control
 import { cn } from '@/lib/utils';
 
 interface FocusAudioPlayerProps {
-  src: string | null; // Allow null for controlled mode if no track is selected
+  src: string | null;
   loop?: boolean;
-  volume?: number; // 0.0 to 1.0
-  
-  // For controlled mode (e.g., Pomodoro timer)
+  volume?: number; // 0.0 to 1.0 - Acts as initial/controlled volume
+
   isPlaying?: boolean; // If provided, component is in controlled mode
   onEnded?: () => void;
 
-  // For UI mode (used if isPlaying is NOT provided)
   label?: string; // If provided and isPlaying is not, component is in UI mode
   autoPlay?: boolean; // Effective only in UI mode
   className?: string;
@@ -23,9 +22,9 @@ interface FocusAudioPlayerProps {
 
 const FocusAudioPlayer: React.FC<FocusAudioPlayerProps> = ({
   src,
-  loop = true, // Default to true, can be overridden (e.g., loop=false for UI snippets)
-  volume = 0.7,
-  isPlaying: controlledIsPlaying, // Prop for external control
+  loop = true,
+  volume = 0.7, // Default initial/controlled volume
+  isPlaying: controlledIsPlaying,
   onEnded,
   label,
   autoPlay = false,
@@ -36,13 +35,11 @@ const FocusAudioPlayer: React.FC<FocusAudioPlayerProps> = ({
   const isControlledMode = controlledIsPlaying !== undefined;
   const isUIMode = !isControlledMode && !!label;
 
-  // Internal playing state for UI mode
   const [selfManagedIsPlaying, setSelfManagedIsPlaying] = useState(isUIMode && autoPlay && !!src);
+  const [uiVolume, setUiVolume] = useState<number>(volume); // For UI mode slider
 
-  // Determine the actual playing state based on mode
   const actualIsPlaying = isControlledMode ? controlledIsPlaying : selfManagedIsPlaying;
 
-  // Set loop and volume
   useEffect(() => {
     if (audioRef.current) {
       audioRef.current.loop = loop;
@@ -50,54 +47,54 @@ const FocusAudioPlayer: React.FC<FocusAudioPlayerProps> = ({
   }, [loop]);
 
   useEffect(() => {
-    if (audioRef.current) {
-      audioRef.current.volume = Math.max(0, Math.min(1, volume));
+    const audioElement = audioRef.current;
+    if (audioElement) {
+      if (isControlledMode) {
+        audioElement.volume = Math.max(0, Math.min(1, volume));
+      } else { // UI Mode
+        audioElement.volume = Math.max(0, Math.min(1, uiVolume));
+      }
     }
-  }, [volume]);
+  }, [volume, uiVolume, isControlledMode]);
 
-  // Handle src changes
   useEffect(() => {
     const audioElement = audioRef.current;
     if (audioElement) {
-      if (src === null || audioElement.src !== src) {
-        audioElement.src = src || ""; // Set to empty string if null to stop current playback
+      if (src === null || (audioElement.src && !audioElement.src.endsWith('null') && audioElement.src !== src)) {
+        audioElement.src = src || ""; 
         if (src) {
-          audioElement.load(); // Load the new source
-          // If it should be playing (either due to autoplay in UI mode or controlled state)
+          audioElement.load(); 
           if (actualIsPlaying) {
             audioElement.play().catch(e => console.error("Error playing new src:", e));
           }
         } else {
-          audioElement.pause(); // Explicitly pause if src is null
+          audioElement.pause(); 
         }
       }
     }
-  }, [src, actualIsPlaying]); // actualIsPlaying is needed here to resume if src changes while playing
+  }, [src, actualIsPlaying]); 
 
-  // Control play/pause based on actualIsPlaying state
   useEffect(() => {
     const audioElement = audioRef.current;
     if (audioElement) {
-      if (actualIsPlaying && audioElement.src && !audioElement.src.endsWith('null')) { // Ensure src is valid
+      if (actualIsPlaying && audioElement.src && !audioElement.src.endsWith('null')) {
         audioElement.play().catch(e => console.error("Error playing audio:", e));
       } else {
         audioElement.pause();
       }
     }
-  }, [actualIsPlaying, src]); // Also depend on src to re-evaluate when src changes
+  }, [actualIsPlaying, src]);
 
-  // Handle 'ended' event
   useEffect(() => {
     const audioElement = audioRef.current;
     if (audioElement) {
       const handleAudioEnded = () => {
         if (isUIMode && !loop) {
-          setSelfManagedIsPlaying(false); // Stop playback in UI mode if not looping
+          setSelfManagedIsPlaying(false); 
         }
-        if (onEnded && !loop) { // Call onEnded for controlled mode if not looping
+        if (onEnded && !loop) { 
             onEnded();
         }
-        // If looping, the browser handles it automatically.
       };
       audioElement.addEventListener('ended', handleAudioEnded);
       return () => {
@@ -112,29 +109,45 @@ const FocusAudioPlayer: React.FC<FocusAudioPlayerProps> = ({
     }
   };
 
+  const handleVolumeChangeForUI = (newVolume: number[]) => {
+    if (isUIMode) {
+      setUiVolume(newVolume[0]);
+    }
+  };
+
   if (isUIMode) {
     return (
-      <div className={cn("flex items-center justify-between p-3 border rounded-lg bg-card shadow-sm", className)}>
-        <span className="text-sm font-medium text-card-foreground mr-2 truncate" title={label}>{label}</span>
-        <Button 
-          onClick={togglePlayPauseForUI} 
-          variant="ghost" 
-          size="icon" 
-          aria-label={actualIsPlaying ? 'Pause' : 'Play'}
-          disabled={!src} // Disable button if no src
-        >
-          {actualIsPlaying ? <PauseIcon className="h-5 w-5" /> : <PlayIcon className="h-5 w-5" />}
-        </Button>
-        {/* Audio element is hidden but controlled by state */}
+      <div className={cn("flex flex-col space-y-2 p-3 border rounded-lg bg-card shadow-sm", className)}>
+        <div className="flex items-center justify-between">
+            <span className="text-sm font-medium text-card-foreground mr-2 truncate" title={label}>{label}</span>
+            <Button 
+            onClick={togglePlayPauseForUI} 
+            variant="ghost" 
+            size="icon" 
+            aria-label={actualIsPlaying ? 'Pause' : 'Play'}
+            disabled={!src}
+            >
+            {actualIsPlaying ? <PauseIcon className="h-5 w-5" /> : <PlayIcon className="h-5 w-5" />}
+            </Button>
+        </div>
+        <div className="flex items-center space-x-2">
+            {uiVolume > 0 ? <Volume2 className="h-4 w-4 text-muted-foreground" /> : <VolumeX className="h-4 w-4 text-muted-foreground" />}
+            <Slider
+                defaultValue={[uiVolume]}
+                max={1}
+                step={0.01}
+                onValueChange={handleVolumeChangeForUI}
+                className="w-full"
+                aria-label="Volume"
+                disabled={!src}
+            />
+        </div>
         <audio ref={audioRef} playsInline aria-hidden="true" />
       </div>
     );
   }
 
-  // Invisible player for controlled mode (e.g., Pomodoro Timer)
-  // src is set by useEffect
   return <audio ref={audioRef} playsInline aria-hidden="true" />;
 };
 
 export default FocusAudioPlayer;
-    
