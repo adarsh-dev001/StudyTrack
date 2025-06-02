@@ -3,6 +3,22 @@ import type {Metadata, Viewport} from 'next'; // Added Viewport type
 import './globals.css';
 import { Toaster } from "@/components/ui/toaster";
 import { AuthProvider } from '@/contexts/auth-context';
+import { Inter, Space_Grotesk } from 'next/font/google';
+import { cn } from '@/lib/utils';
+
+// Setup fonts with next/font
+const fontInter = Inter({
+  subsets: ['latin'],
+  variable: '--font-inter',
+  display: 'swap',
+});
+
+const fontSpaceGrotesk = Space_Grotesk({
+  subsets: ['latin'],
+  weight: ['300', '400', '500', '600', '700'],
+  variable: '--font-space-grotesk',
+  display: 'swap',
+});
 
 export const metadata: Metadata = {
   title: 'StudyTrack - Ace Your Competitive Exams',
@@ -15,7 +31,10 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 1,
   userScalable: false,
-  themeColor: '#7DD3FC', 
+  themeColor: [ // Updated themeColor to be an array for light/dark modes
+    { media: '(prefers-color-scheme: light)', color: '#7DD3FC' }, // Sky Blue for light mode
+    { media: '(prefers-color-scheme: dark)', color: '#0F172A' }, // Darker blue for dark mode (example)
+  ],
 };
 
 export default function RootLayout({
@@ -43,12 +62,15 @@ export default function RootLayout({
         <link rel="apple-touch-icon" sizes="144x144" href="/icons/icon-144x144.png" />
         <link rel="apple-touch-icon" sizes="180x180" href="/icons/icon-180x180.png" />
         
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
-        <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+        {/* Removed direct Google Font links, next/font handles this */}
       </head>
-      <body className="font-body antialiased">
+      <body 
+        className={cn(
+          "font-body antialiased",
+          fontInter.variable,
+          fontSpaceGrotesk.variable
+        )}
+      >
         <AuthProvider>
           {children}
           <Toaster />
@@ -57,3 +79,4 @@ export default function RootLayout({
     </html>
   );
 }
+
