@@ -103,9 +103,9 @@ Please provide the following, ensuring they are tailored to the user's specific 
 5.  **longTermGoals**: 1-3 broader long-term goals (e.g., "Finish Part A of {{{examDisplay}}} syllabus 2 months before exam"). Each goal should have a 'goal' and 'timeline'.
 6.  **milestoneSuggestions**: 2-4 strategic checkpoints (e.g., "Schedule first full-length mock test after 6 weeks", "Begin revision of all {{{strongSubjects}}} by end of Month 1").
 7.  **personalizedTips**:
-    *   `timeManagement`: 1-3 actionable time management tips.
-    *   `subjectSpecificStudy`: 1-3 strategies, considering weak/strong subjects (e.g., "For {{{weakSubjects.[0]}}}, try using Feynman technique."). If no subjects, give general advice.
-    *   `motivationalNudges`: 1-3 nudges. If motivationType is 'xp_badges', suggest tracking progress. If 'calm_mode', suggest minimizing distractions.
+    *   timeManagement: 1-3 actionable time management tips.
+    *   subjectSpecificStudy: 1-3 strategies, considering weak/strong subjects (e.g., "For {{{weakSubjects.[0]}}}, try using Feynman technique."). If no subjects, give general advice.
+    *   motivationalNudges: 1-3 nudges. If motivationType is 'xp_badges', suggest tracking progress. If 'calm_mode', suggest minimizing distractions.
 8.  **overallStrategyStatement**: A concise (2-3 sentences) strategic statement summarizing the approach.
 
 Structure your entire output as a single JSON object that strictly adheres to the PersonalizedRecommendationsOutputSchema.
@@ -129,5 +129,3 @@ const personalizedRecommendationsFlow = ai.defineFlow(
     return output;
   }
 );
-
-    
