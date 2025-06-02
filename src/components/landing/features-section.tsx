@@ -69,22 +69,7 @@ export function FeaturesSection() {
             <FeatureCard key={feature.title} {...feature} />
           ))}
         </div>
-         <div className="flex flex-col items-center justify-center space-y-4 text-center mt-16">
-          <div className="inline-block rounded-lg bg-secondary px-3 py-1 text-sm text-secondary-foreground">And More...</div>
-          <h2 className="font-headline text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl text-foreground">
-            Comprehensive Productivity Tracking
-          </h2>
-           <p className="max-w-[700px] text-muted-foreground md:text-xl/relaxed lg:text-base/relaxed xl:text-xl/relaxed">
-            Visualize your progress with insightful charts and statistics.
-          </p>
-        </div>
-        <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-1 mt-12">
-            <FeatureCard 
-              icon={BarChart3}
-              title="Productivity Stats & Charts"
-              description="Weekly graphs for hours studied & topics completed, subject-wise time distribution pie chart, and 'compared to last week' insights."
-            />
-        </div>
+         {/* The "And More..." section and the Productivity Stats card have been removed */}
       </div>
     </section>
   );
