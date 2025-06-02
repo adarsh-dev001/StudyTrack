@@ -8,15 +8,14 @@ export const metadata: Metadata = {
   title: 'StudyTrack - Ace Your Competitive Exams',
   description: 'Your all-in-one study planner, productivity tracker, and AI-powered learning assistant for NEET, UPSC, JEE, and more.',
   manifest: '/manifest.json', // Link to the manifest file
-  // Viewport settings moved to the new 'viewport' export below
 };
 
-export const viewport: Viewport = { // Added new viewport export
+export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
   maximumScale: 1,
   userScalable: false,
-  themeColor: '#7DD3FC', // Moved theme-color here
+  themeColor: '#7DD3FC', 
 };
 
 export default function RootLayout({
@@ -36,12 +35,13 @@ export default function RootLayout({
         <meta name="msapplication-config" content="/browserconfig.xml" />
         <meta name="msapplication-TileColor" content="#7DD3FC" />
         <meta name="msapplication-tap-highlight" content="no" />
-        {/* theme-color is now part of the viewport export */}
-
-        <link rel="apple-touch-icon" sizes="180x180" href="/icons/icon-180x180.png" />
         
+        <link rel="icon" href="/favicon.ico" sizes="any" />
         <link rel="icon" type="image/png" sizes="32x32" href="/icons/favicon-32x32.png" />
         <link rel="icon" type="image/png" sizes="16x16" href="/icons/favicon-16x16.png" />
+        <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+        <link rel="apple-touch-icon" sizes="144x144" href="/icons/icon-144x144.png" />
+        <link rel="apple-touch-icon" sizes="180x180" href="/icons/icon-180x180.png" />
         
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />

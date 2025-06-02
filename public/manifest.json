@@ -1,35 +1,12 @@
+
 {
-  "name": "StudyTrack - Ace Your Competitive Exams",
+  "name": "StudyTrack",
   "short_name": "StudyTrack",
   "description": "Your all-in-one study planner, productivity tracker, and AI-powered learning assistant for NEET, UPSC, JEE, and more.",
   "icons": [
     {
-      "src": "/icons/icon-72x72.png",
-      "sizes": "72x72",
-      "type": "image/png",
-      "purpose": "any maskable"
-    },
-    {
-      "src": "/icons/icon-96x96.png",
-      "sizes": "96x96",
-      "type": "image/png",
-      "purpose": "any maskable"
-    },
-    {
-      "src": "/icons/icon-128x128.png",
-      "sizes": "128x128",
-      "type": "image/png",
-      "purpose": "any maskable"
-    },
-    {
       "src": "/icons/icon-144x144.png",
       "sizes": "144x144",
-      "type": "image/png",
-      "purpose": "any maskable"
-    },
-    {
-      "src": "/icons/icon-152x152.png",
-      "sizes": "152x152",
       "type": "image/png",
       "purpose": "any maskable"
     },
@@ -40,22 +17,15 @@
       "purpose": "any maskable"
     },
     {
-      "src": "/icons/icon-384x384.png",
-      "sizes": "384x384",
-      "type": "image/png",
-      "purpose": "any maskable"
-    },
-    {
       "src": "/icons/icon-512x512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
     }
   ],
-  "start_url": "/dashboard",
-  "display": "standalone",
-  "background_color": "#F5F7FA",
   "theme_color": "#7DD3FC",
-  "scope": "/",
-  "orientation": "portrait-primary"
+  "background_color": "#F5F7FA",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait"
 }
