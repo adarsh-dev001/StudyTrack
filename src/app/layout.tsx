@@ -1,5 +1,5 @@
 
-import type {Metadata} from 'next';
+import type {Metadata, Viewport} from 'next'; // Added Viewport type
 import './globals.css';
 import { Toaster } from "@/components/ui/toaster";
 import { AuthProvider } from '@/contexts/auth-context';
@@ -8,7 +8,15 @@ export const metadata: Metadata = {
   title: 'StudyTrack - Ace Your Competitive Exams',
   description: 'Your all-in-one study planner, productivity tracker, and AI-powered learning assistant for NEET, UPSC, JEE, and more.',
   manifest: '/manifest.json', // Link to the manifest file
-  viewport: 'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no', // Added for better mobile control
+  // Viewport settings moved to the new 'viewport' export below
+};
+
+export const viewport: Viewport = { // Added new viewport export
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+  themeColor: '#7DD3FC', // Moved theme-color here
 };
 
 export default function RootLayout({
@@ -28,7 +36,7 @@ export default function RootLayout({
         <meta name="msapplication-config" content="/browserconfig.xml" />
         <meta name="msapplication-TileColor" content="#7DD3FC" />
         <meta name="msapplication-tap-highlight" content="no" />
-        <meta name="theme-color" content="#7DD3FC" />
+        {/* theme-color is now part of the viewport export */}
 
         <link rel="apple-touch-icon" sizes="180x180" href="/icons/icon-180x180.png" />
         
@@ -49,4 +57,3 @@ export default function RootLayout({
     </html>
   );
 }
-
