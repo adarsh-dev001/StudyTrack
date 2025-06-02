@@ -39,6 +39,12 @@ const nextConfig: NextConfig = {
         hostname: 'images.unsplash.com', // Added as a common source for future use
         port: '',
         pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'www.eggoz.com',
+        port: '',
+        pathname: '/**',
       }
     ],
   },
