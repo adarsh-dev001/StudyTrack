@@ -1,0 +1,157 @@
+
+'use client';
+
+import React, { useState } from 'react';
+import { useForm, FormProvider, type SubmitHandler } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Progress } from '@/components/ui/progress';
+import { Loader2, Sparkles } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
+import { db } from '@/lib/firebase';
+import { doc, setDoc } from 'firebase/firestore';
+import type { UserProfileData } from '@/lib/profile-types';
+
+import Step1ExamFocus from './step-1-exam-focus';
+import Step2StudyHabits from './step-2-study-habits';
+import Step3LearningMotivation from './step-3-learning-motivation';
+
+// Define Zod schemas for each step
+const step1Schema = z.object({
+  targetExams: z.array(z.string()).min(1, "Please select at least one target exam."),
+  examAttemptYear: z.string().min(1, "Please select your attempt year."),
+  languageMedium: z.string().min(1, "Please select your language medium."),
+});
+
+const step2Schema = z.object({
+  dailyStudyHours: z.string().min(1, "Please select your daily study hours."),
+  preferredStudyTime: z.array(z.string()).min(1, "Select at least one preferred study time."),
+  weakSubjects: z.array(z.string()).optional(), // Optional for now
+});
+
+const step3Schema = z.object({
+  preferredLearningStyles: z.array(z.string()).min(1, "Select at least one learning style."),
+  motivationType: z.string().min(1, "Please select your motivation type."),
+});
+
+// Combine schemas for the full form - adjust as more steps/fields are added
+const fullOnboardingSchema = step1Schema.merge(step2Schema).merge(step3Schema);
+
+export type OnboardingFormData = z.infer<typeof fullOnboardingSchema>;
+
+interface OnboardingFormProps {
+  userId: string;
+  onOnboardingSuccess: () => void;
+}
+
+const TOTAL_STEPS = 3;
+
+export default function OnboardingForm({ userId, onOnboardingSuccess }: OnboardingFormProps) {
+  const [currentStep, setCurrentStep] = useState(1);
+  const [isLoading, setIsLoading] = useState(false);
+  const { toast } = useToast();
+
+  const methods = useForm<OnboardingFormData>({
+    resolver: zodResolver(
+      currentStep === 1 ? step1Schema :
+      currentStep === 2 ? step2Schema :
+      step3Schema // For the last step, full schema is implicitly covered by prior steps or could use fullOnboardingSchema
+    ),
+    mode: 'onChange', // Validate on change for better UX
+    defaultValues: {
+      targetExams: [],
+      preferredStudyTime: [],
+      weakSubjects: [],
+      preferredLearningStyles: [],
+    },
+  });
+
+  const { handleSubmit, trigger, getValues } = methods;
+
+  const handleNextStep = async () => {
+    let isValid = false;
+    if (currentStep === 1) isValid = await trigger(['targetExams', 'examAttemptYear', 'languageMedium']);
+    else if (currentStep === 2) isValid = await trigger(['dailyStudyHours', 'preferredStudyTime', 'weakSubjects']);
+    // No specific trigger for step 3 as it's the last before submit
+
+    if (isValid && currentStep < TOTAL_STEPS) {
+      setCurrentStep(prev => prev + 1);
+    } else if (isValid && currentStep === TOTAL_STEPS) {
+        // This case is handled by onSubmit directly
+        await handleSubmit(onSubmit)();
+    }
+  };
+
+  const handlePrevStep = () => {
+    setCurrentStep(prev => Math.max(1, prev - 1));
+  };
+
+  const onSubmit: SubmitHandler<OnboardingFormData> = async (data) => {
+    setIsLoading(true);
+    const userProfileRef = doc(db, 'users', userId, 'userProfile', 'profile');
+
+    const profilePayload: Partial<UserProfileData> = {
+      ...data, // Spread all collected data
+      onboardingCompleted: true,
+    };
+
+    try {
+      await setDoc(userProfileRef, profilePayload, { merge: true });
+      toast({
+        title: 'Profile Setup Complete! 🎉',
+        description: "We've saved your preferences. Get ready for a personalized experience!",
+      });
+      onOnboardingSuccess();
+    } catch (error: any) {
+      console.error('Error saving onboarding data:', error);
+      toast({
+        title: 'Error Saving Profile',
+        description: error.message || 'Could not save your preferences. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const progressValue = (currentStep / TOTAL_STEPS) * 100;
+
+  return (
+    <Card className="w-full max-w-xl shadow-2xl">
+      <CardHeader className="text-center">
+        <Sparkles className="mx-auto h-10 w-10 text-primary mb-2" />
+        <CardTitle className="text-2xl md:text-3xl font-bold">Personalize Your StudyTrack</CardTitle>
+        <CardDescription>
+          Tell us a bit about yourself to tailor your learning journey. (Step {currentStep} of {TOTAL_STEPS})
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <Progress value={progressValue} className="mb-8 h-3" />
+        <FormProvider {...methods}>
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+            {currentStep === 1 && <Step1ExamFocus />}
+            {currentStep === 2 && <Step2StudyHabits />}
+            {currentStep === 3 && <Step3LearningMotivation />}
+            {/* Add more steps here as needed */}
+          </form>
+        </FormProvider>
+      </CardContent>
+      <CardFooter className="flex justify-between pt-6 border-t">
+        <Button variant="outline" onClick={handlePrevStep} disabled={currentStep === 1 || isLoading}>
+          Previous
+        </Button>
+        {currentStep < TOTAL_STEPS ? (
+          <Button onClick={handleNextStep} disabled={isLoading}>
+            Next
+          </Button>
+        ) : (
+          <Button onClick={handleSubmit(onSubmit)} disabled={isLoading}>
+            {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Finish Setup'}
+          </Button>
+        )}
+      </CardFooter>
+    </Card>
+  );
+}
