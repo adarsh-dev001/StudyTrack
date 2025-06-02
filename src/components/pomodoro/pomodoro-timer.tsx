@@ -6,14 +6,14 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { TimerIcon, PlayIcon, PauseIcon, RotateCcwIcon, Music2, VolumeX } from 'lucide-react'; // Removed Volume2 as player handles it
+import { TimerIcon, PlayIcon, PauseIcon, RotateCcwIcon, Music2, VolumeX } from 'lucide-react';
 import { useAuth } from '@/contexts/auth-context';
 import { db } from '@/lib/firebase';
-import { doc, getDoc, setDoc, updateDoc, onSnapshot } from 'firebase/firestore'; // Removed Timestamp as it's not directly used here for new features
+import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore'; 
 import { useToast } from '@/hooks/use-toast';
 import { ALL_SOUNDTRACK_DEFINITIONS, type SoundtrackDefinition } from '@/lib/soundtracks';
 import { DEFAULT_THEME_ID } from '@/lib/themes';
-import FocusAudioPlayer from '@/components/audio/FocusAudioPlayer'; // Import the new player
+import FocusAudioPlayer from '@/components/audio/FocusAudioPlayer';
 
 const POMODORO_DURATION = 25 * 60; 
 const SHORT_BREAK_DURATION = 5 * 60; 
@@ -37,37 +37,9 @@ export function PomodoroTimer() {
   const [isRunning, setIsRunning] = useState(false);
   const [pomodorosCompletedCycle, setPomodorosCompletedCycle] = useState(0);
   
-  const [purchasedSoundtrackIds, setPurchasedSoundtrackIds] = useState<string[]>([]);
-  const [availableSoundtracks, setAvailableSoundtracks] = useState<SoundtrackDefinition[]>([]);
+  // All soundtracks are available, no need to check purchase status
+  const [availableSoundtracks] = useState<SoundtrackDefinition[]>(ALL_SOUNDTRACK_DEFINITIONS);
   const [selectedSoundtrackPath, setSelectedSoundtrackPath] = useState<string | null>(null);
-  // audioRef is no longer needed here, FocusAudioPlayer manages its own audio element.
-
-  useEffect(() => {
-    if (!currentUser?.uid || !db) {
-        setPurchasedSoundtrackIds([]);
-        setAvailableSoundtracks([]);
-        return;
-    }
-    const userProfileDocRef = doc(db, 'users', currentUser.uid, 'userProfile', 'profile');
-    const unsubscribe = onSnapshot(userProfileDocRef, (docSnap) => {
-        if (docSnap.exists()) {
-            const data = docSnap.data();
-            const ids = data.purchasedItemIds || [];
-            setPurchasedSoundtrackIds(ids);
-            
-            const userTracks = ALL_SOUNDTRACK_DEFINITIONS.filter(track => ids.includes(track.id));
-            setAvailableSoundtracks(userTracks);
-        } else {
-            setPurchasedSoundtrackIds([]);
-            setAvailableSoundtracks([]);
-        }
-    }, (error) => {
-        console.error("Error fetching purchased soundtracks:", error);
-        setPurchasedSoundtrackIds([]);
-        setAvailableSoundtracks([]);
-    });
-    return () => unsubscribe();
-  }, [currentUser?.uid]);
 
 
   const formatTime = (totalSeconds: number): string => {
@@ -86,7 +58,7 @@ export function PomodoroTimer() {
         coins: 0,
         xp: 0,
         earnedBadgeIds: [],
-        purchasedItemIds: purchasedSoundtrackIds, 
+        purchasedItemIds: [], // Kept for structure, but soundtracks aren't "purchased"
         activeThemeId: DEFAULT_THEME_ID,
         dailyChallengeStatus: {}
       };
@@ -132,10 +104,6 @@ export function PomodoroTimer() {
 
   useEffect(() => {
     if (timeRemaining === 0 && isRunning) {
-      // setIsRunning(false); // Keep isRunning true to allow audio to play for the new mode until user pauses or resets.
-                              // Or, if sound should stop immediately, then set isRunning to false.
-                              // For now, sound will stop because isRunning changes below.
-      
       if (mode === 'pomodoro') {
         awardCoinsForPomodoro();
         const newPomodorosCompleted = pomodorosCompletedCycle + 1;
@@ -148,16 +116,14 @@ export function PomodoroTimer() {
       } else { 
         setMode('pomodoro');
       }
-      // isRunning will be set to false in the mode change effect if we want audio to stop on mode auto-switch
     }
-  }, [timeRemaining, mode, pomodorosCompletedCycle, isRunning, awardCoinsForPomodoro]); // awardCoinsForPomodoro added to dependencies
+  }, [timeRemaining, mode, pomodorosCompletedCycle, isRunning, awardCoinsForPomodoro]);
 
   useEffect(() => {
     setTimeRemaining(modeDurations[mode]);
-    setIsRunning(false); // Stop timer and audio when mode changes
+    setIsRunning(false); 
   }, [mode]);
 
-  // No longer need useEffect for direct audioRef manipulation, FocusAudioPlayer handles it.
 
   const handleStartPause = () => {
     setIsRunning((prev) => !prev);
@@ -171,7 +137,6 @@ export function PomodoroTimer() {
   const handleModeChange = (newModeString: string) => {
     const newMode = newModeString as Mode;
     setMode(newMode);
-    // isRunning and timeRemaining are reset by the mode effect
   };
   
   const handleSoundtrackChange = (soundtrackId: string) => {
@@ -228,7 +193,7 @@ export function PomodoroTimer() {
             className="w-32 text-lg py-6" 
             size="lg"
             aria-label={isRunning ? "Pause timer" : "Start timer"}
-            disabled={!currentUser}
+            disabled={!currentUser && mode === 'pomodoro'} // Disable start for pomodoro if not logged in
           >
             {isRunning ? <PauseIcon className="mr-2" /> : <PlayIcon className="mr-2" />}
             {isRunning ? 'Pause' : 'Start'}
@@ -247,12 +212,12 @@ export function PomodoroTimer() {
         <p className="text-sm text-muted-foreground">
           Completed in cycle: {pomodorosCompletedCycle % POMODOROS_UNTIL_LONG_BREAK} (next long break after {POMODOROS_UNTIL_LONG_BREAK})
         </p>
-         {!currentUser && (
+         {!currentUser && mode === 'pomodoro' && (
             <p className="text-xs text-destructive text-center mt-2">Login to track Pomodoros and earn rewards!</p>
         )}
       </CardContent>
       <CardFooter className="flex flex-col items-center space-y-3 pt-4 border-t">
-        {currentUser && (
+        {true && ( // Always show soundtrack selector if soundtracks are defined, login not required to select
             <div className="w-full max-w-xs">
                 <Select 
                     onValueChange={handleSoundtrackChange} 
@@ -277,7 +242,7 @@ export function PomodoroTimer() {
                         ))}
                     </SelectContent>
                 </Select>
-                {availableSoundtracks.length === 0 && <p className="text-xs text-muted-foreground text-center mt-1.5">Purchase soundtracks in the Shop!</p>}
+                {availableSoundtracks.length === 0 && <p className="text-xs text-muted-foreground text-center mt-1.5">No soundtracks available.</p>}
             </div>
         )}
         <FocusAudioPlayer src={selectedSoundtrackPath} isPlaying={isRunning && !!selectedSoundtrackPath} loop={true} volume={0.5} />
@@ -293,3 +258,5 @@ export function PomodoroTimer() {
     </Card>
   );
 }
+
+    
