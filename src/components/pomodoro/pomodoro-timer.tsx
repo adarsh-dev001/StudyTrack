@@ -14,7 +14,7 @@ import { useToast } from '@/hooks/use-toast';
 import { ALL_SOUNDTRACK_DEFINITIONS, type SoundtrackDefinition } from '@/lib/soundtracks';
 import { DEFAULT_THEME_ID } from '@/lib/themes';
 import FocusAudioPlayer from '@/components/audio/FocusAudioPlayer';
-import { recordPlatformInteraction } from '@/lib/activity-utils'; // Added import
+import { recordPlatformInteraction } from '@/lib/activity-utils';
 
 const POMODORO_DURATION = 25 * 60; 
 const SHORT_BREAK_DURATION = 5 * 60; 
@@ -51,7 +51,6 @@ export function PomodoroTimer() {
   const awardCoinsForPomodoro = useCallback(async () => {
     if (!currentUser?.uid || !db) return;
 
-    // Record interaction first
     await recordPlatformInteraction(currentUser.uid);
 
     const userProfileDocRef = doc(db, 'users', currentUser.uid, 'userProfile', 'profile');
@@ -92,7 +91,7 @@ export function PomodoroTimer() {
         variant: 'destructive',
       });
     }
-  }, [currentUser, toast]); // Added currentUser and toast to dependencies
+  }, [currentUser, toast]);
 
   useEffect(() => {
     let interval: NodeJS.Timeout | null = null;
@@ -110,7 +109,7 @@ export function PomodoroTimer() {
     if (timeRemaining === 0 && isRunning) {
       if (mode === 'pomodoro') {
         if (currentUser) {
-          awardCoinsForPomodoro(); // This now also records interaction
+          awardCoinsForPomodoro(); 
         }
         const newPomodorosCompleted = pomodorosCompletedCycle + 1;
         setPomodorosCompletedCycle(newPomodorosCompleted);
@@ -189,7 +188,7 @@ export function PomodoroTimer() {
           </TabsList>
         </Tabs>
 
-        <div className="text-6xl sm:text-7xl font-bold text-foreground tabular-nums my-2 sm:my-4" aria-live="polite">
+        <div className="text-6xl sm:text-7xl md:text-8xl font-bold text-foreground tabular-nums my-2 sm:my-4" aria-live="polite">
           {formatTime(timeRemaining)}
         </div>
 
@@ -223,34 +222,33 @@ export function PomodoroTimer() {
         )}
       </CardContent>
       <CardFooter className="flex flex-col items-center space-y-2 sm:space-y-3 p-4 sm:p-6 pt-3 sm:pt-4 border-t">
-        {true && (
-            <div className="w-full max-w-xs">
-                <Select 
-                    onValueChange={handleSoundtrackChange} 
-                    defaultValue={selectedSoundtrackPath ? availableSoundtracks.find(s => s.filePath === selectedSoundtrackPath)?.id : "none"}
-                    disabled={availableSoundtracks.length === 0}
-                >
-                    <SelectTrigger className="w-full text-xs sm:text-sm h-9 sm:h-10">
-                        <SelectValue placeholder="Select Soundtrack..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                        <SelectItem value="none" className="text-xs sm:text-sm">
+        {/* Soundtrack selection is always true now if the component is rendered */}
+        <div className="w-full max-w-xs">
+            <Select 
+                onValueChange={handleSoundtrackChange} 
+                defaultValue={selectedSoundtrackPath ? availableSoundtracks.find(s => s.filePath === selectedSoundtrackPath)?.id : "none"}
+                disabled={availableSoundtracks.length === 0}
+            >
+                <SelectTrigger className="w-full text-xs sm:text-sm h-9 sm:h-10">
+                    <SelectValue placeholder="Select Soundtrack..." />
+                </SelectTrigger>
+                <SelectContent>
+                    <SelectItem value="none" className="text-xs sm:text-sm">
+                        <div className="flex items-center">
+                            <VolumeX className="mr-2 h-3.5 w-3.5 sm:h-4 sm:w-4" /> No Sound
+                        </div>
+                    </SelectItem>
+                    {availableSoundtracks.map(track => (
+                        <SelectItem key={track.id} value={track.id} className="text-xs sm:text-sm">
                             <div className="flex items-center">
-                                <VolumeX className="mr-2 h-3.5 w-3.5 sm:h-4 sm:w-4" /> No Sound
+                                <Music2 className="mr-2 h-3.5 w-3.5 sm:h-4 sm:w-4" /> {track.name}
                             </div>
                         </SelectItem>
-                        {availableSoundtracks.map(track => (
-                            <SelectItem key={track.id} value={track.id} className="text-xs sm:text-sm">
-                                <div className="flex items-center">
-                                    <Music2 className="mr-2 h-3.5 w-3.5 sm:h-4 sm:w-4" /> {track.name}
-                                </div>
-                            </SelectItem>
-                        ))}
-                    </SelectContent>
-                </Select>
-                {availableSoundtracks.length === 0 && <p className="text-xs text-muted-foreground text-center mt-1">No soundtracks available.</p>}
-            </div>
-        )}
+                    ))}
+                </SelectContent>
+            </Select>
+            {availableSoundtracks.length === 0 && <p className="text-xs text-muted-foreground text-center mt-1">No soundtracks available.</p>}
+        </div>
         <FocusAudioPlayer src={selectedSoundtrackPath} isPlaying={isRunning && !!selectedSoundtrackPath} loop={true} volume={0.5} />
       </CardFooter>
     </Card>
