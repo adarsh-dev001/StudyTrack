@@ -173,7 +173,13 @@ const nextConfig: NextConfig = {
       },
       {
         protocol: 'https',
-        hostname: 's39613.pcdn.co', // Added new pattern for s39613.pcdn.co
+        hostname: 's39613.pcdn.co',
+        port: '',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'cdn.prod.website-files.com', // Added new pattern
         port: '',
         pathname: '/**',
       }
