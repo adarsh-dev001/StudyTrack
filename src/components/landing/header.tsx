@@ -3,7 +3,7 @@
 
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { Sheet, SheetContent, SheetTrigger, SheetClose } from '@/components/ui/sheet'; // Corrected import
+import { Sheet, SheetContent, SheetTrigger, SheetClose } from '@/components/ui/sheet';
 import { Menu, BookOpenText, Rocket, LogIn } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -13,7 +13,6 @@ export function Header() {
   const navLinks = [
     { href: '/#features', label: 'Features' },
     { href: '/blog', label: 'Blog' },
-    // { href: '#faq', label: 'FAQ' }, // FAQ can be added later
   ];
 
   const buttonVariants = {
@@ -22,7 +21,7 @@ export function Header() {
       opacity: 1,
       y: 0,
       transition: {
-        delay: i * 0.1 + 0.3, // Stagger animation
+        delay: i * 0.1 + 0.3, 
         duration: 0.4,
         ease: "easeOut"
       }
@@ -65,24 +64,35 @@ export function Header() {
               </Link>
             </Button>
           </motion.div>
-          <motion.div variants={buttonVariants} initial="hidden" animate="visible" custom={2}>
+          <motion.div 
+            variants={buttonVariants} 
+            initial="hidden" 
+            animate="visible" 
+            custom={2}
+            className="relative" // For pulse animation container
+          >
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button
-                    asChild
-                    className={cn(
-                      "py-2.5 px-5 text-sm rounded-2xl font-semibold shadow-lg text-primary-foreground",
-                      "bg-gradient-to-r from-primary to-accent",
-                      "hover:from-primary/90 hover:to-accent/90 hover:scale-105 hover:shadow-primary/40 dark:hover:shadow-accent/40",
-                      "transform transition-all duration-300 ease-out"
-                    )}
+                   <motion.div // Wrapper for pulse animation
+                    animate={{ scale: [1, 1.03, 1] }}
+                    transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
                   >
-                    <Link href="/signup">
-                      <Rocket className="mr-2 h-4 w-4" />
-                      Get Started Free
-                    </Link>
-                  </Button>
+                    <Button
+                      asChild
+                      className={cn(
+                        "py-2.5 px-5 text-sm rounded-2xl font-semibold shadow-lg text-primary-foreground",
+                        "bg-gradient-to-r from-primary to-accent",
+                        "hover:from-primary/90 hover:to-accent/90 hover:scale-105 hover:shadow-primary/40 dark:hover:shadow-accent/40",
+                        "transform transition-all duration-300 ease-out"
+                      )}
+                    >
+                      <Link href="/signup">
+                        <Rocket className="mr-2 h-4 w-4" />
+                        Get Started Free
+                      </Link>
+                    </Button>
+                  </motion.div>
                 </TooltipTrigger>
                 <TooltipContent>
                   <p>Join StudyTrack and ace your exams!</p>
