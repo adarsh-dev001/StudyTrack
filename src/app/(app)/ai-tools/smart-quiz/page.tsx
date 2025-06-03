@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
-import { Badge } from '@/components/ui/badge'; // Added import for Badge
+import { Badge } from '@/components/ui/badge';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Loader2, Sparkles, Brain, HelpCircle, CheckCircle, XCircle, Lightbulb, Award, Percent, SkipForward, ChevronsRight, Wand2 } from 'lucide-react';
 import { generateQuiz } from '@/ai/flows/generate-quiz-flow';
@@ -360,27 +360,25 @@ export default function SmartQuizPage() {
                                     className="space-y-2 sm:space-y-3"
                                 >
                                     {currentQuestion.options.map((option, optIndex) => (
-                                    <FormItem 
+                                    <div 
                                         key={optIndex} 
                                         className={cn(
                                             "flex items-center space-x-2 p-2.5 sm:p-3 rounded-md border transition-all hover:bg-accent/50",
                                             userAnswers[currentQuestionIndex]?.selectedOption === optIndex && "bg-primary/10 border-primary/70 ring-1 ring-primary/70"
                                         )}
                                     >
-                                        <FormControl>
                                         <RadioGroupItem
                                             value={optIndex.toString()}
                                             id={`q${currentQuestionIndex}-opt${optIndex}`}
                                             className="h-4 w-4 sm:h-5 sm:w-5"
                                         />
-                                        </FormControl>
                                         <Label
                                         htmlFor={`q${currentQuestionIndex}-opt${optIndex}`}
                                         className="font-normal text-sm sm:text-base leading-snug cursor-pointer flex-1"
                                         >
                                         {option}
                                         </Label>
-                                    </FormItem>
+                                    </div>
                                     ))}
                                 </RadioGroup>
                             </CardContent>
