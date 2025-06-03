@@ -8,9 +8,8 @@ import { doc, onSnapshot, type Timestamp } from 'firebase/firestore';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Flame, ListChecks, CalendarDays, ArrowRight, User, Loader2, BrainCircuit, Target as TargetIcon } from 'lucide-react'; // Added TargetIcon
-import type { Task } from '@/components/tasks/task-item'; // This might not be needed directly anymore
-import DailyChallengesCard from '@/components/dashboard/DailyChallengesCard'; // Import the new component
+import { ListChecks, CalendarDays, BrainCircuit, Loader2 } from 'lucide-react'; // Removed Flame, ArrowRight, User, Target as TargetIcon
+import DailyChallengesCard from '@/components/dashboard/DailyChallengesCard';
 
 interface StreakData {
   currentStreak: number;
