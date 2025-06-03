@@ -184,19 +184,19 @@ export function PomodoroTimer() {
           <TabsList className="flex flex-col sm:flex-row w-full h-auto rounded-md bg-muted p-1 text-muted-foreground gap-1">
             <TabsTrigger 
               value="pomodoro" 
-              className="flex-1 justify-center items-center whitespace-nowrap rounded-sm px-4 py-2 text-xs sm:text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=active]:font-semibold"
+              className="flex-1 justify-center items-center whitespace-nowrap rounded-sm px-4 py-2 text-xs sm:text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=active]:font-semibold data-[state=active]:underline data-[state=active]:underline-offset-4"
             >
               Pomodoro ({formatTime(POMODORO_DURATION)})
             </TabsTrigger>
             <TabsTrigger 
               value="shortBreak" 
-              className="flex-1 justify-center items-center whitespace-nowrap rounded-sm px-4 py-2 text-xs sm:text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=active]:font-semibold"
+              className="flex-1 justify-center items-center whitespace-nowrap rounded-sm px-4 py-2 text-xs sm:text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=active]:font-semibold data-[state=active]:underline data-[state=active]:underline-offset-4"
             >
               Short Break ({formatTime(SHORT_BREAK_DURATION)})
             </TabsTrigger>
             <TabsTrigger 
               value="longBreak" 
-              className="flex-1 justify-center items-center whitespace-nowrap rounded-sm px-4 py-2 text-xs sm:text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=active]:font-semibold"
+              className="flex-1 justify-center items-center whitespace-nowrap rounded-sm px-4 py-2 text-xs sm:text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=active]:font-semibold data-[state=active]:underline data-[state=active]:underline-offset-4"
             >
               Long Break ({formatTime(LONG_BREAK_DURATION)})
             </TabsTrigger>
