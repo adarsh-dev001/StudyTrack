@@ -181,10 +181,10 @@ export function PomodoroTimer() {
       </CardHeader>
       <CardContent className="flex flex-col items-center space-y-4 sm:space-y-6 p-4 sm:p-6 pt-2 sm:pt-6">
         <Tabs value={mode} onValueChange={handleModeChange} className="w-full">
-          <TabsList className="grid w-full grid-cols-3 h-auto text-xs sm:text-sm">
-            <TabsTrigger value="pomodoro" className="py-1.5 sm:py-2">Pomodoro ({formatTime(POMODORO_DURATION)})</TabsTrigger>
-            <TabsTrigger value="shortBreak" className="py-1.5 sm:py-2">Short Break ({formatTime(SHORT_BREAK_DURATION)})</TabsTrigger>
-            <TabsTrigger value="longBreak" className="py-1.5 sm:py-2">Long Break ({formatTime(LONG_BREAK_DURATION)})</TabsTrigger>
+          <TabsList className="flex flex-col sm:flex-row w-full h-auto rounded-md bg-muted p-1 text-muted-foreground gap-1">
+            <TabsTrigger value="pomodoro" className="flex-1 justify-center items-center whitespace-nowrap rounded-sm px-4 py-2 text-xs sm:text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm">Pomodoro ({formatTime(POMODORO_DURATION)})</TabsTrigger>
+            <TabsTrigger value="shortBreak" className="flex-1 justify-center items-center whitespace-nowrap rounded-sm px-4 py-2 text-xs sm:text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm">Short Break ({formatTime(SHORT_BREAK_DURATION)})</TabsTrigger>
+            <TabsTrigger value="longBreak" className="flex-1 justify-center items-center whitespace-nowrap rounded-sm px-4 py-2 text-xs sm:text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm">Long Break ({formatTime(LONG_BREAK_DURATION)})</TabsTrigger>
           </TabsList>
         </Tabs>
 
