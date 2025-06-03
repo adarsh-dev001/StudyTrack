@@ -191,7 +191,13 @@ const nextConfig: NextConfig = {
       },
       {
         protocol: 'https',
-        hostname: 'img.freepik.com', // Added new pattern for freepik
+        hostname: 'img.freepik.com',
+        port: '',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'i0.wp.com', // Added new pattern
         port: '',
         pathname: '/**',
       }
