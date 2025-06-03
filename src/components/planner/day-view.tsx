@@ -22,6 +22,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/auth-context";
@@ -41,7 +42,7 @@ import type { Task, Priority } from "./planner-types";
 import { subjects, getPriorityBadgeInfo, getSubjectInfo, hourToDisplayTime } from "./planner-utils";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
-import { recordPlatformInteraction } from '@/lib/activity-utils'; // Added import
+import { recordPlatformInteraction } from '@/lib/activity-utils';
 
 const NewTaskDialogContent = React.lazy(() => import('./new-task-dialog-content'));
 
@@ -148,7 +149,7 @@ export default function DayView({ selectedDate, selectedSubjectFilter }: DayView
 
     try {
       await addDoc(collection(db, "users", currentUser.uid, "plannerTasks"), taskToSave);
-      if (currentUser.uid) { // Record interaction on task creation
+      if (currentUser.uid) { 
         await recordPlatformInteraction(currentUser.uid);
       }
       setNewTask({
@@ -171,7 +172,7 @@ export default function DayView({ selectedDate, selectedSubjectFilter }: DayView
     const newStatus = taskToUpdate.status === "completed" ? "pending" : "completed";
     try {
       await updateDoc(doc(db, "users", currentUser.uid, "plannerTasks", taskId), { status: newStatus });
-      if (newStatus === "completed" && currentUser.uid) { // Record interaction on task completion
+      if (newStatus === "completed" && currentUser.uid) { 
          await recordPlatformInteraction(currentUser.uid);
       }
     } catch (error) {
@@ -184,7 +185,7 @@ export default function DayView({ selectedDate, selectedSubjectFilter }: DayView
     if (!window.confirm("Are you sure you want to delete this task?")) return;
     try {
       await deleteDoc(doc(db, "users", currentUser.uid, "plannerTasks", taskId));
-       if (currentUser.uid) { // Record interaction on task deletion
+       if (currentUser.uid) { 
         await recordPlatformInteraction(currentUser.uid);
       }
     } catch (error) {
@@ -195,38 +196,59 @@ export default function DayView({ selectedDate, selectedSubjectFilter }: DayView
   const renderTaskCard = (task: Task) => {
     const subjectInfo = getSubjectInfo(task.subject);
     const priorityInfo = getPriorityBadgeInfo(task.priority);
+    const endTime = hourToDisplayTime(task.startHour + task.duration);
+
     return (
-      <Card key={task.id} className={cn("mb-2 sm:mb-3 shadow-md border", subjectInfo.color, task.status === "completed" ? "opacity-60 line-through" : "")}>
-        <CardHeader className="pb-1.5 sm:pb-2 pt-2 sm:pt-3 px-2 sm:px-3">
-          <div className="flex justify-between items-start gap-1 sm:gap-2">
-            <CardTitle className={cn("text-sm sm:text-base font-semibold leading-tight break-words", subjectInfo.textColor)} title={task.title}>
-              {task.title}
-            </CardTitle>
-            <div className="flex items-center space-x-0.5 sm:space-x-1 shrink-0">
-              <Button variant="ghost" size="icon" className="h-5 w-5 sm:h-6 sm:w-6" onClick={() => toggleTaskStatus(task.id)} title={task.status === "completed" ? "Mark pending" : "Mark completed"}>
-                {task.status === "completed" ? <CheckCircle2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-green-600" /> : <CheckCircle2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 opacity-50 hover:opacity-100" />}
-              </Button>
-              <Button variant="ghost" size="icon" className="h-5 w-5 sm:h-6 sm:w-6" onClick={() => handleDeleteTask(task.id)} title="Delete task">
-                <Trash2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-red-500 hover:text-red-700" />
-              </Button>
-            </div>
-          </div>
-          <div className={cn("text-xs opacity-90", subjectInfo.textColor)}>
-            <span className="font-medium">{subjectInfo.name}</span>
-            {task.topic && <span className="ml-1 break-all"> - {task.topic}</span>}
-          </div>
-        </CardHeader>
-        <CardContent className="px-2 sm:px-3 pb-2 sm:pb-3 text-xs">
-          {task.description && <p className={cn("mb-1.5 sm:mb-2 opacity-80 break-words", subjectInfo.textColor)}>{task.description}</p>}
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-1 sm:gap-2">
-            <div className={cn("flex items-center opacity-80", subjectInfo.textColor)}>
-              <Clock className="h-3 w-3 mr-1" />
-              <span>{hourToDisplayTime(task.startHour)} ({task.duration} {task.duration === 1 ? "hr" : "hrs"})</span>
-            </div>
-            <Badge variant={priorityInfo.variant} className={cn("mt-1 sm:mt-0 text-[10px] sm:text-xs px-1.5 py-0.5", priorityInfo.className)}>{priorityInfo.text}</Badge>
-          </div>
-        </CardContent>
-      </Card>
+      <TooltipProvider key={task.id}>
+        <Tooltip delayDuration={300}>
+          <TooltipTrigger asChild>
+            <Card className={cn(
+                "mb-2 sm:mb-3 shadow-md border transition-all duration-200 ease-out transform hover:shadow-lg hover:scale-[1.01]", 
+                subjectInfo.color, 
+                task.status === "completed" ? "opacity-60 line-through" : ""
+            )}>
+              <CardHeader className="pb-1.5 sm:pb-2 pt-2 sm:pt-3 px-2 sm:px-3">
+                <div className="flex justify-between items-start gap-1 sm:gap-2">
+                  <CardTitle className={cn("text-sm sm:text-base font-semibold leading-tight break-words", subjectInfo.textColor)} title={task.title}>
+                    {task.title}
+                  </CardTitle>
+                  <div className="flex items-center space-x-0.5 sm:space-x-1 shrink-0">
+                    <Button variant="ghost" size="icon" className="h-5 w-5 sm:h-6 sm:w-6" onClick={() => toggleTaskStatus(task.id)} title={task.status === "completed" ? "Mark pending" : "Mark completed"}>
+                      {task.status === "completed" ? <CheckCircle2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-green-600" /> : <CheckCircle2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 opacity-50 hover:opacity-100" />}
+                    </Button>
+                    <Button variant="ghost" size="icon" className="h-5 w-5 sm:h-6 sm:w-6" onClick={() => handleDeleteTask(task.id)} title="Delete task">
+                      <Trash2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-red-500 hover:text-red-700" />
+                    </Button>
+                  </div>
+                </div>
+                <div className={cn("text-xs opacity-90", subjectInfo.textColor)}>
+                  <span className="font-medium">{subjectInfo.name}</span>
+                  {task.topic && <span className="ml-1 break-all"> - {task.topic}</span>}
+                </div>
+              </CardHeader>
+              <CardContent className="px-2 sm:px-3 pb-2 sm:pb-3 text-xs">
+                {task.description && <p className={cn("mb-1.5 sm:mb-2 opacity-80 break-words", subjectInfo.textColor)}>{task.description}</p>}
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-1 sm:gap-2">
+                  <div className={cn("flex items-center opacity-80", subjectInfo.textColor)}>
+                    <Clock className="h-3 w-3 mr-1" />
+                    <span>{hourToDisplayTime(task.startHour)} ({task.duration} {task.duration === 1 ? "hr" : "hrs"})</span>
+                  </div>
+                  <Badge variant={priorityInfo.variant} className={cn("mt-1 sm:mt-0 text-[10px] sm:text-xs px-1.5 py-0.5", priorityInfo.className)}>{priorityInfo.text}</Badge>
+                </div>
+              </CardContent>
+            </Card>
+          </TooltipTrigger>
+          <TooltipContent side="top" align="center" className="w-64">
+            <p className="font-semibold text-sm">{task.title}</p>
+            <p className="text-xs text-muted-foreground">Subject: {subjectInfo.name}</p>
+            {task.topic && <p className="text-xs text-muted-foreground">Topic: {task.topic}</p>}
+            <p className="text-xs text-muted-foreground">Time: {hourToDisplayTime(task.startHour)} - {endTime}</p>
+            <p className="text-xs text-muted-foreground">Duration: {task.duration} hr(s)</p>
+            <p className="text-xs text-muted-foreground capitalize">Priority: {task.priority}</p>
+            {task.description && <p className="text-xs text-muted-foreground mt-1">Notes: {task.description}</p>}
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
     );
   };
 
@@ -268,7 +290,7 @@ export default function DayView({ selectedDate, selectedSubjectFilter }: DayView
         </h2>
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
-            <Button size="sm" className="w-full sm:w-auto text-xs sm:text-sm">
+            <Button size="sm" className="w-full sm:w-auto text-xs sm:text-sm" variant="default">
               <Plus className="mr-1.5 h-3.5 w-3.5 sm:h-4 sm:w-4" /> Add Task
             </Button>
           </DialogTrigger>

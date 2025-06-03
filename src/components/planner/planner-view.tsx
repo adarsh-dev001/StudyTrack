@@ -24,6 +24,7 @@ import {
   DialogTitle,
   DialogTrigger
 } from "@/components/ui/dialog"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { cn } from "@/lib/utils"
 import { useAuth } from "@/contexts/auth-context"
@@ -40,10 +41,10 @@ import {
 } from "firebase/firestore"
 import { Skeleton } from "@/components/ui/skeleton";
 import type { Task, Priority } from "./planner-types"; 
-import { subjects, getPriorityBadgeInfo, getSubjectInfo } from "./planner-utils"; 
+import { subjects, getPriorityBadgeInfo, getSubjectInfo, hourToDisplayTime } from "./planner-utils"; 
 import { Badge } from "@/components/ui/badge"; 
 import { startOfWeek, addDays, format } from "date-fns";
-import { recordPlatformInteraction } from '@/lib/activity-utils'; // Added import
+import { recordPlatformInteraction } from '@/lib/activity-utils';
 
 const NewTaskDialogContent = React.lazy(() => import('./new-task-dialog-content'));
 
@@ -168,7 +169,7 @@ export function PlannerView({ selectedDate, selectedSubjectFilter, onDateChange,
     try {
       const tasksCollectionRef = collection(db, "users", currentUser.uid, "plannerTasks");
       await addDoc(tasksCollectionRef, taskToSave);
-      if (currentUser.uid) { // Record interaction on task creation
+      if (currentUser.uid) { 
         await recordPlatformInteraction(currentUser.uid);
       }
       setNewTask({ 
@@ -213,7 +214,7 @@ export function PlannerView({ selectedDate, selectedSubjectFilter, onDateChange,
     const taskDocRef = doc(db, "users", currentUser.uid, "plannerTasks", draggedTask.id);
     try {
       await updateDoc(taskDocRef, { day, startHour: hour });
-      if (currentUser.uid) { // Record interaction on task move/update
+      if (currentUser.uid) { 
         await recordPlatformInteraction(currentUser.uid);
       }
     } catch (error) {
@@ -232,7 +233,7 @@ export function PlannerView({ selectedDate, selectedSubjectFilter, onDateChange,
     const taskDocRef = doc(db, "users", currentUser.uid, "plannerTasks", taskId);
     try {
       await updateDoc(taskDocRef, { status: newStatus });
-      if (newStatus === "completed" && currentUser.uid) { // Record interaction on task completion
+      if (newStatus === "completed" && currentUser.uid) { 
          await recordPlatformInteraction(currentUser.uid);
       }
     } catch (error) {
@@ -247,7 +248,7 @@ export function PlannerView({ selectedDate, selectedSubjectFilter, onDateChange,
     const taskDocRef = doc(db, "users", currentUser.uid, "plannerTasks", taskId);
     try {
       await deleteDoc(taskDocRef);
-      if (currentUser.uid) { // Record interaction on task deletion
+      if (currentUser.uid) { 
         await recordPlatformInteraction(currentUser.uid);
       }
     } catch (error) {
@@ -266,62 +267,77 @@ export function PlannerView({ selectedDate, selectedSubjectFilter, onDateChange,
   const renderTask = (task: Task) => {
     const subjectInfo = getSubjectInfo(task.subject);
     const priorityInfo = getPriorityBadgeInfo(task.priority);
+    const endTime = hourToDisplayTime(task.startHour + task.duration);
 
     return (
-      <div
-        key={task.id}
-        draggable
-        onDragStart={(e) => handleDragStart(task, e)}
-        className={cn(
-          "rounded-md p-2 mb-1.5 cursor-move shadow-sm border relative group",
-          task.status === "completed" ? "opacity-60 bg-opacity-70 line-through" : "opacity-100",
-          subjectInfo.color,
-          "hover:shadow-md transition-shadow text-sm"
-        )}
-        style={{ minHeight: `${Math.max(1, task.duration) * 2.25}rem` }} 
-      >
-        <div className="flex items-start justify-between">
-          <div className="flex-1 overflow-hidden pr-1">
-            <div className="flex items-center">
-              <GripVertical className="h-4 w-4 mr-1 opacity-50 shrink-0 group-hover:opacity-70" />
-              <h4 className="font-semibold truncate" title={task.title}>{task.title}</h4>
+    <TooltipProvider key={task.id}>
+      <Tooltip delayDuration={300}>
+        <TooltipTrigger asChild>
+          <div
+            draggable
+            onDragStart={(e) => handleDragStart(task, e)}
+            className={cn(
+              "rounded-md p-2 mb-1.5 cursor-move shadow-sm border relative group transition-all duration-200 ease-out transform hover:shadow-lg hover:scale-[1.01]",
+              task.status === "completed" ? "opacity-60 bg-opacity-70 line-through" : "opacity-100",
+              subjectInfo.color,
+              "text-sm"
+            )}
+            style={{ minHeight: `${Math.max(1, task.duration) * 2.25}rem` }} 
+          >
+            <div className="flex items-start justify-between">
+              <div className="flex-1 overflow-hidden pr-1">
+                <div className="flex items-center">
+                  <GripVertical className="h-4 w-4 mr-1 opacity-50 shrink-0 group-hover:opacity-70" />
+                  <h4 className="font-semibold truncate" title={task.title}>{task.title}</h4>
+                </div>
+                <div className="text-xs mt-0.5 mb-1 opacity-80">
+                  <span className="font-medium">{subjectInfo.name}</span>
+                  {task.topic && <span className="truncate block" title={task.topic}> {task.topic}</span>}
+                </div>
+                <div className="flex items-center text-xs opacity-70">
+                  <Clock className="h-3 w-3 mr-1 shrink-0" />
+                  <span>{task.duration} {task.duration === 1 ? 'hr' : 'hrs'}</span>
+                </div>
+              </div>
+              <div className="flex flex-col items-center ml-1 space-y-0.5">
+                <button
+                  onClick={() => toggleTaskStatus(task.id)}
+                  className="p-0.5 rounded-full hover:bg-black/10 dark:hover:bg-white/10 transition-colors"
+                  title={task.status === "completed" ? "Mark as pending" : "Mark as completed"}
+                >
+                  {task.status === "completed" ? (
+                    <CheckCircle2 className="h-4 w-4 text-green-600 dark:text-green-400" />
+                  ) : (
+                    <CheckCircle2 className="h-4 w-4 opacity-40 hover:opacity-70" />
+                  )}
+                </button>
+                <button
+                  onClick={() => handleDeleteTask(task.id)}
+                  className="p-0.5 rounded-full hover:bg-black/10 dark:hover:bg-white/10 transition-colors"
+                  title="Delete task"
+                >
+                  <Trash2 className="h-4 w-4 text-red-500 hover:text-red-700 dark:hover:text-red-400" />
+                </button>
+              </div>
             </div>
-            <div className="text-xs mt-0.5 mb-1 opacity-80">
-              <span className="font-medium">{subjectInfo.name}</span>
-              {task.topic && <span className="truncate block" title={task.topic}> {task.topic}</span>}
-            </div>
-            <div className="flex items-center text-xs opacity-70">
-              <Clock className="h-3 w-3 mr-1 shrink-0" />
-              <span>{task.duration} {task.duration === 1 ? 'hr' : 'hrs'}</span>
-            </div>
+            {task.priority && (
+              <div className="mt-1.5">
+                <Badge variant={priorityInfo.variant} className={priorityInfo.className}>{priorityInfo.text}</Badge>
+              </div>
+            )}
           </div>
-          <div className="flex flex-col items-center ml-1 space-y-0.5">
-            <button
-              onClick={() => toggleTaskStatus(task.id)}
-              className="p-0.5 rounded-full hover:bg-black/10 dark:hover:bg-white/10 transition-colors"
-              title={task.status === "completed" ? "Mark as pending" : "Mark as completed"}
-            >
-              {task.status === "completed" ? (
-                <CheckCircle2 className="h-4 w-4 text-green-600 dark:text-green-400" />
-              ) : (
-                <CheckCircle2 className="h-4 w-4 opacity-40 hover:opacity-70" />
-              )}
-            </button>
-            <button
-              onClick={() => handleDeleteTask(task.id)}
-              className="p-0.5 rounded-full hover:bg-black/10 dark:hover:bg-white/10 transition-colors"
-              title="Delete task"
-            >
-              <Trash2 className="h-4 w-4 text-red-500 hover:text-red-700 dark:hover:text-red-400" />
-            </button>
-          </div>
-        </div>
-        {task.priority && (
-          <div className="mt-1.5">
-            <Badge variant={priorityInfo.variant} className={priorityInfo.className}>{priorityInfo.text}</Badge>
-          </div>
-        )}
-      </div>
+        </TooltipTrigger>
+        <TooltipContent side="top" align="center" className="w-64">
+          <p className="font-semibold text-sm">{task.title}</p>
+          <p className="text-xs text-muted-foreground">Subject: {subjectInfo.name}</p>
+          {task.topic && <p className="text-xs text-muted-foreground">Topic: {task.topic}</p>}
+          <p className="text-xs text-muted-foreground">Time: {hourToDisplayTime(task.startHour)} - {endTime}</p>
+          <p className="text-xs text-muted-foreground">Duration: {task.duration} hr(s)</p>
+          <p className="text-xs text-muted-foreground capitalize">Priority: {task.priority}</p>
+          {task.description && <p className="text-xs text-muted-foreground mt-1">Notes: {task.description}</p>}
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
     )
   }
 
@@ -338,8 +354,6 @@ export function PlannerView({ selectedDate, selectedSubjectFilter, onDateChange,
     }
 
     const tasksForCurrentWeekView = tasks.filter(task => {
-        // Week view usually shows all tasks for the week regardless of the specific 'selectedDate' within that week.
-        // The filtering by 'day' (0-6) and 'startHour' happens in the rendering loop.
         return true; 
     });
 
@@ -362,7 +376,6 @@ export function PlannerView({ selectedDate, selectedSubjectFilter, onDateChange,
                 : "Get started by adding your first study task to the planner!"
               }
             </p>
-            {/* The Add Task button is now at the top, so no need to repeat it here specifically for empty state */}
           </CardContent>
         </Card>
       );
@@ -443,7 +456,7 @@ export function PlannerView({ selectedDate, selectedSubjectFilter, onDateChange,
         <div className="flex justify-end mb-3 px-1 shrink-0">
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogTrigger asChild>
-              <Button size="sm">
+              <Button size="sm" variant="default">
                 <Plus className="mr-2 h-4 w-4" /> Add Task
               </Button>
             </DialogTrigger>
