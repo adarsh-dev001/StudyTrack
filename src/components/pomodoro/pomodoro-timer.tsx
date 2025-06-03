@@ -14,6 +14,7 @@ import { useToast } from '@/hooks/use-toast';
 import { ALL_SOUNDTRACK_DEFINITIONS, type SoundtrackDefinition } from '@/lib/soundtracks';
 import { DEFAULT_THEME_ID } from '@/lib/themes';
 import FocusAudioPlayer from '@/components/audio/FocusAudioPlayer';
+import { recordPlatformInteraction } from '@/lib/activity-utils'; // Added import
 
 const POMODORO_DURATION = 25 * 60; 
 const SHORT_BREAK_DURATION = 5 * 60; 
@@ -47,8 +48,11 @@ export function PomodoroTimer() {
     return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
   };
 
-  const awardCoinsForPomodoro = async () => {
+  const awardCoinsForPomodoro = useCallback(async () => {
     if (!currentUser?.uid || !db) return;
+
+    // Record interaction first
+    await recordPlatformInteraction(currentUser.uid);
 
     const userProfileDocRef = doc(db, 'users', currentUser.uid, 'userProfile', 'profile');
     try {
@@ -59,7 +63,8 @@ export function PomodoroTimer() {
         earnedBadgeIds: [],
         purchasedItemIds: [],
         activeThemeId: DEFAULT_THEME_ID,
-        dailyChallengeStatus: {}
+        dailyChallengeStatus: {},
+        lastInteractionDates: [],
       };
 
       if (docSnap.exists()) {
@@ -87,7 +92,7 @@ export function PomodoroTimer() {
         variant: 'destructive',
       });
     }
-  };
+  }, [currentUser, toast]); // Added currentUser and toast to dependencies
 
   useEffect(() => {
     let interval: NodeJS.Timeout | null = null;
@@ -105,7 +110,7 @@ export function PomodoroTimer() {
     if (timeRemaining === 0 && isRunning) {
       if (mode === 'pomodoro') {
         if (currentUser) {
-          awardCoinsForPomodoro();
+          awardCoinsForPomodoro(); // This now also records interaction
         }
         const newPomodorosCompleted = pomodorosCompletedCycle + 1;
         setPomodorosCompletedCycle(newPomodorosCompleted);
@@ -251,3 +256,4 @@ export function PomodoroTimer() {
     </Card>
   );
 }
+

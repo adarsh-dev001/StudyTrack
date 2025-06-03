@@ -10,6 +10,7 @@ import { useAuth } from '@/contexts/auth-context';
 import { db } from '@/lib/firebase';
 import { doc, getDoc, setDoc, updateDoc, Timestamp } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
+import { recordPlatformInteraction } from '@/lib/activity-utils'; // Added import
 
 const COINS_FOR_TASK = 2;
 
@@ -37,10 +38,16 @@ export default function TasksPage() {
       completed: false,
     };
     setTasks((prevTasks) => [newTask, ...prevTasks]);
+    // Optionally record interaction on task creation if desired
+    // if (currentUser?.uid) {
+    //   recordPlatformInteraction(currentUser.uid);
+    // }
   };
 
-  const awardCoinsForTask = async () => {
+  const awardCoinsAndRecordInteraction = async () => {
     if (!currentUser?.uid || !db) return;
+
+    await recordPlatformInteraction(currentUser.uid); // Record interaction
 
     const userProfileDocRef = doc(db, 'users', currentUser.uid, 'userProfile', 'profile');
     try {
@@ -52,12 +59,16 @@ export default function TasksPage() {
         await updateDoc(userProfileDocRef, { coins: newCoins });
       } else {
         newCoins = COINS_FOR_TASK;
-        await setDoc(userProfileDocRef, {
-          coins: newCoins,
-          xp: 0, 
-          earnedBadgeIds: [],
-          purchasedItemIds: []
-        }, { merge: true });
+        // Ensure all fields for UserProfileData are considered if creating a new profile
+        const initialProfile = {
+            coins: newCoins,
+            xp: 0, 
+            earnedBadgeIds: [],
+            purchasedItemIds: [],
+            lastInteractionDates: [new Date().toISOString().split('T')[0]], // Add current date
+            onboardingCompleted: false, // Or based on app logic
+        };
+        await setDoc(userProfileDocRef, initialProfile, { merge: true });
       }
       toast({
         title: 'Task Completed! 👍',
@@ -88,7 +99,7 @@ export default function TasksPage() {
     );
 
     if (taskJustCompleted && currentUser) {
-      awardCoinsForTask();
+      awardCoinsAndRecordInteraction();
     }
   };
 
@@ -120,7 +131,7 @@ export default function TasksPage() {
           <CardHeader className="p-4 sm:p-6">
             <CardTitle className="text-lg sm:text-xl font-semibold">Pending Tasks ({pendingTasks.length})</CardTitle>
           </CardHeader>
-          <CardContent className="p-0 sm:p-2 md:p-0"> {/* Adjust padding for scroll area */}
+          <CardContent className="p-0 sm:p-2 md:p-0">
             {pendingTasks.length > 0 ? (
               <ScrollArea className="h-[250px] sm:h-[300px] px-4 sm:px-4 md:px-6">
                 <div className="space-y-0">
@@ -178,3 +189,4 @@ export default function TasksPage() {
     </div>
   );
 }
+

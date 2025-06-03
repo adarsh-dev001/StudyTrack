@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react'; // Added useEffect, useRef
+import React, { useState, useEffect, useRef } from 'react'; 
 import { useForm, type SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -17,6 +17,8 @@ import { Loader2, Wand2, Sparkles, ListChecks, HelpCircle, CheckCircle, XCircle,
 import { summarizeStudyMaterial, type SummarizeStudyMaterialOutput, type MCQ } from '@/ai/flows/summarize-study-material';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+import { useAuth } from '@/contexts/auth-context'; // Added import
+import { recordPlatformInteraction } from '@/lib/activity-utils'; // Added import
 
 const summarizerFormSchema = z.object({
   material: z.string().min(50, { message: 'Study material must be at least 50 characters long.' }).max(10000, { message: 'Study material cannot exceed 10,000 characters.' }),
@@ -31,11 +33,12 @@ interface MCQWithUserAnswer extends MCQ {
 }
 
 export default function MaterialSummarizerPage() {
+  const { currentUser } = useAuth(); // Added
   const [analysisResult, setAnalysisResult] = useState<SummarizeStudyMaterialOutput | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [mcqAnswers, setMcqAnswers] = useState<Record<number, MCQWithUserAnswer>>({});
   const { toast } = useToast();
-  const resultsRef = useRef<HTMLDivElement>(null); // Ref for scrolling
+  const resultsRef = useRef<HTMLDivElement>(null); 
 
   const form = useForm<SummarizerFormData>({
     resolver: zodResolver(summarizerFormSchema),
@@ -91,7 +94,7 @@ export default function MaterialSummarizerPage() {
     }));
   };
 
-  const handleShowAnswer = (questionIndex: number) => {
+  const handleShowAnswer = async (questionIndex: number) => { // Made async
     setMcqAnswers(prev => ({
       ...prev,
       [questionIndex]: {
@@ -99,6 +102,9 @@ export default function MaterialSummarizerPage() {
         answerRevealed: true,
       }
     }));
+    if (currentUser?.uid) { // Record interaction
+      await recordPlatformInteraction(currentUser.uid);
+    }
   };
 
   return (
@@ -306,3 +312,4 @@ export default function MaterialSummarizerPage() {
     </div>
   );
 }
+

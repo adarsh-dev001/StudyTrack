@@ -41,6 +41,7 @@ import type { Task, Priority } from "./planner-types";
 import { subjects, getPriorityBadgeInfo, getSubjectInfo, hourToDisplayTime } from "./planner-utils";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
+import { recordPlatformInteraction } from '@/lib/activity-utils'; // Added import
 
 const NewTaskDialogContent = React.lazy(() => import('./new-task-dialog-content'));
 
@@ -147,6 +148,9 @@ export default function DayView({ selectedDate, selectedSubjectFilter }: DayView
 
     try {
       await addDoc(collection(db, "users", currentUser.uid, "plannerTasks"), taskToSave);
+      if (currentUser.uid) { // Record interaction on task creation
+        await recordPlatformInteraction(currentUser.uid);
+      }
       setNewTask({
         title: "", topic: "", description: "",
         priority: "medium", status: "pending", duration: 1,
@@ -167,6 +171,9 @@ export default function DayView({ selectedDate, selectedSubjectFilter }: DayView
     const newStatus = taskToUpdate.status === "completed" ? "pending" : "completed";
     try {
       await updateDoc(doc(db, "users", currentUser.uid, "plannerTasks", taskId), { status: newStatus });
+      if (newStatus === "completed" && currentUser.uid) { // Record interaction on task completion
+         await recordPlatformInteraction(currentUser.uid);
+      }
     } catch (error) {
       console.error("Error updating task status: ", error);
     }
@@ -177,6 +184,9 @@ export default function DayView({ selectedDate, selectedSubjectFilter }: DayView
     if (!window.confirm("Are you sure you want to delete this task?")) return;
     try {
       await deleteDoc(doc(db, "users", currentUser.uid, "plannerTasks", taskId));
+       if (currentUser.uid) { // Record interaction on task deletion
+        await recordPlatformInteraction(currentUser.uid);
+      }
     } catch (error) {
       console.error("Error deleting task: ", error);
     }
@@ -322,3 +332,4 @@ export default function DayView({ selectedDate, selectedSubjectFilter }: DayView
     </div>
   );
 }
+

@@ -30,4 +30,8 @@ export interface UserProfileData {
   motivationType?: string;
 
   onboardingCompleted?: boolean;
+
+  // New field for interaction tracking
+  lastInteractionDates?: string[]; // Stores unique YYYY-MM-DD date strings
 }
+

@@ -43,6 +43,7 @@ import type { Task, Priority } from "./planner-types";
 import { subjects, getPriorityBadgeInfo, getSubjectInfo } from "./planner-utils"; 
 import { Badge } from "@/components/ui/badge"; 
 import { startOfWeek, addDays, format } from "date-fns";
+import { recordPlatformInteraction } from '@/lib/activity-utils'; // Added import
 
 const NewTaskDialogContent = React.lazy(() => import('./new-task-dialog-content'));
 
@@ -167,6 +168,9 @@ export function PlannerView({ selectedDate, selectedSubjectFilter, onDateChange,
     try {
       const tasksCollectionRef = collection(db, "users", currentUser.uid, "plannerTasks");
       await addDoc(tasksCollectionRef, taskToSave);
+      if (currentUser.uid) { // Record interaction on task creation
+        await recordPlatformInteraction(currentUser.uid);
+      }
       setNewTask({ 
         title: "",
         topic: "",
@@ -209,6 +213,9 @@ export function PlannerView({ selectedDate, selectedSubjectFilter, onDateChange,
     const taskDocRef = doc(db, "users", currentUser.uid, "plannerTasks", draggedTask.id);
     try {
       await updateDoc(taskDocRef, { day, startHour: hour });
+      if (currentUser.uid) { // Record interaction on task move/update
+        await recordPlatformInteraction(currentUser.uid);
+      }
     } catch (error) {
       console.error("Error updating task position: ", error);
     }
@@ -225,6 +232,9 @@ export function PlannerView({ selectedDate, selectedSubjectFilter, onDateChange,
     const taskDocRef = doc(db, "users", currentUser.uid, "plannerTasks", taskId);
     try {
       await updateDoc(taskDocRef, { status: newStatus });
+      if (newStatus === "completed" && currentUser.uid) { // Record interaction on task completion
+         await recordPlatformInteraction(currentUser.uid);
+      }
     } catch (error) {
       console.error("Error updating task status: ", error);
     }
@@ -237,6 +247,9 @@ export function PlannerView({ selectedDate, selectedSubjectFilter, onDateChange,
     const taskDocRef = doc(db, "users", currentUser.uid, "plannerTasks", taskId);
     try {
       await deleteDoc(taskDocRef);
+      if (currentUser.uid) { // Record interaction on task deletion
+        await recordPlatformInteraction(currentUser.uid);
+      }
     } catch (error) {
       console.error("Error deleting task: ", error);
     }
@@ -325,6 +338,8 @@ export function PlannerView({ selectedDate, selectedSubjectFilter, onDateChange,
     }
 
     const tasksForCurrentWeekView = tasks.filter(task => {
+        // Week view usually shows all tasks for the week regardless of the specific 'selectedDate' within that week.
+        // The filtering by 'day' (0-6) and 'startHour' happens in the rendering loop.
         return true; 
     });
 

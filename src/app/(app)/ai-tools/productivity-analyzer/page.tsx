@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useForm, type SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -9,9 +9,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Loader2, Lightbulb, Zap, Brain, Award, TrendingUp, Rocket, Target as TargetIcon } from 'lucide-react';
+import { Loader2, Lightbulb, Zap, Brain, Award, TrendingUp, Rocket, Target as TargetIcon, Lock, Info } from 'lucide-react';
 import { analyzeProductivityData, type AnalyzeProductivityDataInput, type AnalyzeProductivityDataOutput } from '@/ai/flows/analyze-productivity-data';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/contexts/auth-context';
+import { getUnlockAndProgressStatus, type UnlockStatus } from '@/lib/activity-utils';
+import { Progress } from '@/components/ui/progress';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 
 const productivityAnalyzerFormSchema = z.object({
   studyHours: z.coerce.number().min(0, { message: 'Study hours cannot be negative.' }).max(100, { message: 'Study hours seem too high for a week.' }),
@@ -28,9 +32,35 @@ const productivityAnalyzerFormSchema = z.object({
 type ProductivityAnalyzerFormData = z.infer<typeof productivityAnalyzerFormSchema>;
 
 export default function ProductivityAnalyzerPage() {
+  const { currentUser } = useAuth();
+  const { toast } = useToast();
   const [analysisResult, setAnalysisResult] = useState<AnalyzeProductivityDataOutput | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const { toast } = useToast();
+  const [unlockState, setUnlockState] = useState<UnlockStatus | null>(null);
+  const [isLoadingUnlockStatus, setIsLoadingUnlockStatus] = useState(true);
+  const [hasShownUnlockToast, setHasShownUnlockToast] = useState(false);
+
+
+  useEffect(() => {
+    if (currentUser?.uid) {
+      setIsLoadingUnlockStatus(true);
+      getUnlockAndProgressStatus(currentUser.uid).then(status => {
+        const previouslyLocked = unlockState ? !unlockState.unlocked : true; // Assume locked if no previous state
+        setUnlockState(status);
+        if (status.unlocked && previouslyLocked && !hasShownUnlockToast) {
+          toast({
+            title: '🎉 Productivity Analysis AI Unlocked! 🎉',
+            description: "You've gained access to your personal productivity coach!",
+          });
+          setHasShownUnlockToast(true);
+        }
+        setIsLoadingUnlockStatus(false);
+      });
+    } else {
+      setUnlockState({ unlocked: false, displayProgress: 0, progressTarget: 7, message: "Log in to access this tool.", unlockReason: 'none', studyStreakCount: 0, interactionStreakCount: 0 });
+      setIsLoadingUnlockStatus(false);
+    }
+  }, [currentUser?.uid, toast, hasShownUnlockToast, unlockState]); // Added unlockState to deps for re-check if needed.
 
   const form = useForm<ProductivityAnalyzerFormData>({
     resolver: zodResolver(productivityAnalyzerFormSchema),
@@ -86,6 +116,73 @@ export default function ProductivityAnalyzerPage() {
     }
   };
 
+  if (isLoadingUnlockStatus || !unlockState) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[calc(100vh-200px)] text-center p-6">
+        <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
+        <p className="text-muted-foreground">Checking access to AI Analyzer...</p>
+      </div>
+    );
+  }
+
+  if (!unlockState.unlocked) {
+    return (
+      <div className="w-full space-y-6 flex flex-col items-center justify-center p-4">
+        <Card className="shadow-xl w-full max-w-lg text-center border-primary/30 bg-gradient-to-br from-card to-primary/5">
+          <CardHeader className="p-6">
+            <div className="mx-auto bg-primary/10 p-3 rounded-full w-fit mb-3">
+              <Lock className="h-10 w-10 text-primary" />
+            </div>
+            <CardTitle className="text-xl sm:text-2xl font-bold text-foreground">Productivity Analysis AI Locked</CardTitle>
+            <CardDescription className="text-sm sm:text-md text-muted-foreground mt-1">
+              🎯 “Complete your 7-day activity streak (study or daily platform use) to unlock your personal productivity coach. Let’s break down how you're studying and help you improve!”
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4 p-6 pt-0">
+            <div className="space-y-1.5">
+              <div className="flex justify-between items-center text-xs mb-1">
+                <span className="text-muted-foreground">Progress:</span>
+                <span className="font-medium text-primary">{unlockState.message}</span>
+              </div>
+              <Progress value={(unlockState.displayProgress / unlockState.progressTarget) * 100} className="h-3" />
+            </div>
+            <p className="text-xs text-muted-foreground">
+                Current Study Streak: <strong>{unlockState.studyStreakCount} days</strong>.
+                Consecutive Interaction Days: <strong>{unlockState.interactionStreakCount} days</strong>.
+            </p>
+            <Dialog>
+              <DialogTrigger asChild>
+                <Button variant="outline" size="sm" className="text-xs">
+                  <Info className="mr-1.5 h-3.5 w-3.5" /> How to Unlock & Learn More
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-md">
+                <DialogHeader>
+                  <DialogTitle className="flex items-center">
+                    <Zap className="mr-2 h-5 w-5 text-primary" /> Unlock Your AI Productivity Coach
+                  </DialogTitle>
+                  <DialogDescription className="text-sm text-left pt-2 space-y-1">
+                    This powerful AI tool analyzes your study patterns to provide personalized insights and recommendations.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="py-2 text-sm space-y-3">
+                  <p><strong className="text-foreground">What it does:</strong> Identifies your strong/weak subjects, detects burnout signs, and offers actionable tips for time management and study efficiency.</p>
+                  <p><strong className="text-foreground">Unlock Conditions:</strong></p>
+                  <ul className="list-disc list-inside pl-4 space-y-1 text-muted-foreground">
+                    <li>Achieve a <strong className="text-foreground">7-day study streak</strong> by checking in daily.</li>
+                    <li>OR, interact with StudyTrack (complete Pomodoros, tasks, or quizzes) for <strong className="text-foreground">7 consecutive days</strong>.</li>
+                  </ul>
+                  <p className="text-foreground font-medium pt-1">Keep up the great work, you're almost there!</p>
+                </div>
+              </DialogContent>
+            </Dialog>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // If unlocked, show the original form
   return (
     <div className="w-full space-y-6">
       <div>
@@ -267,3 +364,4 @@ export default function ProductivityAnalyzerPage() {
   );
 }
     
+
