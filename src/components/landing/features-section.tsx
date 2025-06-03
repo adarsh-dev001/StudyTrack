@@ -10,11 +10,12 @@ import {
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import Image from 'next/image';
+import { Badge } from '@/components/ui/badge'; // Added import for Badge
 
 const featureShowcaseData = [
   {
     id: 'ai-tools',
-    icon: Brain, // Changed from BrainCircuit
+    icon: Brain,
     title: 'AI Tools That Think Like a Mentor',
     description: 'Leverage cutting-edge AI to supercharge your study process. Get smart syllabus suggestions, instant material summaries, and generate custom quizzes tailored to your needs.',
     details: [
@@ -31,7 +32,7 @@ const featureShowcaseData = [
   },
   {
     id: 'gamification',
-    icon: Gamepad, // Changed from Gamepad2
+    icon: Gamepad,
     title: 'Gamified Study Experience',
     description: 'Turn study into an adventure! Earn XP for completing Pomodoros, acing quizzes, and consistent planning. Unlock prestigious badges and climb the leaderboards.',
     details: [
@@ -204,3 +205,4 @@ export default function FeaturesSection() {
     </section>
   );
 }
+
