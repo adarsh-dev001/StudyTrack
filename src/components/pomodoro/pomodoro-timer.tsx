@@ -173,89 +173,87 @@ export function PomodoroTimer() {
 
   return (
     <Card className="w-full max-w-sm sm:max-w-md mx-auto shadow-xl">
-      <CardHeader className="text-center p-4 sm:p-6">
-        <CardTitle className="font-headline text-xl sm:text-2xl flex items-center justify-center">
-          <TimerIcon className="mr-2 h-6 w-6 sm:h-7 sm:w-7 text-primary" />
+      <CardHeader className="text-center p-6">
+        <CardTitle className="font-headline text-2xl flex items-center justify-center">
+          <TimerIcon className="mr-2 h-7 w-7 text-primary" />
           Pomodoro Timer
         </CardTitle>
       </CardHeader>
-      <CardContent className="flex flex-col items-center space-y-4 sm:space-y-6 p-4 sm:p-6">
+      <CardContent className="flex flex-col items-center space-y-6 p-6 pt-2">
         <Tabs value={mode} onValueChange={handleModeChange} className="w-full">
           <TabsList className="flex flex-col sm:flex-row w-full h-auto rounded-md bg-muted p-1 text-muted-foreground gap-1">
             <TabsTrigger 
               value="pomodoro" 
-              className="flex-1 justify-center items-center whitespace-nowrap rounded-sm px-4 py-2 text-xs sm:text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=active]:font-semibold"
+              className="flex-1 justify-center items-center whitespace-nowrap rounded-sm px-4 py-2 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=active]:font-semibold data-[state=active]:underline data-[state=active]:underline-offset-4"
             >
               Pomodoro ({formatTime(POMODORO_DURATION)})
             </TabsTrigger>
             <TabsTrigger 
               value="shortBreak" 
-              className="flex-1 justify-center items-center whitespace-nowrap rounded-sm px-4 py-2 text-xs sm:text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=active]:font-semibold"
+              className="flex-1 justify-center items-center whitespace-nowrap rounded-sm px-4 py-2 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=active]:font-semibold data-[state=active]:underline data-[state=active]:underline-offset-4"
             >
               Short Break ({formatTime(SHORT_BREAK_DURATION)})
             </TabsTrigger>
             <TabsTrigger 
               value="longBreak" 
-              className="flex-1 justify-center items-center whitespace-nowrap rounded-sm px-4 py-2 text-xs sm:text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=active]:font-semibold"
+              className="flex-1 justify-center items-center whitespace-nowrap rounded-sm px-4 py-2 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=active]:font-semibold data-[state=active]:underline data-[state=active]:underline-offset-4"
             >
               Long Break ({formatTime(LONG_BREAK_DURATION)})
             </TabsTrigger>
           </TabsList>
         </Tabs>
 
-        <div className="text-6xl sm:text-7xl md:text-8xl font-bold text-foreground tabular-nums my-4 sm:my-6" aria-live="polite">
+        <div className="text-7xl sm:text-8xl font-bold text-foreground tabular-nums my-2 sm:my-4" aria-live="polite">
           {formatTime(timeRemaining)}
         </div>
 
         <div className="flex flex-col xs:flex-row space-y-2 xs:space-y-0 xs:space-x-3 w-full max-w-xs">
           <Button 
             onClick={handleStartPause} 
-            className="flex-1 text-base" 
-            size="lg"
+            className="flex-1 py-3 h-auto text-lg" 
             aria-label={isRunning ? "Pause timer" : "Start timer"}
             disabled={!currentUser && mode === 'pomodoro'}
           >
-            {isRunning ? <PauseIcon className="mr-1.5 h-5 w-5" /> : <PlayIcon className="mr-1.5 h-5 w-5" />}
+            {isRunning ? <PauseIcon className="mr-2 h-5 w-5" /> : <PlayIcon className="mr-2 h-5 w-5" />}
             {isRunning ? 'Pause' : 'Start'}
           </Button>
           <Button 
             onClick={handleReset} 
             variant="outline" 
-            className="flex-1 text-base" 
-            size="lg"
+            className="flex-1 py-3 h-auto text-lg" 
             aria-label="Reset timer"
           >
-            <RotateCcwIcon className="mr-1.5 h-5 w-5" />
+            <RotateCcwIcon className="mr-2 h-5 w-5" />
             Reset
           </Button>
         </div>
-        <p className="text-xs sm:text-sm text-muted-foreground">
+        <p className="text-sm text-muted-foreground">
           Completed in cycle: {pomodorosCompletedCycle % POMODOROS_UNTIL_LONG_BREAK} (next long break after {POMODOROS_UNTIL_LONG_BREAK})
         </p>
          {!currentUser && mode === 'pomodoro' && (
-            <p className="text-xs text-destructive text-center mt-1 sm:mt-2">Login to track Pomodoros and earn rewards!</p>
+            <p className="text-xs text-destructive text-center mt-1">Login to track Pomodoros and earn rewards!</p>
         )}
       </CardContent>
-      <CardFooter className="flex flex-col items-center space-y-3 sm:space-y-4 p-4 sm:p-6 border-t">
+      <CardFooter className="flex flex-col items-center space-y-4 p-6 pt-3 border-t">
         <div className="w-full max-w-xs">
             <Select 
                 onValueChange={handleSoundtrackChange} 
                 defaultValue={selectedSoundtrackPath ? availableSoundtracks.find(s => s.filePath === selectedSoundtrackPath)?.id : "none"}
                 disabled={availableSoundtracks.length === 0}
             >
-                <SelectTrigger className="w-full text-xs sm:text-sm h-9 sm:h-10">
+                <SelectTrigger className="w-full">
                     <SelectValue placeholder="Select Soundtrack..." />
                 </SelectTrigger>
                 <SelectContent>
-                    <SelectItem value="none" className="text-xs sm:text-sm">
+                    <SelectItem value="none">
                         <div className="flex items-center">
-                            <VolumeX className="mr-2 h-3.5 w-3.5 sm:h-4 sm:w-4" /> No Sound
+                            <VolumeX className="mr-2 h-4 w-4" /> No Sound
                         </div>
                     </SelectItem>
                     {availableSoundtracks.map(track => (
-                        <SelectItem key={track.id} value={track.id} className="text-xs sm:text-sm">
+                        <SelectItem key={track.id} value={track.id}>
                             <div className="flex items-center">
-                                <Music2 className="mr-2 h-3.5 w-3.5 sm:h-4 sm:w-4" /> {track.name}
+                                <Music2 className="mr-2 h-4 w-4" /> {track.name}
                             </div>
                         </SelectItem>
                     ))}
@@ -263,8 +261,9 @@ export function PomodoroTimer() {
             </Select>
             {availableSoundtracks.length === 0 && <p className="text-xs text-muted-foreground text-center mt-1">No soundtracks available.</p>}
         </div>
-        <FocusAudioPlayer src={selectedSoundtrackPath} isPlaying={isRunning && !!selectedSoundtrackPath} loop={true} volume={0.5} className="w-full max-w-xs"/>
+        <FocusAudioPlayer src={selectedSoundtrackPath} isPlaying={isRunning && !!selectedSoundtrackPath} loop={true} volume={0.5} />
       </CardFooter>
     </Card>
   );
 }
+
