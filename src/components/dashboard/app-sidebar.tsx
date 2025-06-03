@@ -8,13 +8,14 @@ import {
   LayoutDashboard,
   CalendarDays,
   ClipboardCheck,
-  BrainCircuit, // Existing
-  Brain,        // New for AI Coach/Recommendations
+  BrainCircuit, 
+  Brain,        
   Timer,
   Flame,
   BarChart3,
   Settings,
   ShoppingCart, 
+  HelpCircle, // Added for SmartQuiz AI
 } from 'lucide-react';
 import {
   Sidebar,
@@ -32,8 +33,9 @@ const mainNavItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/study-planner', label: 'Study Planner', icon: CalendarDays },
   { href: '/tasks', label: 'Tasks', icon: ClipboardCheck },
-  { href: '/ai-tools', label: 'AI Tools', icon: BrainCircuit },
-  { href: '/ai-recommendations', label: 'AI Coach', icon: Brain }, // New Item
+  { href: '/ai-tools', label: 'AI Tools Hub', icon: BrainCircuit },
+  { href: '/ai-tools/smart-quiz', label: 'SmartQuiz AI', icon: HelpCircle }, // New Item for SmartQuiz
+  { href: '/ai-recommendations', label: 'AI Coach', icon: Brain },
   { href: '/pomodoro', label: 'Pomodoro Timer', icon: Timer },
   { href: '/streaks', label: 'Study Streaks', icon: Flame },
   // { href: '/analytics', label: 'Analytics', icon: BarChart3 }, // Temporarily disabled
@@ -42,6 +44,19 @@ const mainNavItems = [
 
 export function AppSidebar() {
   const pathname = usePathname();
+
+  const isNavItemActive = (itemHref: string) => {
+    if (itemHref === '/dashboard' || itemHref === '/ai-recommendations' || itemHref === '/ai-tools/smart-quiz') {
+      return pathname === itemHref;
+    }
+    // For other items, check if pathname starts with the item's href
+    // e.g. /ai-tools/syllabus-suggester should make /ai-tools active
+    if (itemHref === '/ai-tools'){
+        return pathname.startsWith('/ai-tools') && pathname !== '/ai-tools/smart-quiz';
+    }
+    return pathname.startsWith(itemHref);
+  };
+
 
   return (
     <Sidebar collapsible="icon" defaultOpen={true} className="border-r">
@@ -62,7 +77,7 @@ export function AppSidebar() {
               <SidebarMenuButton 
                 asChild 
                 tooltip={{ children: item.label, side: 'right', align: 'center' }}
-                isActive={pathname === item.href || (item.href !== '/dashboard' && item.href !== '/ai-recommendations' && pathname.startsWith(item.href)) || (item.href === '/ai-recommendations' && pathname === item.href) }
+                isActive={isNavItemActive(item.href)}
               >
                 <Link href={item.href}>
                   <item.icon />

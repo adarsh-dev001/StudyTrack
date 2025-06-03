@@ -2,7 +2,7 @@
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { BrainCircuit, BookText, BarChartBig, Sparkles, ListTree, Brain } from "lucide-react";
+import { BrainCircuit, BookText, BarChartBig, Sparkles, ListTree, Brain, HelpCircle } from "lucide-react";
 
 export default function AiToolsPage() {
   const aiTools = [
@@ -29,6 +29,14 @@ export default function AiToolsPage() {
       link: "/ai-tools/productivity-analyzer",
       status: "Active",
       actionText: "Analyze Data"
+    },
+    {
+      title: "SmartQuiz AI",
+      description: "Generate custom quizzes on any topic, tailored to exam type and difficulty.",
+      icon: <HelpCircle className="h-6 w-6 sm:h-8 sm:w-8 text-primary" />,
+      link: "/ai-tools/smart-quiz",
+      status: "Active",
+      actionText: "Create Quiz"
     },
   ];
 
