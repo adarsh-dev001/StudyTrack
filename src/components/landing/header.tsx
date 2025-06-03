@@ -41,7 +41,7 @@ export function Header() {
             <Link
               key={link.label}
               href={link.href}
-              className="text-muted-foreground transition-colors hover:text-foreground"
+              className="text-muted-foreground transition-colors hover:text-primary hover:underline"
             >
               {link.label}
             </Link>
@@ -55,7 +55,7 @@ export function Header() {
               asChild
               className={cn(
                 "py-2.5 px-5 text-sm rounded-2xl border-2 border-primary text-primary hover:bg-primary/10 hover:text-primary",
-                "hover:scale-105 transform transition-all duration-300 ease-out font-semibold shadow-sm hover:shadow-primary/20"
+                "hover:scale-105 transform transition-all duration-300 ease-out font-semibold shadow-sm hover:shadow-md"
               )}
             >
               <Link href="/login">
@@ -69,21 +69,21 @@ export function Header() {
             initial="hidden" 
             animate="visible" 
             custom={2}
-            className="relative" // For pulse animation container
+            className="relative" 
           >
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
-                   <motion.div // Wrapper for pulse animation
-                    animate={{ scale: [1, 1.03, 1] }}
-                    transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
+                   <motion.div 
+                    animate={{ scale: [1, 1.02, 1, 1.02, 1] }}
+                    transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
                   >
                     <Button
                       asChild
                       className={cn(
                         "py-2.5 px-5 text-sm rounded-2xl font-semibold shadow-lg text-primary-foreground",
                         "bg-gradient-to-r from-primary to-accent",
-                        "hover:from-primary/90 hover:to-accent/90 hover:scale-105 hover:shadow-primary/40 dark:hover:shadow-accent/40",
+                        "hover:from-primary/90 hover:to-accent/90 hover:scale-105 hover:shadow-xl",
                         "transform transition-all duration-300 ease-out"
                       )}
                     >
@@ -122,7 +122,7 @@ export function Header() {
                   <SheetClose asChild key={link.label}>
                     <Link
                       href={link.href}
-                      className="px-3 py-2 text-muted-foreground transition-colors hover:text-foreground hover:bg-muted rounded-md"
+                      className="px-3 py-2 text-muted-foreground transition-colors hover:text-primary hover:bg-muted hover:underline rounded-md"
                     >
                       {link.label}
                     </Link>
@@ -135,7 +135,8 @@ export function Header() {
                     variant="outline"
                     asChild
                     className={cn(
-                      "w-full py-2.5 px-5 rounded-2xl border-2 border-primary text-primary hover:bg-primary/10"
+                      "w-full py-2.5 px-5 rounded-2xl border-2 border-primary text-primary hover:bg-primary/10",
+                      "hover:scale-105 hover:shadow-md transform transition-all duration-300 ease-out"
                     )}
                   >
                     <Link href="/login">
@@ -148,7 +149,8 @@ export function Header() {
                     asChild
                     className={cn(
                       "w-full py-2.5 px-5 rounded-2xl text-primary-foreground",
-                      "bg-gradient-to-r from-primary to-accent hover:from-primary/90 hover:to-accent/90"
+                      "bg-gradient-to-r from-primary to-accent hover:from-primary/90 hover:to-accent/90",
+                       "hover:scale-105 hover:shadow-lg transform transition-all duration-300 ease-out"
                     )}
                   >
                     <Link href="/signup">
