@@ -167,7 +167,13 @@ const nextConfig: NextConfig = {
       },
       {
         protocol: 'https',
-        hostname: 'datahubanalytics.com', // Added this new pattern
+        hostname: 'datahubanalytics.com',
+        port: '',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 's39613.pcdn.co', // Added new pattern for s39613.pcdn.co
         port: '',
         pathname: '/**',
       }
