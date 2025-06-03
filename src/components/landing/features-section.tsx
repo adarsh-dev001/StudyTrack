@@ -10,7 +10,7 @@ import {
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import Image from 'next/image';
-import { Badge } from '@/components/ui/badge'; // Added import for Badge
+import { Badge } from '@/components/ui/badge'; 
 
 const featureShowcaseData = [
   {
@@ -147,7 +147,7 @@ export default function FeaturesSection() {
               <motion.div 
                 key={feature.id} 
                 className={`grid gap-6 md:gap-10 lg:gap-16 items-center lg:grid-cols-2 ${feature.align === 'right' ? 'lg:grid-flow-col-dense' : ''}`}
-                variants={itemVariants}
+                variants={itemVariants} // Ensures each feature block animates in
               >
                 <div className={`relative w-full aspect-[16/10] rounded-xl overflow-hidden shadow-2xl group ${feature.align === 'right' ? 'lg:col-start-2' : ''}`}>
                   <Image
@@ -160,7 +160,7 @@ export default function FeaturesSection() {
                     data-ai-hint={feature.dataAiHint}
                     priority={index < 2} 
                   />
-                   <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent opacity-70 group-hover:opacity-50 transition-opacity duration-300"></div>
+                   <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent opacity-70 group-hover:opacity-50 transition-opacity duration-300 rounded-xl"></div>
                 </div>
 
                 <div className="space-y-3 md:space-y-4">
@@ -181,11 +181,11 @@ export default function FeaturesSection() {
                     <Button 
                       size="lg" 
                       asChild 
-                      className="text-sm md:text-base shadow-md hover:shadow-lg transition-shadow"
+                      className={`text-sm md:text-base transition-all duration-300 ease-out ${feature.isComingSoon || feature.isLocked ? '' : 'shadow-md hover:shadow-lg'}`}
                       variant={feature.isComingSoon || feature.isLocked ? "outline" : "default"}
                       disabled={feature.isComingSoon}
                     >
-                      <Link href={feature.ctaLink}>
+                      <Link href={feature.ctaLink} className={`${feature.isComingSoon || feature.isLocked ? 'hover:bg-accent/10 hover:border-accent' : ''}`}>
                         {feature.isComingSoon ? <Sparkles className="mr-2 h-4 w-4"/> : 
                          feature.isLocked ? <Lock className="mr-2 h-4 w-4"/> :
                          <ArrowRight className="mr-2 h-4 w-4"/>
@@ -193,8 +193,8 @@ export default function FeaturesSection() {
                         {feature.ctaText}
                       </Link>
                     </Button>
-                     {feature.isComingSoon && <Badge variant="secondary" className="ml-2">Coming Soon</Badge>}
-                     {feature.isLocked && <Badge variant="outline" className="ml-2 text-primary border-primary">Unlockable</Badge>}
+                     {feature.isComingSoon && <Badge variant="secondary" className="ml-2 align-middle">Coming Soon</Badge>}
+                     {feature.isLocked && <Badge variant="outline" className="ml-2 align-middle text-primary border-primary">Unlockable</Badge>}
                   </div>
                 </div>
               </motion.div>
@@ -205,4 +205,3 @@ export default function FeaturesSection() {
     </section>
   );
 }
-
