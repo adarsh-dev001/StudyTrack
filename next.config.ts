@@ -185,7 +185,13 @@ const nextConfig: NextConfig = {
       },
       {
         protocol: 'https',
-        hostname: 'res.cloudinary.com', // Added new pattern for cloudinary
+        hostname: 'res.cloudinary.com', 
+        port: '',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'img.freepik.com', // Added new pattern for freepik
         port: '',
         pathname: '/**',
       }
