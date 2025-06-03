@@ -52,22 +52,22 @@ Number of Questions: {{{numQuestions}}}
 
 **Instructions:**
 
-1.  **Quiz Title:** Create an engaging `quizTitle` that reflects the topic, difficulty, and exam type. For example, "NEET Biology Challenge: {{{topic}}} ({{{difficulty}}})" or "UPSC Prelims - Modern History: {{{topic}}}". Include relevant emojis (e.g., 🧠, 🎯, 📚).
+1.  **Quiz Title:** Create an engaging \\\`quizTitle\\\` that reflects the topic, difficulty, and exam type. For example, "NEET Biology Challenge: {{{topic}}} ({{{difficulty}}})" or "UPSC Prelims - Modern History: {{{topic}}}". Include relevant emojis (e.g., 🧠, 🎯, 📚).
 2.  **Questions:**
     *   Generate exactly {{{numQuestions}}} multiple-choice questions.
-    *   **Relevance & Authenticity:** Each `questionText` must be highly relevant to the given `topic`, `difficulty`, and `examType`. Ensure questions are factually accurate and valid.
+    *   **Relevance & Authenticity:** Each \\\`questionText\\\` must be highly relevant to the given \\\`topic\\\`, \\\`difficulty\\\`, and \\\`examType\\\`. Ensure questions are factually accurate and valid.
     *   **Difficulty Scaling:**
-        *   `basic`: Focus on recall, definitions, direct facts, or simple formulas.
-        *   `intermediate`: Require comprehension, application of concepts, or simple analysis.
-        *   `advanced`: Demand conceptual understanding, critical thinking, multi-step problem-solving, or assess nuanced understanding. For UPSC, this could involve questions testing analytical skills.
+        *   \\\`basic\\\`: Focus on recall, definitions, direct facts, or simple formulas.
+        *   \\\`intermediate\\\`: Require comprehension, application of concepts, or simple analysis.
+        *   \\\`advanced\\\`: Demand conceptual understanding, critical thinking, multi-step problem-solving, or assess nuanced understanding. For UPSC, this could involve questions testing analytical skills.
     *   **Exam Type Adaptation:**
-        *   `neet`/`jee`: Conceptual, application-based questions, often scientific or numerical. Options should be clear and distinct. Typically 4 options.
-        *   `upsc_prelims`: Questions can be analytical, statement-based (though for this MCQ format, focus on a single best answer from 4-5 options). Avoid overly complex "match the following" or "which of the above are correct" if it complicates the single correctAnswerIndex.
-        *   `ssc_bank`/`cat`/`general`: Tailor question style to common patterns in these exams (e.g., quantitative aptitude, logical reasoning, general awareness, vocabulary for CAT/Bank).
-    *   **Options:** Provide 4 to 5 distinct answer `options` for each question. Ensure only ONE option is unequivocally correct.
-    *   **Correct Answer:** Specify the 0-based `correctAnswerIndex`.
-    *   **Explanation:** Craft a clear and comprehensive `explanation` for each question. Explain *why* the correct answer is correct and, if useful, why common distractors are incorrect. This is crucial for learning.
-    *   **Engaging Content:** For `questionText` and `explanation`, use clear, concise language. You MAY use **bold** text (e.g., \`**Keyword**\`) or *italic* text (e.g., \`*concept*\`) for emphasis. Incorporate relevant emojis (e.g., 🤔, ✅, 💡, 📚, 🎯, 🚀) where appropriate to make the content more engaging.
+        *   \\\`neet\\\`/\`jee\\\`: Conceptual, application-based questions, often scientific or numerical. Options should be clear and distinct. Typically 4 options.
+        *   \\\`upsc_prelims\\\`: Questions can be analytical, statement-based (though for this MCQ format, focus on a single best answer from 4-5 options). Avoid overly complex "match the following" or "which of the above are correct" if it complicates the single correctAnswerIndex.
+        *   \\\`ssc_bank\\\`/\`cat\\\`/\`general\\\`: Tailor question style to common patterns in these exams (e.g., quantitative aptitude, logical reasoning, general awareness, vocabulary for CAT/Bank).
+    *   **Options:** Provide 4 to 5 distinct answer \\\`options\\\` for each question. Ensure only ONE option is unequivocally correct.
+    *   **Correct Answer:** Specify the 0-based \\\`correctAnswerIndex\\\`.
+    *   **Explanation:** Craft a clear and comprehensive \\\`explanation\\\` for each question. Explain *why* the correct answer is correct and, if useful, why common distractors are incorrect. This is crucial for learning.
+    *   **Engaging Content:** For \\\`questionText\\\` and \\\`explanation\\\`, use clear, concise language. You MAY use **bold** text (e.g., \\\`**Keyword**\\\`) or *italic* text (e.g., \\\`*concept*\\\`) for emphasis. Incorporate relevant emojis (e.g., 🤔, ✅, 💡, 📚, 🎯, 🚀) where appropriate to make the content more engaging.
 
 **Output Format:**
 Your entire response MUST be a single JSON object that strictly adheres to the GenerateQuizOutputSchema.
@@ -107,3 +107,4 @@ const generateQuizFlow = ai.defineFlow(
     return output;
   }
 );
+
