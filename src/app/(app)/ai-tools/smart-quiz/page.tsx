@@ -4,7 +4,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useForm, type SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
+// import { z } from 'zod'; // Not needed here if schema is imported for type only
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -13,21 +13,19 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from "@/components/ui/label";
 import { Loader2, Sparkles, Brain, HelpCircle, CheckCircle, XCircle, Lightbulb, Award, Percent } from 'lucide-react';
-import { generateQuiz, type GenerateQuizInput, type GenerateQuizOutput, type QuizQuestion } from '@/ai/flows/generate-quiz-flow';
+import { generateQuiz } from '@/ai/flows/generate-quiz-flow'; // Main function import
+import type { GenerateQuizInput, GenerateQuizOutput, QuizQuestion } from '@/ai/schemas/quiz-tool-schemas'; // Import types from the new schemas file
+import { GenerateQuizInputSchema } from '@/ai/schemas/quiz-tool-schemas'; // Import schema for resolver
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/auth-context';
 import { recordPlatformInteraction } from '@/lib/activity-utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
-const quizFormSchema = z.object({
-  topic: z.string().min(3, { message: 'Topic must be at least 3 characters long.' }).max(100, { message: 'Topic cannot exceed 100 characters.' }),
-  difficulty: z.enum(['basic', 'intermediate', 'advanced'], { required_error: "Please select a difficulty level."}),
-  examType: z.enum(['neet', 'jee', 'upsc_prelims', 'ssc_bank', 'cat', 'general'], { required_error: "Please select an exam type."}),
-  numQuestions: z.coerce.number().int().min(3, { message: 'Minimum 3 questions.' }).max(10, { message: 'Maximum 10 questions.' }),
-});
+// Use the imported schema for form validation
+const quizFormSchema = GenerateQuizInputSchema;
 
-type QuizFormData = z.infer<typeof quizFormSchema>;
+type QuizFormData = GenerateQuizInput; // Type is now directly from imported schema
 
 interface QuizQuestionWithUserAnswer extends QuizQuestion {
   userSelectedOption?: number;
@@ -45,7 +43,7 @@ export default function SmartQuizPage() {
   const quizResultsRef = useRef<HTMLDivElement>(null);
 
   const form = useForm<QuizFormData>({
-    resolver: zodResolver(quizFormSchema),
+    resolver: zodResolver(quizFormSchema), // Use the imported schema here
     defaultValues: {
       topic: '',
       difficulty: 'intermediate',
