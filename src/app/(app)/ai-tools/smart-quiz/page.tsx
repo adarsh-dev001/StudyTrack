@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
+import { Badge } from '@/components/ui/badge'; // Added import for Badge
 import { motion, AnimatePresence } from 'framer-motion';
 import { Loader2, Sparkles, Brain, HelpCircle, CheckCircle, XCircle, Lightbulb, Award, Percent, SkipForward, ChevronsRight, Wand2 } from 'lucide-react';
 import { generateQuiz } from '@/ai/flows/generate-quiz-flow';
