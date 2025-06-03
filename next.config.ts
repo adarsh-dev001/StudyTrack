@@ -179,7 +179,13 @@ const nextConfig: NextConfig = {
       },
       {
         protocol: 'https',
-        hostname: 'cdn.prod.website-files.com', // Added new pattern
+        hostname: 'cdn.prod.website-files.com',
+        port: '',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'res.cloudinary.com', // Added new pattern for cloudinary
         port: '',
         pathname: '/**',
       }
