@@ -164,6 +164,12 @@ const nextConfig: NextConfig = {
         hostname: 'eduauraapublic.s3.ap-south-1.amazonaws.com',
         port: '',
         pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'datahubanalytics.com', // Added this new pattern
+        port: '',
+        pathname: '/**',
       }
     ],
   },
