@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react'; // Added useEffect, useRef
 import { useForm, type SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -60,6 +60,7 @@ export default function SyllabusSuggesterPage() {
   const [overallFeedback, setOverallFeedback] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
+  const syllabusResultRef = useRef<HTMLDivElement>(null); // Ref for the results card
 
   const form = useForm<SyllabusFormData>({
     resolver: zodResolver(syllabusFormSchema),
@@ -70,6 +71,13 @@ export default function SyllabusSuggesterPage() {
       targetDate: addDays(new Date(), 90), 
     },
   });
+
+  // Effect to scroll to results
+  useEffect(() => {
+    if (generatedSyllabus && generatedSyllabus.length > 0 && syllabusResultRef.current) {
+      syllabusResultRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }, [generatedSyllabus]);
 
   const onSubmit: SubmitHandler<SyllabusFormData> = async (data) => {
     setIsLoading(true);
@@ -292,7 +300,7 @@ export default function SyllabusSuggesterPage() {
       </Card>
 
       {generatedSyllabus && generatedSyllabus.length > 0 && (
-        <Card className="shadow-lg animate-in fade-in-50 duration-500 mt-6">
+        <Card ref={syllabusResultRef} className="shadow-lg animate-in fade-in-50 duration-500 mt-6">
           <CardHeader className="p-4 sm:p-6">
             <CardTitle className="text-xl sm:text-2xl font-headline">Your Personalized Study Plan for <span className="text-primary">{form.getValues('examType')}</span> 🌟</CardTitle>
             <CardDescription className="text-xs sm:text-sm">
@@ -350,7 +358,7 @@ export default function SyllabusSuggesterPage() {
       )}
 
       { (generatedSyllabus === null || generatedSyllabus.length === 0) && !isLoading && form.formState.isSubmitted && (
-         <Card className="shadow-lg animate-in fade-in-50 duration-500 mt-6">
+         <Card ref={syllabusResultRef} className="shadow-lg animate-in fade-in-50 duration-500 mt-6">
           <CardHeader className="p-4 sm:p-6">
             <CardTitle className="text-lg sm:text-xl">😕 No Syllabus Generated</CardTitle>
           </CardHeader>
