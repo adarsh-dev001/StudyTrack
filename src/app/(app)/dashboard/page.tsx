@@ -1,51 +1,23 @@
 
 'use client';
 
-import React, { useState, useEffect, Suspense } from 'react';
+import React, { useState, useEffect } from 'react'; // Removed Suspense
 import { useAuth } from '@/contexts/auth-context';
 import { db } from '@/lib/firebase';
 import { doc, onSnapshot, type Timestamp } from 'firebase/firestore';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { ListChecks, CalendarDays, BrainCircuit, Loader2 } from 'lucide-react'; // Removed Flame, ArrowRight, User, Target as TargetIcon
-import DailyChallengesCard from '@/components/dashboard/DailyChallengesCard';
+import { ListChecks, CalendarDays, BrainCircuit, Loader2 } from 'lucide-react';
+import DailyChallengesCard from '@/components/dashboard/DailyChallengesCard'; // Direct import
 
 interface StreakData {
   currentStreak: number;
   lastCheckInDate: Timestamp | null;
 }
 
-// Fallback for DailyChallengesCard during lazy loading
-function DailyChallengesFallback() {
-    return (
-      <Card className="shadow-lg">
-        <CardHeader className="p-4 sm:p-6">
-          <CardTitle className="text-lg sm:text-xl font-semibold flex items-center">
-            <Loader2 className="mr-2 sm:mr-3 h-5 w-5 sm:h-6 sm:w-6 animate-spin text-primary" /> Daily Challenges
-          </CardTitle>
-          <CardDescription className="text-xs sm:text-sm">Loading today's challenges...</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-3 sm:space-y-4 p-4 sm:p-6">
-          {[1, 2].map(i => (
-            <div key={i} className="p-3 sm:p-4 border rounded-lg bg-card/40 shadow-sm space-y-2 sm:space-y-3">
-              <div className="flex items-start gap-2 sm:gap-3">
-                <div className="bg-muted p-1.5 sm:p-2 rounded-md mt-0.5 sm:mt-1 animate-pulse h-8 w-8">
-                  {/* Placeholder for icon */}
-                </div>
-                <div className="w-full">
-                  <div className="h-4 sm:h-5 w-3/4 bg-muted rounded animate-pulse mb-1 sm:mb-1.5"></div>
-                  <div className="h-2.5 sm:h-3 w-full bg-muted rounded animate-pulse"></div>
-                </div>
-              </div>
-              <div className="h-2 sm:h-2.5 w-full bg-muted rounded animate-pulse mt-1.5 sm:mt-2"></div>
-              <div className="h-7 sm:h-8 w-1/3 bg-muted rounded animate-pulse mt-2 sm:mt-3 ml-auto"></div>
-            </div>
-          ))}
-        </CardContent>
-      </Card>
-    );
-  }
+// Fallback function is no longer needed with direct import
+// function DailyChallengesFallback() { ... }
 
 
 export default function DashboardPage() {
@@ -69,8 +41,6 @@ export default function DashboardPage() {
           const data = docSnap.data() as StreakData;
           setStreakData(data);
         } else {
-          // If no streak data, initialize with 0, but don't set lastCheckInDate
-          // as that implies a check-in. The StreaksPage handles creating this doc.
           setStreakData({ currentStreak: 0, lastCheckInDate: null });
         }
         setLoadingStreak(false);
@@ -104,12 +74,10 @@ export default function DashboardPage() {
       </div>
       
       {currentUser && (
-        <Suspense fallback={<DailyChallengesFallback />}>
-            <DailyChallengesCard />
-        </Suspense>
+        // Removed Suspense and DailyChallengesFallback wrapper
+        <DailyChallengesCard />
       )}
 
-      {/* Other existing cards like "Quick Actions" can remain or be adjusted */}
       <Card className="shadow-lg">
         <CardHeader className="p-4 sm:p-6">
             <CardTitle className="text-lg sm:text-xl font-semibold">Quick Actions</CardTitle>
@@ -133,23 +101,6 @@ export default function DashboardPage() {
             </Button>
         </CardContent>
       </Card>
-
-      {/* Placeholder for future widgets like Today's Plan, Progress Tracker, etc. */}
-      {/* 
-      <div className="grid gap-4 sm:gap-6 md:grid-cols-2">
-         Placeholder for Today's Plan
-        <Card>
-            <CardHeader><CardTitle>Today's Plan</CardTitle></CardHeader>
-            <CardContent><p className="text-muted-foreground">Upcoming sessions will appear here.</p></CardContent>
-        </Card>
-         Placeholder for Progress Tracker 
-        <Card>
-            <CardHeader><CardTitle>Progress Tracker</CardTitle></CardHeader>
-            <CardContent><p className="text-muted-foreground">Subject progress will be shown here.</p></CardContent>
-        </Card>
-      </div> 
-      */}
-
     </div>
   );
 }
