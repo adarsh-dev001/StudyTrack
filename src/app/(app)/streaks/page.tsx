@@ -15,22 +15,8 @@ import { isToday, isYesterday } from 'date-fns';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
 import { DEFAULT_THEME_ID } from '@/lib/themes';
+import type { UserProfileData, StreakData } from '@/lib/profile-types'; // Updated import
 
-
-interface StreakData {
-  currentStreak: number;
-  longestStreak: number;
-  lastCheckInDate: Timestamp | null;
-}
-
-interface UserProfileData {
-  earnedBadgeIds: string[];
-  xp: number;
-  coins: number;
-  purchasedItemIds: string[];
-  activeThemeId?: string | null; 
-  dailyChallengeStatus?: { [challengeId: string]: { completedOn: Timestamp } }; 
-}
 
 const initialStreakData: StreakData = {
   currentStreak: 0,
@@ -45,6 +31,7 @@ const initialUserProfileData: UserProfileData = {
   purchasedItemIds: [],
   activeThemeId: DEFAULT_THEME_ID,
   dailyChallengeStatus: {},
+  lastInteractionDates: [], // Ensure this is part of the initial data
 };
 
 type BadgeType = 'streak' | 'pomodoro' | 'task' | 'topic';
@@ -132,10 +119,13 @@ export default function StreaksPage() {
           purchasedItemIds: Array.isArray(rawData.purchasedItemIds) ? rawData.purchasedItemIds : [],
           activeThemeId: typeof rawData.activeThemeId === 'string' ? rawData.activeThemeId : DEFAULT_THEME_ID,
           dailyChallengeStatus: typeof rawData.dailyChallengeStatus === 'object' ? rawData.dailyChallengeStatus : {},
+          lastInteractionDates: Array.isArray(rawData.lastInteractionDates) ? rawData.lastInteractionDates : [], // Initialize if missing
         });
       } else {
-        setDoc(userProfileDocRef, initialUserProfileData, { merge: true })
-          .then(() => setUserProfile(initialUserProfileData))
+        // Ensure lastInteractionDates is part of the initial setDoc
+        const profileToSet = { ...initialUserProfileData, lastInteractionDates: [] };
+        setDoc(userProfileDocRef, profileToSet, { merge: true })
+          .then(() => setUserProfile(profileToSet))
           .catch(err => console.error("Error creating initial user profile:", err));
       }
     }, (error) => {
@@ -173,12 +163,16 @@ export default function StreaksPage() {
       ]);
 
       let currentDbStreakData = streakDocSnap.exists() ? streakDocSnap.data() as StreakData : initialStreakData;
-      let currentDbProfileData = profileDocSnap.exists() ? profileDocSnap.data() as UserProfileData : {...initialUserProfileData}; 
+      let currentDbProfileData: UserProfileData = profileDocSnap.exists() 
+        ? profileDocSnap.data() as UserProfileData 
+        : { ...initialUserProfileData, lastInteractionDates: [] }; // Ensure lastInteractionDates
       
+      // Ensure all potentially undefined arrays/objects are initialized
       currentDbProfileData.earnedBadgeIds = currentDbProfileData.earnedBadgeIds || [];
       currentDbProfileData.purchasedItemIds = currentDbProfileData.purchasedItemIds || [];
       currentDbProfileData.dailyChallengeStatus = currentDbProfileData.dailyChallengeStatus || {};
       currentDbProfileData.activeThemeId = currentDbProfileData.activeThemeId === undefined ? DEFAULT_THEME_ID : currentDbProfileData.activeThemeId;
+      currentDbProfileData.lastInteractionDates = currentDbProfileData.lastInteractionDates || [];
 
 
       if (currentDbStreakData.lastCheckInDate && isToday(currentDbStreakData.lastCheckInDate.toDate())) {
@@ -220,13 +214,15 @@ export default function StreaksPage() {
       const updatedCoins = (currentDbProfileData.coins || 0) + coinsFromCheckIn;
       const updatedXp = (currentDbProfileData.xp || 0) + xpFromCheckIn;
 
-      const profileUpdates: UserProfileData = {
+      // Preserve all existing fields from currentDbProfileData when updating
+      const profileUpdates: Partial<UserProfileData> = {
         earnedBadgeIds: updatedEarnedBadgeIds,
         coins: updatedCoins,
         xp: updatedXp,
-        purchasedItemIds: currentDbProfileData.purchasedItemIds,
-        activeThemeId: currentDbProfileData.activeThemeId,
-        dailyChallengeStatus: currentDbProfileData.dailyChallengeStatus,
+        // No need to explicitly include purchasedItemIds, activeThemeId, dailyChallengeStatus, lastInteractionDates
+        // if they are not changed here, as setDoc with merge:true will preserve them if they exist.
+        // However, if they are part of UserProfileData structure and might be missing from currentDbProfileData,
+        // it's safer to include them from currentDbProfileData or initialUserProfileData if not present.
       };
       
       await setDoc(userProfileDocRef, profileUpdates, { merge: true });

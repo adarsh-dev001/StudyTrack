@@ -2,8 +2,7 @@
 import { db } from '@/lib/firebase';
 import { doc, getDoc, setDoc, updateDoc, Timestamp } from 'firebase/firestore';
 import { format, subDays, differenceInCalendarDays, parseISO } from 'date-fns';
-import type { UserProfileData } from './profile-types';
-import type { StreakData } from '@/app/(app)/streaks/page'; // Assuming StreakData is exported
+import type { UserProfileData, StreakData } from './profile-types'; // Updated import
 
 const MAX_INTERACTION_DATES_STORED = 14; // Store a bit more than 7 for robust checking
 
@@ -53,6 +52,28 @@ export async function recordPlatformInteraction(userId: string): Promise<void> {
             purchasedItemIds: [],
             onboardingCompleted: false, // Or true if this interaction implies some onboarding
             lastInteractionDates,
+            // Ensure other UserProfileData fields are initialized if necessary
+            activeThemeId: currentProfileData.activeThemeId || null,
+            dailyChallengeStatus: currentProfileData.dailyChallengeStatus || {},
+            // Add other fields from UserProfileData with default values
+            fullName: currentProfileData.fullName || '',
+            targetExams: currentProfileData.targetExams || [],
+            otherExamName: currentProfileData.otherExamName || '',
+            examAttemptYear: currentProfileData.examAttemptYear || '',
+            languageMedium: currentProfileData.languageMedium || '',
+            studyMode: currentProfileData.studyMode || '',
+            examPhase: currentProfileData.examPhase || '',
+            previousAttempts: currentProfileData.previousAttempts || '',
+            dailyStudyHours: currentProfileData.dailyStudyHours || '',
+            preferredStudyTime: currentProfileData.preferredStudyTime || [],
+            weakSubjects: currentProfileData.weakSubjects || [],
+            strongSubjects: currentProfileData.strongSubjects || [],
+            distractionStruggles: currentProfileData.distractionStruggles || '',
+            preferredLearningStyles: currentProfileData.preferredLearningStyles || [],
+            motivationType: currentProfileData.motivationType || '',
+            age: currentProfileData.age === undefined ? null : currentProfileData.age,
+            location: currentProfileData.location || '',
+            socialVisibilityPublic: currentProfileData.socialVisibilityPublic || false,
         };
         await setDoc(userProfileDocRef, initialProfile);
       }
@@ -111,10 +132,10 @@ export async function getUnlockAndProgressStatus(userId: string): Promise<Unlock
       getDoc(userProfileDocRef)
     ]);
 
-    const streakData = streakSnap.exists() ? streakSnap.data() as StreakData : { currentStreak: 0 };
+    const streakDataFromDb = streakSnap.exists() ? streakSnap.data() as StreakData : { currentStreak: 0, longestStreak: 0, lastCheckInDate: null };
     const profileData = profileSnap.exists() ? profileSnap.data() as UserProfileData : { lastInteractionDates: [] };
 
-    const currentStudyStreak = streakData.currentStreak || 0;
+    const currentStudyStreak = streakDataFromDb.currentStreak || 0;
     const studyStreakMet = currentStudyStreak >= progressTarget;
 
     const lastInteractionDates = profileData.lastInteractionDates || [];
@@ -176,3 +197,4 @@ export async function getUnlockAndProgressStatus(userId: string): Promise<Unlock
     };
   }
 }
+

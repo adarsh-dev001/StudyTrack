@@ -40,3 +40,9 @@ export interface UserProfileData {
   lastInteractionDates?: string[]; // Stores unique YYYY-MM-DD date strings
 }
 
+// Moved StreakData here
+export interface StreakData {
+  currentStreak: number;
+  longestStreak: number;
+  lastCheckInDate: Timestamp | null;
+}
