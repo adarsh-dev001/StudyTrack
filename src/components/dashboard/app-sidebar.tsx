@@ -1,6 +1,7 @@
 
 'use client'; 
 
+import React from 'react'; // Added React import
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
@@ -12,7 +13,7 @@ import {
   Brain,        
   Timer,
   Flame,
-  BarChart3, // Kept for potential future use
+  BarChart3, 
   Settings,
   ShoppingCart, 
   HelpCircle,
@@ -26,7 +27,7 @@ import {
   SidebarMenuItem,
   SidebarMenuButton,
   SidebarTrigger,
-  SidebarSeparator, // Added for visual separation
+  SidebarSeparator,
 } from '@/components/ui/sidebar';
 import { cn } from '@/lib/utils';
 import type { LucideIcon } from 'lucide-react';
@@ -65,7 +66,7 @@ const navSections: NavSection[] = [
     items: [
       { href: '/streaks', label: 'Study Streaks', icon: Flame },
       { href: '/rewards-shop', label: 'Rewards Shop', icon: ShoppingCart },
-      // { href: '/analytics', label: 'Analytics', icon: BarChart3 }, // Temporarily disabled in previous state
+      // { href: '/analytics', label: 'Analytics', icon: BarChart3 }, // Temporarily disabled
     ]
   }
 ];
@@ -74,15 +75,12 @@ export function AppSidebar() {
   const pathname = usePathname();
 
   const isNavItemActive = (itemHref: string) => {
-    // Exact match for specific top-level routes
     if (['/dashboard', '/ai-recommendations', '/ai-tools/smart-quiz', '/pomodoro', '/streaks', '/rewards-shop', '/settings'].includes(itemHref)) {
       return pathname === itemHref;
     }
-    // For /ai-tools, it's active if path starts with /ai-tools BUT is not /ai-tools/smart-quiz (which is separate)
     if (itemHref === '/ai-tools') {
       return pathname.startsWith('/ai-tools') && pathname !== '/ai-tools/smart-quiz';
     }
-    // For other parent routes like /study-planner, /tasks
     return pathname.startsWith(itemHref);
   };
 
@@ -118,7 +116,7 @@ export function AppSidebar() {
                       isActive={isActive}
                       className={cn(
                         "transition-all duration-200",
-                        isActive && "border-l-4 border-primary pl-1" // Highlight bar for active item
+                        isActive && "border-l-4 border-primary pl-1" 
                       )}
                     >
                       <Link href={item.href}>
