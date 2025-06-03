@@ -1,52 +1,91 @@
 
+'use client';
+
 import Link from 'next/link';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
-import { ArrowRight } from 'lucide-react';
+import { ArrowRight, Zap } from 'lucide-react';
+import { motion } from 'framer-motion';
 
-export function HeroSection() {
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.2,
+      delayChildren: 0.3,
+    },
+  },
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.6, ease: "easeOut" } },
+};
+
+export default function HeroSection() {
   return (
-    <section className="w-full py-12 md:py-20 lg:py-28 xl:py-32 bg-gradient-to-b from-background to-secondary/30">
-      <div className="container mx-auto px-4 md:px-6">
-        <div className="grid gap-6 lg:grid-cols-1 lg:items-center xl:grid-cols-[1fr_minmax(0,_550px)] xl:gap-12">
-          <div className="flex flex-col justify-center space-y-4 sm:space-y-6 text-center lg:text-left">
-            <div className="space-y-3 sm:space-y-4">
-              <h1 className="font-headline text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl lg:text-6xl text-foreground">
-                Ace Your Competitive Exams with <span className="text-primary">StudyTrack</span>
-              </h1>
-              <p className="max-w-[600px] text-muted-foreground text-sm sm:text-base md:text-lg xl:text-xl mx-auto lg:mx-0">
-                Your all-in-one study planner, productivity tracker, and AI-powered learning assistant.
-                Tailored for NEET, UPSC, JEE, and more.
-              </p>
-            </div>
-            <div className="flex flex-col gap-2.5 sm:flex-row sm:justify-center lg:justify-start">
-              <Button size="lg" asChild className="shadow-lg hover:shadow-primary/50 transition-shadow text-sm sm:text-base">
+    <section className="w-full py-16 md:py-24 lg:py-32 xl:py-40 bg-gradient-to-br from-primary/10 via-background to-background">
+      <motion.div 
+        className="container mx-auto px-4 md:px-6"
+        variants={containerVariants}
+        initial="hidden"
+        animate="visible"
+      >
+        <div className="grid gap-8 lg:grid-cols-2 lg:items-center xl:gap-12">
+          <div className="flex flex-col justify-center space-y-6 text-center lg:text-left">
+            <motion.h1 
+              className="font-headline text-4xl font-bold tracking-tighter sm:text-5xl md:text-6xl lg:text-7xl text-foreground"
+              variants={itemVariants}
+            >
+              Study Smarter, Not Harder — <br className="hidden sm:inline"/>Powered by <span className="text-primary">AI & Gamification</span>
+            </motion.h1>
+            <motion.p 
+              className="max-w-[600px] text-muted-foreground text-md sm:text-lg md:text-xl xl:text-2xl mx-auto lg:mx-0"
+              variants={itemVariants}
+            >
+              Ace your exams with XP rewards, AI tools, and a personalized planner — all in one platform.
+            </motion.p>
+            <motion.div 
+              className="flex flex-col gap-3 sm:flex-row sm:justify-center lg:justify-start"
+              variants={itemVariants}
+            >
+              <Button size="lg" asChild className="shadow-lg bg-primary hover:bg-primary/90 text-primary-foreground transition-shadow text-base sm:text-lg py-3 px-6">
                 <Link href="/signup">
-                  Get Started For Free
-                  <ArrowRight className="ml-2 h-4 w-4 sm:h-5 sm:w-5" />
+                  Get Started Free
+                  <ArrowRight className="ml-2 h-5 w-5" />
                 </Link>
               </Button>
-              <Button variant="outline" size="lg" asChild className="text-sm sm:text-base">
-                <Link href="#features">Learn More</Link>
+              <Button variant="outline" size="lg" asChild className="text-base sm:text-lg py-3 px-6">
+                <Link href="/ai-tools">
+                  Try AI Tools Now
+                  <Zap className="ml-2 h-5 w-5 text-accent" />
+                </Link>
               </Button>
-            </div>
+            </motion.div>
           </div>
-          <div className="relative mx-auto aspect-video w-full max-w-xl overflow-hidden rounded-lg lg:aspect-[4/3] xl:aspect-video mt-6 lg:mt-0">
+          <motion.div 
+            className="relative mx-auto w-full max-w-lg aspect-[4/3] overflow-hidden rounded-xl lg:max-w-xl mt-8 lg:mt-0"
+            variants={itemVariants}
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.7, delay: 0.5, ease: "easeOut" }}
+          >
+            {/* Placeholder for student leveling up animation */}
             <Image
-              src="https://eduauraapublic.s3.ap-south-1.amazonaws.com/webassets/images/blogs/effective-study-plan.jpg"
-              alt="Effective Study Plan Illustration"
+              src="https://placehold.co/800x600.png?text=Student+Leveling+Up!"
+              alt="Student achieving goals with StudyTrack"
               fill
               sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 550px"
               style={{ objectFit: 'cover' }}
               className="rounded-xl shadow-2xl"
-              data-ai-hint="study plan"
+              data-ai-hint="student success exam prep"
               priority
             />
-             <div className="absolute inset-0 bg-gradient-to-t from-black/10 to-transparent rounded-xl"></div>
-          </div>
+            <div className="absolute inset-0 bg-gradient-to-t from-black/5 to-transparent rounded-xl"></div>
+          </motion.div>
         </div>
-      </div>
+      </motion.div>
     </section>
   );
 }
-

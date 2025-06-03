@@ -23,7 +23,7 @@ const ctaList = [
   "Smart AI Tools for Efficient Study",
 ];
 
-export default function FinalCtaSection() { // Renamed function to FinalCtaSection
+export default function FinalCtaSection() {
   return (
     <section id="final-cta" className="w-full py-16 md:py-24 lg:py-32 bg-gradient-to-b from-background via-primary/5 to-primary/10">
       <motion.div 
@@ -98,7 +98,5 @@ export default function FinalCtaSection() { // Renamed function to FinalCtaSecti
   );
 }
 
-// Updated the content of cta-section.tsx to match the new FinalCtaSection design.
-// The import in src/app/page.tsx will need to reflect `FinalCtaSection` if this was a rename,
-// but since I'm updating the existing file, the import name can remain `CtaSection` or be updated for clarity.
-// For consistency, I'll make sure src/app/page.tsx imports it as `FinalCtaSection`.
+// Note: Renamed from cta-section.tsx for clarity, or if you prefer, update the content of cta-section.tsx
+// If renaming, ensure imports are updated in src/app/page.tsx
