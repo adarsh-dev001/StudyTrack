@@ -52,24 +52,38 @@ The material provided is:
 {{{material}}}
 ---
 
-Please perform the following tasks and structure your output as a JSON object conforming to the SummarizeStudyMaterialOutputSchema:
+Please perform the following tasks:
 1.  **Summary**: Write a concise summary of the material, around 100-200 words.
-2.  **Key Concepts**: List 5-7 key concepts from the material as bullet points.
+2.  **Key Concepts**: List 5-7 key concepts from the material.
 3.  **Multiple Choice Questions**: Generate 3-5 multiple-choice questions (MCQs) based on the material. For each MCQ:
     *   Provide a clear question.
     *   Provide 4 distinct answer options.
     *   Clearly indicate the 0-based index of the correct answer within the options array.
     *   Provide a brief explanation for why the correct answer is right and, if relevant, why other choices might be incorrect.
 
-Ensure the entire output is a single JSON object that strictly adheres to the SummarizeStudyMaterialOutputSchema.
-Focus on extracting the most important information and creating relevant, challenging MCQs.
+---
+**Content Generation Guidelines:**
+- **Authenticity & Validity:** The summary, key concepts, and MCQs must be authentic and accurately reflect the provided \`material\` and \`topic\`.
+- **Structure & Formatting (within JSON string values):**
+    - For the \`summary\` field, the \`question\` and \`explanation\` fields within MCQs, and individual strings in the \`keyConcepts\` array:
+        - Use clear, engaging, and well-structured language.
+        - You MAY use **bold** text (using \`**text**\`) or _italic_ text (using \`*text*\` or \`_text_\`) for emphasis on key terms, definitions, or important parts of an explanation. For example, a key concept could be: "🔑 **Photosynthesis:** The process by which green plants use sunlight, water, and carbon dioxide to create _glucose_ and oxygen. Crucial for life on Earth! 🌱"
+        - Incorporate relevant emojis (e.g., 💡, ✅, 🎯, 🤔, 🌱, 🔑) where appropriate to make the content more engaging and visually appealing.
+    - The \`keyConcepts\` array will be rendered as a bulleted list by the UI; ensure each string is a distinct and clear concept, potentially enhanced with formatting.
+- **Tone:** Maintain a friendly, focused, and helpful tone, as an academic assistant.
+- **Clarity & Readability:** Ensure all text is clear, concise, and easy to understand. MCQs should be unambiguous.
+---
+
+Output a JSON object strictly conforming to the SummarizeStudyMaterialOutputSchema.
 Example of an MCQ structure within the output:
 {
-  "question": "What is the powerhouse of the cell?",
+  "question": "What is the **powerhouse** of the cell? 💪",
   "options": ["Nucleus", "Mitochondria", "Ribosome", "Endoplasmic Reticulum"],
   "correctAnswerIndex": 1,
-  "explanation": "Mitochondria are responsible for generating most of the cell's supply of adenosine triphosphate (ATP), used as a source of chemical energy."
+  "explanation": "Mitochondria are responsible for generating most of the cell's supply of adenosine triphosphate (ATP), used as a source of chemical energy. Think of them as the cell's _energy factories_! 💡"
 }
+
+Focus on extracting the most important information and creating relevant, challenging MCQs.
 `,
 });
 

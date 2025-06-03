@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react'; // Added useEffect, useRef
 import { useForm, type SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -35,6 +35,7 @@ export default function MaterialSummarizerPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [mcqAnswers, setMcqAnswers] = useState<Record<number, MCQWithUserAnswer>>({});
   const { toast } = useToast();
+  const resultsRef = useRef<HTMLDivElement>(null); // Ref for scrolling
 
   const form = useForm<SummarizerFormData>({
     resolver: zodResolver(summarizerFormSchema),
@@ -43,6 +44,12 @@ export default function MaterialSummarizerPage() {
       topic: '',
     },
   });
+
+  useEffect(() => {
+    if (analysisResult && resultsRef.current) {
+      resultsRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }, [analysisResult]);
 
   const onSubmit: SubmitHandler<SummarizerFormData> = async (data) => {
     setIsLoading(true);
@@ -170,7 +177,7 @@ export default function MaterialSummarizerPage() {
       </Card>
 
       {analysisResult && (
-        <>
+        <div ref={resultsRef} className="space-y-6">
           <Tabs defaultValue="summary" className="w-full animate-in fade-in-50 duration-500">
             <TabsList className="grid w-full grid-cols-1 sm:grid-cols-3 text-xs sm:text-sm h-auto sm:h-10">
               <TabsTrigger value="summary" className="py-1.5 sm:py-2"><ClipboardList className="mr-1.5 h-3.5 w-3.5 sm:h-4 sm:w-4" />Summary</TabsTrigger>
@@ -294,7 +301,7 @@ export default function MaterialSummarizerPage() {
           <div className="mt-6 sm:mt-8 text-center p-3 sm:p-4 border-t bg-card rounded-b-lg">
             <p className="text-sm sm:text-md font-semibold text-accent">✨ Understanding is power! Use these insights to supercharge your learning. You're doing great! 💪</p>
           </div>
-        </>
+        </div>
       )}
     </div>
   );

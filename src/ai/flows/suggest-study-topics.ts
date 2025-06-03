@@ -71,6 +71,18 @@ For each week, list the topics to be covered for that subject under the 'topics'
 The number of weeks should be realistic based on the target date and average daily study time.
 Calculate the total number of days available from today (assume today is {{{currentDate}}}) until the targetDate. Then calculate total study weeks.
 
+---
+**Content Generation Guidelines:**
+- **Authenticity & Validity:** Ensure the generated syllabus is authentic, valid, and highly relevant to the specified \`examType\` and \`subjects\`. Prioritize core, high-weightage topics.
+- **Structure & Formatting (within JSON string values):**
+    - For fields like \`overallFeedback\` and \`SubjectSyllabusSchema.summary\`, and individual \`topics\` strings, use clear and engaging language.
+    - You MAY use **bold** text (using \`**text**\`) or _italic_ text (using \`*text*\` or \`_text_\`) for emphasis on key terms or advice.
+    - Incorporate relevant emojis (e.g., 💡, ✅, 🚀, 🎯) where appropriate to make the content more engaging.
+    - If a field is an array of strings meant to be a list (like \`topics\`), the UI will render them as bullet points. Focus on making each string in such arrays a clear and concise point. For example, a topic string could be "**Topic X** (Core) - *Approx 4h* 🚀".
+- **Tone:** Maintain a friendly, focused, and motivational tone suitable for students preparing for competitive Indian exams (NEET, JEE, UPSC, etc.). Offer encouragement and practical advice.
+- **Clarity & Readability:** Ensure all text is clear, concise, and easy to understand.
+---
+
 Output a JSON object strictly conforming to the SuggestStudyTopicsOutputSchema.
 The 'generatedSyllabus' array must contain one object for each subject listed by the user.
 Each object in 'generatedSyllabus' must have a 'subject' (string) and a 'schedule' (array of objects, where each object has 'weekLabel' and 'topics' array).
@@ -80,10 +92,10 @@ Example for a single subject in the 'generatedSyllabus' array:
 {
   "subject": "Physics",
   "schedule": [
-    { "weekLabel": "Week 1", "topics": ["Kinematics (10h)", "Units & Measurement (5h)"] },
-    { "weekLabel": "Week 2", "topics": ["Laws of Motion (12h)", "Work, Energy, Power (8h)"] }
+    { "weekLabel": "Week 1", "topics": ["**Kinematics** (Important) - *10h*", "Units & Measurement (5h)"] },
+    { "weekLabel": "Week 2", "topics": ["Laws of Motion (12h) 💡", "Work, Energy, Power (8h)"] }
   ],
-  "summary": "Focus on conceptual understanding and problem-solving for mechanics first."
+  "summary": "Focus on conceptual understanding and problem-solving for mechanics first. **Practice numericals daily!**"
 }
 
 Remember to distribute topics appropriately across the weeks leading up to the target date, considering the daily study hours.
