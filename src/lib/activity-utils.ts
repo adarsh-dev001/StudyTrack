@@ -1,6 +1,4 @@
 
-'use server'; // For potential future use if called from server components, though primarily client for now.
-
 import { db } from '@/lib/firebase';
 import { doc, getDoc, setDoc, updateDoc, Timestamp } from 'firebase/firestore';
 import { format, subDays, differenceInCalendarDays, parseISO } from 'date-fns';
