@@ -9,7 +9,7 @@ export interface UserProfileData {
   earnedBadgeIds: string[];
   purchasedItemIds: string[];
   activeThemeId?: string | null;
-  dailyChallengeStatus?: { [challengeId: string]: { completedOn: Timestamp } };
+  dailyChallengeStatus?: { [challengeId: string]: { completedOn: Timestamp } }; // Store completion date
 
   // Onboarding/Profile Fields
   fullName?: string;
@@ -20,14 +20,19 @@ export interface UserProfileData {
   languageMedium?: string;
   studyMode?: string; // e.g., 'self_study', 'coaching', 'hybrid'
   examPhase?: string; // e.g., 'prelims', 'mains', 'not_started'
+  previousAttempts?: string; // Added from settings
   
   dailyStudyHours?: string;
   preferredStudyTime?: string[];
   weakSubjects?: string[];
   strongSubjects?: string[];
+  distractionStruggles?: string;
 
   preferredLearningStyles?: string[];
   motivationType?: string;
+  age?: number | null; // Changed from string to number | null
+  location?: string;
+  socialVisibilityPublic?: boolean;
 
   onboardingCompleted?: boolean;
 

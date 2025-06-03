@@ -12,23 +12,27 @@ import { useAuth } from '@/contexts/auth-context';
 import { db } from '@/lib/firebase';
 import { doc, Timestamp, runTransaction, getDoc } from 'firebase/firestore';
 import { isToday, startOfDay } from 'date-fns';
-import { DEFAULT_THEME_ID } from '@/lib/themes'; // Import for initializing activeThemeId
+import type { UserProfileData } from '@/lib/profile-types';
+import { DEFAULT_THEME_ID } from '@/lib/themes';
+import { recordPlatformInteraction } from '@/lib/activity-utils';
 
 interface ChallengeDefinition {
   id: string;
   title: string;
   description: string;
   icon: LucideIcon;
-  goalValue: number;
+  goalValue: number; // e.g., number of pomodoros, tasks, or minutes
   rewardXP: number;
   rewardCoins: number;
+  // Future: type: 'pomodoro' | 'task' | 'study_time' for automatic progress tracking
 }
 
 interface ActiveChallenge extends ChallengeDefinition {
-  currentProgress: number;
+  currentProgress: number; // For now, this will be 0 or goalValue upon manual completion
   isCompletedToday: boolean;
 }
 
+// Define a larger pool of challenges
 const ALL_CHALLENGE_DEFINITIONS: ChallengeDefinition[] = [
   {
     id: 'daily_task_1',
@@ -65,7 +69,25 @@ const ALL_CHALLENGE_DEFINITIONS: ChallengeDefinition[] = [
     goalValue: 1,
     rewardXP: 10,
     rewardCoins: 3,
-  }
+  },
+  {
+    id: 'daily_plan_day',
+    title: 'Plan Your Day',
+    description: 'Add at least 2 tasks to your study planner for today.',
+    icon: TargetIcon, // Using TargetIcon from lucide-react
+    goalValue: 1, // Representing the act of planning
+    rewardXP: 5,
+    rewardCoins: 2,
+  },
+  {
+    id: 'daily_hydrate_break',
+    title: 'Hydration Break',
+    description: 'Take a 5-minute break and drink a glass of water.',
+    icon: Coffee, // Placeholder, consider WaterDrop or similar
+    goalValue: 1,
+    rewardXP: 5,
+    rewardCoins: 1,
+  },
 ];
 
 export default function DailyChallengesCard() {
@@ -77,14 +99,23 @@ export default function DailyChallengesCard() {
 
   const selectChallengesForToday = useCallback(() => {
     const dayOfYear = Math.floor((new Date().getTime() - new Date(new Date().getFullYear(), 0, 0).getTime()) / (1000 * 60 * 60 * 24));
-    const selectedIndexes = [
-      dayOfYear % ALL_CHALLENGE_DEFINITIONS.length,
-      (dayOfYear + 1) % ALL_CHALLENGE_DEFINITIONS.length,
-    ];
-    if (selectedIndexes[0] === selectedIndexes[1] && ALL_CHALLENGE_DEFINITIONS.length > 1) {
-      selectedIndexes[1] = (selectedIndexes[1] + 1) % ALL_CHALLENGE_DEFINITIONS.length;
+    // Select 2 or 3 challenges based on the day of the year
+    const numChallengesToSelect = ALL_CHALLENGE_DEFINITIONS.length >= 2 ? 2 : ALL_CHALLENGE_DEFINITIONS.length;
+    const selectedIndexes = new Set<number>();
+    
+    if (ALL_CHALLENGE_DEFINITIONS.length === 0) return [];
+
+    for (let i = 0; i < numChallengesToSelect; i++) {
+      selectedIndexes.add((dayOfYear + i) % ALL_CHALLENGE_DEFINITIONS.length);
     }
-    return Array.from(new Set(selectedIndexes)).map(index => ALL_CHALLENGE_DEFINITIONS[index]);
+    // Ensure we have exactly numChallengesToSelect if possible, avoiding duplicates from modulo
+    let attempt = 0;
+    while(selectedIndexes.size < numChallengesToSelect && attempt < ALL_CHALLENGE_DEFINITIONS.length) {
+        selectedIndexes.add((dayOfYear + numChallengesToSelect + attempt) % ALL_CHALLENGE_DEFINITIONS.length);
+        attempt++;
+    }
+
+    return Array.from(selectedIndexes).map(index => ALL_CHALLENGE_DEFINITIONS[index]);
   }, []);
 
   useEffect(() => {
@@ -96,10 +127,16 @@ export default function DailyChallengesCard() {
 
     setLoadingChallenges(true);
     const todaySelectedDefs = selectChallengesForToday();
+    if (todaySelectedDefs.length === 0) {
+        setActiveChallenges([]);
+        setLoadingChallenges(false);
+        return;
+    }
+
     const userProfileDocRef = doc(db, 'users', currentUser.uid, 'userProfile', 'profile');
 
     getDoc(userProfileDocRef).then(docSnap => {
-      const profileData = docSnap.exists() ? docSnap.data() : {};
+      const profileData = docSnap.exists() ? docSnap.data() as UserProfileData : undefined;
       const challengeStatus = profileData?.dailyChallengeStatus || {};
 
       const challengesToDisplay = todaySelectedDefs.map(challengeDef => {
@@ -142,28 +179,23 @@ export default function DailyChallengesCard() {
       await runTransaction(db, async (transaction) => {
         const profileDoc = await transaction.get(userProfileDocRef);
         
-        let currentCoins = 0;
-        let currentXP = 0;
-        let currentChallengeStatus = {};
-        let currentEarnedBadgeIds: string[] = [];
-        let currentPurchasedItemIds: string[] = [];
-        let currentActiveThemeId: string | null = DEFAULT_THEME_ID;
+        const currentData = profileDoc.exists() ? profileDoc.data() as UserProfileData : undefined;
+        
+        const currentCoins = currentData?.coins || 0;
+        const currentXP = currentData?.xp || 0;
+        const currentChallengeStatus = currentData?.dailyChallengeStatus || {};
+        const currentEarnedBadgeIds = currentData?.earnedBadgeIds || [];
+        const currentPurchasedItemIds = currentData?.purchasedItemIds || [];
+        const currentActiveThemeId = currentData?.activeThemeId === undefined ? DEFAULT_THEME_ID : currentData.activeThemeId;
+        const currentLastInteractionDates = currentData?.lastInteractionDates || [];
 
-
-        if (profileDoc.exists()) {
-            const currentData = profileDoc.data();
-            currentCoins = currentData.coins || 0;
-            currentXP = currentData.xp || 0;
-            currentChallengeStatus = currentData.dailyChallengeStatus || {};
-            currentEarnedBadgeIds = currentData.earnedBadgeIds || [];
-            currentPurchasedItemIds = currentData.purchasedItemIds || [];
-            currentActiveThemeId = currentData.activeThemeId === undefined ? DEFAULT_THEME_ID : currentData.activeThemeId;
-        }
 
         const existingStatus = (currentChallengeStatus as any)[challengeId];
         if (existingStatus && existingStatus.completedOn instanceof Timestamp && isToday(existingStatus.completedOn.toDate())) {
+            // This state should ideally be caught by the UI, but as a safeguard:
             setActiveChallenges(prev => prev.map(c => c.id === challengeId ? {...c, isCompletedToday: true, currentProgress: c.goalValue } : c));
             toast({ title: 'Already Done!', description: 'You already completed this challenge today.', variant: 'default' });
+            setCompletingChallengeId(null); // Reset loading state
             return; 
         }
 
@@ -174,19 +206,20 @@ export default function DailyChallengesCard() {
           [challengeId]: { completedOn: Timestamp.fromDate(startOfDay(new Date())) }
         };
 
-        const profilePayload = {
+        const profilePayload: UserProfileData = {
             coins: newCoins,
             xp: newXP,
             dailyChallengeStatus: updatedChallengeStatus,
             earnedBadgeIds: currentEarnedBadgeIds,
             purchasedItemIds: currentPurchasedItemIds,
             activeThemeId: currentActiveThemeId,
+            onboardingCompleted: currentData?.onboardingCompleted || false, // Preserve onboarding status
+            lastInteractionDates: currentLastInteractionDates, // Preserve interaction dates
         };
 
         if (profileDoc.exists()) {
             transaction.update(userProfileDocRef, profilePayload);
         } else {
-            // Create the profile with these values if it doesn't exist
             transaction.set(userProfileDocRef, profilePayload);
         }
       });
@@ -204,6 +237,8 @@ export default function DailyChallengesCard() {
         description: `You earned +${challengeToComplete.rewardXP} XP and +${challengeToComplete.rewardCoins} Coins! 🪙`,
       });
 
+      await recordPlatformInteraction(currentUser.uid);
+
     } catch (error: any) {
       console.error('Error completing challenge:', error);
       toast({
@@ -219,22 +254,22 @@ export default function DailyChallengesCard() {
   if (loadingChallenges) {
     return (
         <Card className="shadow-lg">
-            <CardHeader>
-                <CardTitle className="text-xl font-semibold flex items-center"><Loader2 className="mr-3 h-6 w-6 animate-spin text-primary" /> Daily Challenges</CardTitle>
-                <CardDescription>Loading today's challenges...</CardDescription>
+            <CardHeader className="p-4 sm:p-6">
+                <CardTitle className="text-lg sm:text-xl font-semibold flex items-center"><Loader2 className="mr-2 sm:mr-3 h-5 w-5 sm:h-6 sm:w-6 animate-spin text-primary" /> Daily Challenges</CardTitle>
+                <CardDescription className="text-xs sm:text-sm">Loading today's challenges...</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-3 sm:space-y-4 p-4 sm:p-6">
             {[1, 2].map(i => (
-                <div key={i} className="p-4 border rounded-lg bg-card/40 shadow-sm space-y-3">
-                <div className="flex items-start gap-3">
-                    <div className="bg-muted p-2 rounded-md mt-1 animate-pulse h-10 w-10"></div>
+                <div key={i} className="p-3 sm:p-4 border rounded-lg bg-card/40 shadow-sm space-y-2 sm:space-y-3">
+                <div className="flex items-start gap-2 sm:gap-3">
+                    <div className="bg-muted p-1.5 sm:p-2 rounded-md mt-0.5 sm:mt-1 animate-pulse h-8 w-8 sm:h-10 sm:w-10"></div>
                     <div className="w-full">
-                    <div className="h-5 w-3/4 bg-muted rounded animate-pulse mb-1.5"></div>
-                    <div className="h-3 w-full bg-muted rounded animate-pulse"></div>
+                    <div className="h-4 sm:h-5 w-3/4 bg-muted rounded animate-pulse mb-1 sm:mb-1.5"></div>
+                    <div className="h-2.5 sm:h-3 w-full bg-muted rounded animate-pulse"></div>
                     </div>
                 </div>
-                <div className="h-2.5 w-full bg-muted rounded animate-pulse mt-2"></div>
-                <div className="h-8 w-1/3 bg-muted rounded animate-pulse mt-3 ml-auto"></div>
+                <div className="h-2 sm:h-2.5 w-full bg-muted rounded animate-pulse mt-1.5 sm:mt-2"></div>
+                <div className="h-7 sm:h-8 w-1/3 bg-muted rounded animate-pulse mt-2 sm:mt-3 ml-auto"></div>
                 </div>
             ))}
             </CardContent>
@@ -246,12 +281,12 @@ export default function DailyChallengesCard() {
   if (activeChallenges.length === 0 && !loadingChallenges) {
     return (
         <Card className="shadow-lg">
-            <CardHeader>
-                <CardTitle className="text-xl font-semibold flex items-center"><TargetIcon className="mr-3 h-6 w-6 text-primary" /> Daily Challenges</CardTitle>
-                <CardDescription>Check back later for new challenges!</CardDescription>
+            <CardHeader className="p-4 sm:p-6">
+                <CardTitle className="text-lg sm:text-xl font-semibold flex items-center"><TargetIcon className="mr-2 sm:mr-3 h-5 w-5 sm:h-6 sm:w-6 text-primary" /> Daily Challenges</CardTitle>
+                <CardDescription className="text-xs sm:text-sm">Check back later for new challenges!</CardDescription>
             </CardHeader>
-            <CardContent>
-                <p className="text-muted-foreground">No challenges available right now. Keep up the great work! 💪</p>
+            <CardContent className="p-4 sm:p-6">
+                <p className="text-muted-foreground text-sm">No challenges available right now. Keep up the great work! 💪</p>
             </CardContent>
         </Card>
     );
@@ -259,35 +294,35 @@ export default function DailyChallengesCard() {
 
   return (
     <Card className="shadow-lg">
-      <CardHeader>
-        <CardTitle className="text-xl font-semibold flex items-center">
-          <TargetIcon className="mr-3 h-6 w-6 text-primary" /> Daily Challenges
+      <CardHeader className="p-4 sm:p-6">
+        <CardTitle className="text-lg sm:text-xl font-semibold flex items-center">
+          <TargetIcon className="mr-2 sm:mr-3 h-5 w-5 sm:h-6 sm:w-6 text-primary" /> Daily Challenges
         </CardTitle>
-        <CardDescription>Complete today's challenges for bonus XP and Coins!</CardDescription>
+        <CardDescription className="text-xs sm:text-sm">Complete today's challenges for bonus XP and Coins!</CardDescription>
       </CardHeader>
-      <CardContent className="space-y-6">
+      <CardContent className="space-y-4 sm:space-y-6 p-4 sm:p-6">
         {activeChallenges.map(challenge => (
-          <div key={challenge.id} className="p-4 border rounded-lg bg-card/40 shadow-sm space-y-3">
-            <div className="flex items-start gap-3">
-              <div className="bg-primary/10 p-2 rounded-md mt-1">
-                <challenge.icon className="h-6 w-6 text-primary" />
+          <div key={challenge.id} className="p-3 sm:p-4 border rounded-lg bg-card/40 shadow-sm space-y-2 sm:space-y-3">
+            <div className="flex items-start gap-2 sm:gap-3">
+              <div className="bg-primary/10 p-1.5 sm:p-2 rounded-md mt-0.5 sm:mt-1">
+                <challenge.icon className="h-5 w-5 sm:h-6 sm:w-6 text-primary" />
               </div>
               <div>
-                <h4 className="font-semibold text-md text-foreground">{challenge.title}</h4>
+                <h4 className="font-semibold text-sm sm:text-md text-foreground">{challenge.title}</h4>
                 <p className="text-xs text-muted-foreground">{challenge.description}</p>
               </div>
             </div>
             
-            <div className="space-y-1.5">
-              <div className="flex justify-between items-center text-xs mb-1">
+            <div className="space-y-1 sm:space-y-1.5">
+              <div className="flex justify-between items-center text-xs mb-0.5 sm:mb-1">
                 <span className="text-muted-foreground">Progress:</span>
                 <span className="font-medium text-foreground">{challenge.isCompletedToday ? challenge.goalValue : challenge.currentProgress} / {challenge.goalValue}</span>
               </div>
-              <Progress value={((challenge.isCompletedToday ? challenge.goalValue : challenge.currentProgress) / challenge.goalValue) * 100} className="h-2.5" />
+              <Progress value={((challenge.isCompletedToday ? challenge.goalValue : challenge.currentProgress) / challenge.goalValue) * 100} className="h-2 sm:h-2.5" />
             </div>
 
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 pt-2">
-                <div className="text-sm">
+            <div className="flex flex-col xs:flex-row xs:items-center xs:justify-between gap-1.5 sm:gap-2 pt-1.5 sm:pt-2">
+                <div className="text-xs sm:text-sm">
                     <span className="font-semibold text-green-600 dark:text-green-400">+{challenge.rewardXP} XP</span>
                     <span className="text-muted-foreground mx-1">|</span>
                     <span className="font-semibold text-yellow-500 dark:text-yellow-400">+{challenge.rewardCoins} 🪙</span>
@@ -297,13 +332,13 @@ export default function DailyChallengesCard() {
                     disabled={challenge.isCompletedToday || completingChallengeId === challenge.id}
                     size="sm"
                     variant={challenge.isCompletedToday ? "secondary" : "default"}
-                    className="w-full sm:w-auto"
+                    className="w-full xs:w-auto text-xs sm:text-sm h-8 sm:h-9"
                 >
-                    {completingChallengeId === challenge.id ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> :
+                    {completingChallengeId === challenge.id ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> :
                      challenge.isCompletedToday ? (
-                        <><CheckCircle className="mr-2 h-4 w-4" /> Claimed Today!</>
+                        <><CheckCircle className="mr-1.5 h-3.5 w-3.5" /> Claimed Today!</>
                     ) : (
-                        <><Award className="mr-2 h-4 w-4" /> Complete Challenge</>
+                        <><Award className="mr-1.5 h-3.5 w-3.5" /> Complete Challenge</>
                     )}
                 </Button>
             </div>
@@ -313,5 +348,3 @@ export default function DailyChallengesCard() {
     </Card>
   );
 }
-
-    
