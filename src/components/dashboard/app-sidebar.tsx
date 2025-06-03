@@ -89,7 +89,7 @@ export function AppSidebar() {
     <Sidebar collapsible="icon" defaultOpen={true} className="border-r">
       <SidebarHeader className="p-4">
         <div className="flex items-center justify-between">
-           <Link href="/dashboard" className="flex items-center gap-2 group-data-[collapsible=icon]:hidden">
+           <Link href="/" className="flex items-center gap-2 group-data-[collapsible=icon]:hidden">
             <BookOpenText className="h-7 w-7 text-primary" />
             <span className="font-headline text-xl font-bold text-sidebar-foreground">StudyTrack</span>
           </Link>

@@ -145,7 +145,7 @@ export default function AppLayout({
           <header className="sticky top-0 z-40 flex h-16 items-center justify-between gap-4 border-b bg-background px-4 sm:px-6 shrink-0">
             <div className="flex items-center gap-2">
               <MobileSidebarTrigger className="lg:hidden" />
-              <Link href="/dashboard" className="flex items-center gap-2 md:hidden">
+              <Link href="/" className="flex items-center gap-2 md:hidden">
                 <BookOpenText className="h-6 w-6 text-primary" />
                 <span className="font-headline text-xl font-bold text-foreground">StudyTrack</span>
               </Link>
