@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { useToast } from '@/hooks/use-toast';
-import { Award, CheckCircle, BookOpen, Zap, Target as TargetIcon, Coffee, Sunrise, Brain, Loader2 } from 'lucide-react';
+import { Award, CheckCircle, BookOpen, Zap, Target, Coffee, Sunrise, Brain, Loader2 } from 'lucide-react'; // Changed TargetIcon to Target
 import type { LucideIcon } from 'lucide-react';
 import { useAuth } from '@/contexts/auth-context';
 import { db } from '@/lib/firebase';
@@ -74,7 +74,7 @@ const ALL_CHALLENGE_DEFINITIONS: ChallengeDefinition[] = [
     id: 'daily_plan_day',
     title: 'Plan Your Day',
     description: 'Add at least 2 tasks to your study planner for today.',
-    icon: TargetIcon, // Using TargetIcon from lucide-react
+    icon: Target, // Using Target directly
     goalValue: 1, // Representing the act of planning
     rewardXP: 5,
     rewardCoins: 2,
@@ -282,7 +282,7 @@ export default function DailyChallengesCard() {
     return (
         <Card className="shadow-lg">
             <CardHeader className="p-4 sm:p-6">
-                <CardTitle className="text-lg sm:text-xl font-semibold flex items-center"><TargetIcon className="mr-2 sm:mr-3 h-5 w-5 sm:h-6 sm:w-6 text-primary" /> Daily Challenges</CardTitle>
+                <CardTitle className="text-lg sm:text-xl font-semibold flex items-center"><Target className="mr-2 sm:mr-3 h-5 w-5 sm:h-6 sm:w-6 text-primary" /> Daily Challenges</CardTitle>
                 <CardDescription className="text-xs sm:text-sm">Check back later for new challenges!</CardDescription>
             </CardHeader>
             <CardContent className="p-4 sm:p-6">
@@ -296,7 +296,7 @@ export default function DailyChallengesCard() {
     <Card className="shadow-lg">
       <CardHeader className="p-4 sm:p-6">
         <CardTitle className="text-lg sm:text-xl font-semibold flex items-center">
-          <TargetIcon className="mr-2 sm:mr-3 h-5 w-5 sm:h-6 sm:w-6 text-primary" /> Daily Challenges
+          <Target className="mr-2 sm:mr-3 h-5 w-5 sm:h-6 sm:w-6 text-primary" /> Daily Challenges
         </CardTitle>
         <CardDescription className="text-xs sm:text-sm">Complete today's challenges for bonus XP and Coins!</CardDescription>
       </CardHeader>
@@ -348,3 +348,5 @@ export default function DailyChallengesCard() {
     </Card>
   );
 }
+
+    
