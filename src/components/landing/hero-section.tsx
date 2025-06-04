@@ -73,7 +73,7 @@ export default function HeroSection() {
           >
             {/* Placeholder for student leveling up animation */}
             <Image
-              src="https://datahubanalytics.com/wp-content/uploads/2024/10/dha-ai-education-blog.png"
+              src="/images/Hero_iamge.png"
               alt="Student achieving goals with StudyTrack"
               fill
               sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 550px"
