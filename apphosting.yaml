@@ -1,3 +1,6 @@
+# Settings to manage and configure a Firebase App Hosting backend.
+# https://firebase.google.com/docs/app-hosting/configure
+
 # Settings for Cloud Run
 runConfig:
   minInstances: 2
@@ -9,24 +12,19 @@ runConfig:
 # Environment variables and secrets
 env:
   - variable: STORAGE_BUCKET
-    value: studyplanner-4abf5.firebasestorage.app
+    value: mybucket.firebasestorage.app
     availability:
       - BUILD
       - RUNTIME
 
   - variable: API_KEY
-    secret: AIzaSyAuHcdS5piYz3vMmCji71C-TgrYvZeC7Mw
+    secret: myApiKeySecret
 
-    # Same as API_KEY above but with a pinned version.
   - variable: PINNED_API_KEY
-    secret: studyplanner-4abf5
+    secret: myApiKeySecret@5
 
-    # Same as API_KEY above but with the long form secret reference as defined by Cloud Secret Manager.
   - variable: VERBOSE_API_KEY
-    secret: studyplanner-4abf5.firebaseapp.com
+    secret: projects/test-project/secrets/secretID
 
-    # Same as API_KEY above but with the long form secret reference with pinned version.
   - variable: PINNED_VERBOSE_API_KEY
-    secret: 193887379026
-   - variable: VERBOSE_API_KEY1
-    secret: 1:193887379026:web:39cf8ba846183fc4c5898b
+    secret: projects/test-project/secrets/secretID/versions/5
