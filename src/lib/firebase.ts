@@ -23,10 +23,11 @@ if (!firebaseConfig.apiKey || !firebaseConfig.projectId) {
     'CRITICAL FIREBASE CONFIGURATION ERROR: Firebase apiKey or projectId is missing or undefined.',
     'This usually means your environment variables are not loaded correctly.',
     'Please verify the following:',
-    '1. Your .env file is at the ROOT of your project.',
+    '1. Your .env file is at the ROOT of your project (for local development).',
     '2. All Firebase related environment variables in .env START WITH "NEXT_PUBLIC_". (e.g., NEXT_PUBLIC_FIREBASE_API_KEY).',
     '3. You have RESTARTED your Next.js development server after making changes to the .env file.',
     '4. The values in your .env file are correct and do not contain typos.',
+    '5. For DEPLOYMENT (like Firebase App Hosting), these variables MUST be set in the hosting environment settings.',
     `Current apiKey used for initialization: ${firebaseConfig.apiKey}`,
     `Current projectId used for initialization: ${firebaseConfig.projectId}`
   );
