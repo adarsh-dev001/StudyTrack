@@ -1,7 +1,6 @@
 # Settings to manage and configure a Firebase App Hosting backend.
 # https://firebase.google.com/docs/app-hosting/configure
 
-# Settings for Cloud Run
 runConfig:
   minInstances: 2
   maxInstances: 100
@@ -9,22 +8,15 @@ runConfig:
   cpu: 2
   memoryMiB: 1024
 
-# Environment variables and secrets
-env:
-  - variable: STORAGE_BUCKET
-    value: mybucket.firebasestorage.app
-    availability:
-      - BUILD
-      - RUNTIME
-
-  - variable: API_KEY
-    secret: myApiKeySecret
-
-  - variable: PINNED_API_KEY
-    secret: myApiKeySecret@5
-
-  - variable: VERBOSE_API_KEY
-    secret: projects/test-project/secrets/secretID
-
-  - variable: PINNED_VERBOSE_API_KEY
-    secret: projects/test-project/secrets/secretID/versions/5
+# Environment variables (including NEXT_PUBLIC_FIREBASE_... and any others like STORAGE_BUCKET)
+# should now be set directly in the Firebase App Hosting console's "Settings" tab.
+#
+# If you have server-side secrets (like third-party API keys not for client-side Firebase)
+# that you want to load from Google Cloud Secret Manager, you would add them back here
+# under an 'env:' section. For example:
+#
+# env:
+#   - variable: MY_THIRD_PARTY_API_KEY
+#     secret: nameOfYourSecretInSecretManagerForThirdPartyKey
+#     availability: # Typically RUNTIME for server-side secrets not needed at build
+#       - RUNTIME
