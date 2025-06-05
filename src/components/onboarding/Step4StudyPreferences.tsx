@@ -42,33 +42,26 @@ export default function Step4StudyPreferences() {
       <FormField
         control={control}
         name="preferredStudyTime"
-        render={() => (
+        render={({ field }) => (
           <FormItem>
             <FormLabel className="text-sm sm:text-base font-semibold">Preferred Study Time(s) <span className="text-destructive">*</span></FormLabel>
             <FormDescription className="text-xs sm:text-sm">When are you most productive?</FormDescription>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-3 gap-y-2 sm:gap-x-4 sm:gap-y-3 pt-1 sm:pt-2">
               {PREFERRED_STUDY_TIMES.map((time) => (
-                <FormField
-                  key={time.id}
-                  control={control}
-                  name="preferredStudyTime"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-row items-center space-x-2 space-y-0">
-                      <FormControl>
-                        <Checkbox
-                          checked={field.value?.includes(time.id)}
-                          onCheckedChange={(checked) => {
-                            const currentSelection = field.value || [];
-                            return checked
-                              ? field.onChange([...currentSelection, time.id])
-                              : field.onChange(currentSelection.filter((value) => value !== time.id));
-                          }}
-                        />
-                      </FormControl>
-                      <FormLabel className="font-normal text-xs sm:text-sm">{time.label}</FormLabel>
-                    </FormItem>
-                  )}
-                />
+                <FormItem key={time.id} className="flex flex-row items-center space-x-2 space-y-0">
+                  <FormControl>
+                    <Checkbox
+                      checked={field.value?.includes(time.id)}
+                      onCheckedChange={(checked) => {
+                        const currentSelection = field.value || [];
+                        return checked
+                          ? field.onChange([...currentSelection, time.id])
+                          : field.onChange(currentSelection.filter((value) => value !== time.id));
+                      }}
+                    />
+                  </FormControl>
+                  <FormLabel className="font-normal text-xs sm:text-sm">{time.label}</FormLabel>
+                </FormItem>
               ))}
             </div>
             <FormMessage />
@@ -128,7 +121,7 @@ export default function Step4StudyPreferences() {
           <FormItem className="flex flex-row items-start sm:items-center space-x-3 space-y-0 rounded-md border p-3 sm:p-4 shadow-sm bg-background">
             <FormControl>
               <Checkbox
-                checked={field.value}
+                checked={!!field.value} // Ensure it's a boolean
                 onCheckedChange={field.onChange}
               />
             </FormControl>

@@ -2,36 +2,35 @@
 'use client';
 
 import React from 'react';
-import { useFormContext, useFieldArray, Controller } from 'react-hook-form';
+import { useFormContext, useFieldArray } from 'react-hook-form';
 import { FormField, FormItem, FormLabel, FormControl, FormMessage, FormDescription } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Button } from '@/components/ui/button';
-import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
+// Button import removed as it's not used
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'; // CardDescription removed as not used
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { EXAM_SUBJECT_MAP, PREPARATION_LEVELS, PREFERRED_LEARNING_METHODS_PER_SUBJECT } from '@/lib/constants';
 import type { OnboardingFormData } from './onboarding-form';
 import { cn } from '@/lib/utils';
 
 interface Step3SubjectDetailsProps {
-  selectedExam: string | undefined; // ID of the selected exam from Step 2
+  selectedExam: string | undefined; 
 }
 
 export default function Step3SubjectDetails({ selectedExam }: Step3SubjectDetailsProps) {
   const { control, getValues, setValue, formState: { errors } } = useFormContext<OnboardingFormData>();
   
   const subjectsForSelectedExam = React.useMemo(() => {
-    if (!selectedExam) return EXAM_SUBJECT_MAP['other']; // Default to custom if no exam selected
+    if (!selectedExam) return EXAM_SUBJECT_MAP['other']; 
     return EXAM_SUBJECT_MAP[selectedExam] || EXAM_SUBJECT_MAP['other'];
   }, [selectedExam]);
 
-  const { fields, append, remove, update } = useFieldArray({
+  const { fields } = useFieldArray({
     control,
     name: "subjectDetails",
   });
 
-  // Sync field array with subjectsForSelectedExam
   React.useEffect(() => {
     const currentSubjectDetails = getValues('subjectDetails') || [];
     const newSubjectDetails = subjectsForSelectedExam.map(examSubject => {
@@ -45,9 +44,8 @@ export default function Step3SubjectDetails({ selectedExam }: Step3SubjectDetail
       };
     });
 
-    // Efficiently update or set the field array
-    // Check if actual update is needed to avoid infinite loops
-    if (JSON.stringify(currentSubjectDetails) !== JSON.stringify(newSubjectDetails)) {
+    if (JSON.stringify(currentSubjectDetails.map(sd => sd.subjectId).sort()) !== JSON.stringify(newSubjectDetails.map(nsd => nsd.subjectId).sort()) ||
+        currentSubjectDetails.length !== newSubjectDetails.length) {
         setValue('subjectDetails', newSubjectDetails, { shouldValidate: true, shouldDirty: true });
     }
 
@@ -107,33 +105,26 @@ export default function Step3SubjectDetails({ selectedExam }: Step3SubjectDetail
                 <FormField
                   control={control}
                   name={`subjectDetails.${index}.preferredLearningMethods`}
-                  render={() => (
+                  render={({ field: controllerField }) => (
                     <FormItem>
                       <FormLabel className="text-xs sm:text-sm font-medium">Preferred Learning Methods <span className="text-destructive">*</span></FormLabel>
                       <div className="grid grid-cols-1 xs:grid-cols-2 gap-x-2 gap-y-1.5 pt-0.5">
                         {PREFERRED_LEARNING_METHODS_PER_SUBJECT.map((method) => (
-                          <FormField
-                            key={method.id}
-                            control={control}
-                            name={`subjectDetails.${index}.preferredLearningMethods`}
-                            render={({ field: controllerField }) => (
-                              <FormItem className="flex flex-row items-center space-x-1.5 space-y-0">
-                                <FormControl>
-                                  <Checkbox
-                                    checked={controllerField.value?.includes(method.id)}
-                                    onCheckedChange={(checked) => {
-                                      const currentSelection = controllerField.value || [];
-                                      return checked
-                                        ? controllerField.onChange([...currentSelection, method.id])
-                                        : controllerField.onChange(currentSelection.filter((val) => val !== method.id));
-                                    }}
-                                    className="h-3.5 w-3.5 sm:h-4 sm:w-4"
-                                  />
-                                </FormControl>
-                                <FormLabel className="font-normal text-[11px] sm:text-xs">{method.label}</FormLabel>
-                              </FormItem>
-                            )}
-                          />
+                          <FormItem key={method.id} className="flex flex-row items-center space-x-1.5 space-y-0">
+                            <FormControl>
+                              <Checkbox
+                                checked={controllerField.value?.includes(method.id)}
+                                onCheckedChange={(checked) => {
+                                  const currentSelection = controllerField.value || [];
+                                  return checked
+                                    ? controllerField.onChange([...currentSelection, method.id])
+                                    : controllerField.onChange(currentSelection.filter((val) => val !== method.id));
+                                }}
+                                className="h-3.5 w-3.5 sm:h-4 sm:w-4"
+                              />
+                            </FormControl>
+                            <FormLabel className="font-normal text-[11px] sm:text-xs">{method.label}</FormLabel>
+                          </FormItem>
                         ))}
                       </div>
                       <FormMessage />

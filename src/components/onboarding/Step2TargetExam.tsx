@@ -19,33 +19,26 @@ export default function Step2TargetExam() {
       <FormField
         control={control}
         name="targetExams"
-        render={() => (
+        render={({ field }) => (
           <FormItem>
             <FormLabel className="text-sm sm:text-base font-semibold">Target Exam(s) <span className="text-destructive">*</span></FormLabel>
             <FormDescription className="text-xs sm:text-sm">Select the competitive exam(s) you are preparing for. You can select multiple.</FormDescription>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-3 gap-y-2 sm:gap-x-4 sm:gap-y-3 pt-1 sm:pt-2">
               {TARGET_EXAMS.map((exam) => (
-                <FormField
-                  key={exam.value}
-                  control={control}
-                  name="targetExams"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-row items-center space-x-2 space-y-0">
-                      <FormControl>
-                        <Checkbox
-                          checked={field.value?.includes(exam.value)}
-                          onCheckedChange={(checked) => {
-                            const currentSelection = field.value || [];
-                            return checked
-                              ? field.onChange([...currentSelection, exam.value])
-                              : field.onChange(currentSelection.filter((value) => value !== exam.value));
-                          }}
-                        />
-                      </FormControl>
-                      <FormLabel className="font-normal text-xs sm:text-sm">{exam.label}</FormLabel>
-                    </FormItem>
-                  )}
-                />
+                <FormItem key={exam.value} className="flex flex-row items-center space-x-2 space-y-0">
+                  <FormControl>
+                    <Checkbox
+                      checked={field.value?.includes(exam.value)}
+                      onCheckedChange={(checked) => {
+                        const currentSelection = field.value || [];
+                        return checked
+                          ? field.onChange([...currentSelection, exam.value])
+                          : field.onChange(currentSelection.filter((value) => value !== exam.value));
+                      }}
+                    />
+                  </FormControl>
+                  <FormLabel className="font-normal text-xs sm:text-sm">{exam.label}</FormLabel>
+                </FormItem>
               ))}
             </div>
             <FormMessage />
