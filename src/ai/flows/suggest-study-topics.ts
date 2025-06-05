@@ -112,8 +112,14 @@ Based on the above student profile and request type, provide a highly relevant a
 ---
 
 Output a JSON object strictly conforming to the SuggestStudyTopicsOutputSchema.
-The 'generatedSyllabus' array must contain one object for each subject listed by the user.
-Optionally, include a 'summary' for each subject's plan and 'overallFeedback' for the entire plan.
+
+The 'generatedSyllabus' array MUST contain one object for EACH subject listed in the user's input (Subjects: {{#each subjects}}{{{this}}}{{#unless @last}}, {{/unless}}{{/each}}).
+Each of these objects within 'generatedSyllabus' MUST have:
+1.  A \`subject\` field (string, exactly matching one of the user's selected subjects).
+2.  A \`schedule\` field (array of weekly plan objects as defined in the schema).
+3.  A \`summary\` field (string, providing a brief summary or key focus for THIS subject's plan. If no specific summary comes to mind, provide a generic encouragement or note about the subject, ensuring this field is never empty).
+
+Optionally, include an 'overallFeedback' string for the entire plan.
 
 Example for a single subject in 'generatedSyllabus':
 {
@@ -125,7 +131,7 @@ Example for a single subject in 'generatedSyllabus':
   "summary": "Phase 1 focuses on building a strong foundation in mechanics. **Practice numericals daily!** Consider your {{{preparationLevel}}} level when tackling these."
 }
 
-Generate the syllabus now.
+Generate the syllabus now. Ensure all subjects requested by the user are present in the output with all required fields.
 `,
 });
 
@@ -145,6 +151,22 @@ const suggestStudyTopicsFlow = ai.defineFlow(
     if (!output) {
         throw new Error("The AI model did not return valid syllabus data. Please try adjusting your inputs or try again later.");
     }
+    // Basic validation to ensure all requested subjects have an entry with a 'subject' field
+    const returnedSubjects = new Set(output.generatedSyllabus.map(s => s.subject));
+    for (const requestedSubject of input.subjects) {
+        if (!returnedSubjects.has(requestedSubject)) {
+            console.error(`AI did not return syllabus for requested subject: ${requestedSubject}. Output:`, JSON.stringify(output, null, 2));
+            throw new Error(`The AI did not generate a syllabus for the subject: ${requestedSubject}. Please try again or adjust inputs.`);
+        }
+    }
+    // Ensure summary is present for each syllabus item, as per strengthened prompt
+    for (const syllabusItem of output.generatedSyllabus) {
+        if (syllabusItem.summary === undefined || syllabusItem.summary.trim() === "") {
+            console.warn(`AI returned an empty or undefined summary for subject: ${syllabusItem.subject}. Setting a default.`);
+            syllabusItem.summary = `Focus on consistent study for ${syllabusItem.subject}.`; // Provide a default if AI fails
+        }
+    }
     return output;
   }
 );
+
