@@ -1,12 +1,13 @@
 
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react'; // Added useEffect, useRef
+import React, { useState, useEffect, useRef } from 'react';
 import { useForm, type SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -15,7 +16,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import { format, addDays } from "date-fns";
-import { Loader2, ListTree, CalendarIcon, Sparkles, BookOpen, CalendarDays, Target, Lightbulb } from 'lucide-react';
+import { Loader2, ListTree, CalendarIcon, Sparkles, BookOpen, CalendarDays, Target, Lightbulb, Brain, Users } from 'lucide-react';
 import { suggestStudyTopics, type SuggestStudyTopicsInput, type SuggestStudyTopicsOutput } from '@/ai/flows/suggest-study-topics';
 import { useToast } from '@/hooks/use-toast';
 
@@ -31,6 +32,10 @@ const commonSubjects = [
   { id: 'general_science', label: 'General Science' },
   { id: 'english', label: 'English' },
   { id: 'current_affairs', label: 'Current Affairs' },
+  { id: 'quantitative_aptitude', label: 'Quantitative Aptitude' },
+  { id: 'reasoning_ability', label: 'Reasoning Ability' },
+  { id: 'optional_subject_1', label: 'Optional Subject 1 (e.g., for UPSC)' },
+  { id: 'optional_subject_2', label: 'Optional Subject 2 (e.g., for UPSC)' },
 ] as const;
 
 
@@ -43,6 +48,9 @@ const syllabusFormSchema = z.object({
   targetDate: z.date({
     required_error: "Target date is required.",
   }).refine(date => date > new Date(), { message: "Target date must be in the future." }),
+  preparationLevel: z.enum(['beginner', 'intermediate', 'advanced'], { required_error: "Preparation level is required."}),
+  studyMode: z.string().optional(),
+  weakTopics: z.string().optional().transform(val => val ? val.split(',').map(s => s.trim()).filter(s => s.length > 0) : []),
 });
 
 type SyllabusFormData = z.infer<typeof syllabusFormSchema>;
@@ -53,6 +61,9 @@ const predefinedExams = [
   { value: 'UPSC', label: 'UPSC (Civil Services)' },
   { value: 'CAT', label: 'CAT (MBA Entrance)' },
   { value: 'GATE', label: 'GATE (Engineering PG)' },
+  { value: 'SSC', label: 'SSC (CGL, CHSL, etc.)' },
+  { value: 'Banking', label: 'Banking (PO, Clerk, RBI)' },
+  { value: 'Other', label: 'Other (Specify)' },
 ];
 
 export default function SyllabusSuggesterPage() {
@@ -60,7 +71,7 @@ export default function SyllabusSuggesterPage() {
   const [overallFeedback, setOverallFeedback] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
-  const syllabusResultRef = useRef<HTMLDivElement>(null); // Ref for the results card
+  const syllabusResultRef = useRef<HTMLDivElement>(null); 
 
   const form = useForm<SyllabusFormData>({
     resolver: zodResolver(syllabusFormSchema),
@@ -69,10 +80,12 @@ export default function SyllabusSuggesterPage() {
       subjects: [],
       timeAvailablePerDay: 4,
       targetDate: addDays(new Date(), 90), 
+      preparationLevel: 'intermediate',
+      studyMode: 'self_study',
+      weakTopics: [],
     },
   });
 
-  // Effect to scroll to results
   useEffect(() => {
     if (generatedSyllabus && generatedSyllabus.length > 0 && syllabusResultRef.current) {
       syllabusResultRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -86,7 +99,7 @@ export default function SyllabusSuggesterPage() {
 
     const inputForAI: SuggestStudyTopicsInput = {
       ...data,
-      targetDate: format(data.targetDate, 'yyyy-MM-dd'), 
+      targetDate: format(data.targetDate, 'yyyy-MM-dd'),
     };
 
     try {
@@ -127,7 +140,7 @@ export default function SyllabusSuggesterPage() {
           <form onSubmit={form.handleSubmit(onSubmit)}>
             <CardHeader className="p-4 sm:p-6">
               <CardTitle className="text-lg sm:text-xl">Your Study Profile 🧑‍🎓</CardTitle>
-              <CardDescription className="text-xs sm:text-sm">Provide details to generate a tailored syllabus.</CardDescription>
+              <CardDescription className="text-xs sm:text-sm">Provide details to generate a tailored syllabus. Required fields are marked with <span className="text-destructive">*</span>.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4 sm:space-y-6 p-4 sm:p-6">
               <FormField
@@ -148,13 +161,12 @@ export default function SyllabusSuggesterPage() {
                             {exam.label}
                           </SelectItem>
                         ))}
-                         <SelectItem value="Other" className="text-sm sm:text-base">Other (Specify if not listed)</SelectItem>
                       </SelectContent>
                     </Select>
                     {form.watch('examType') === "Other" && (
                         <Input
                             placeholder="Specify other exam type"
-                            onChange={(e) => field.onChange(e.target.value)}
+                            onChange={(e) => field.onChange(e.target.value)} // This might need refinement if 'Other' is the value
                             className="mt-2 text-sm sm:text-base"
                         />
                     )}
@@ -279,6 +291,67 @@ export default function SyllabusSuggesterPage() {
                   )}
                 />
               </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+                <FormField
+                  control={form.control}
+                  name="preparationLevel"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-sm sm:text-base">Current Preparation Level <span className="text-destructive">*</span> <Brain className="inline h-4 w-4 text-muted-foreground" /></FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl><SelectTrigger className="text-sm sm:text-base"><SelectValue placeholder="Select your level" /></SelectTrigger></FormControl>
+                        <SelectContent>
+                          <SelectItem value="beginner" className="text-sm sm:text-base">Beginner (Just Started)</SelectItem>
+                          <SelectItem value="intermediate" className="text-sm sm:text-base">Intermediate (Covered Basics)</SelectItem>
+                          <SelectItem value="advanced" className="text-sm sm:text-base">Advanced (Syllabus Done, Revising)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="studyMode"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-sm sm:text-base">Preferred Study Mode <Users className="inline h-4 w-4 text-muted-foreground" /></FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl><SelectTrigger className="text-sm sm:text-base"><SelectValue placeholder="e.g., Self-study" /></SelectTrigger></FormControl>
+                        <SelectContent>
+                          <SelectItem value="self_study" className="text-sm sm:text-base">Self-study</SelectItem>
+                          <SelectItem value="coaching" className="text-sm sm:text-base">Coaching</SelectItem>
+                          <SelectItem value="hybrid" className="text-sm sm:text-base">Hybrid (Self + Coaching)</SelectItem>
+                          <SelectItem value="online" className="text-sm sm:text-base">Online Courses</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              
+              <FormField
+                control={form.control}
+                name="weakTopics"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-sm sm:text-base">Weak Topics/Areas (Optional) <Lightbulb className="inline h-4 w-4 text-muted-foreground" /></FormLabel>
+                    <FormControl>
+                      <Textarea
+                        placeholder="List topics you find challenging, separated by commas (e.g., Organic Chemistry, Modern Physics)"
+                        className="min-h-[80px] resize-y text-sm sm:text-base"
+                        value={Array.isArray(field.value) ? field.value.join(', ') : field.value || ''}
+                        onChange={(e) => field.onChange(e.target.value)} // Store as string, flow will parse
+                      />
+                    </FormControl>
+                    <FormDescription className="text-xs sm:text-sm">Helps AI tailor the plan to your needs.</FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
             </CardContent>
             <CardFooter className="p-4 sm:p-6">
               <Button type="submit" disabled={isLoading} size="default" className="w-full sm:w-auto text-sm sm:text-base">
@@ -289,8 +362,8 @@ export default function SyllabusSuggesterPage() {
                   </>
                 ) : (
                   <>
-                    <ListTree className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />
-                    Generate Syllabus
+                    <Sparkles className="mr-2 h-4 w-4 sm:h-5 sm:w-5" /> {/* Changed icon to Sparkles */}
+                    Generate Personalized Syllabus
                   </>
                 )}
               </Button>
@@ -304,7 +377,7 @@ export default function SyllabusSuggesterPage() {
           <CardHeader className="p-4 sm:p-6">
             <CardTitle className="text-xl sm:text-2xl font-headline">Your Personalized Study Plan for <span className="text-primary">{form.getValues('examType')}</span> 🌟</CardTitle>
             <CardDescription className="text-xs sm:text-sm">
-              Target Completion: {format(form.getValues('targetDate'), "PPP")} ({form.getValues('timeAvailablePerDay')} hrs/day)
+              Target Completion: {format(form.getValues('targetDate'), "PPP")} | {form.getValues('timeAvailablePerDay')} hrs/day | Level: {form.getValues('preparationLevel')}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4 sm:space-y-6 p-4 sm:p-6">
@@ -370,3 +443,4 @@ export default function SyllabusSuggesterPage() {
     </div>
   );
 }
+
