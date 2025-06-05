@@ -16,7 +16,6 @@ import { updateProfile } from 'firebase/auth';
 import type { UserProfileData } from '@/lib/profile-types'; 
 import { subjectDetailSchema } from '@/lib/profile-types'; 
 import { Skeleton } from '@/components/ui/skeleton';
-// AnimatePresence and motion removed
 import { EXAM_SUBJECT_MAP } from '@/lib/constants';
 
 const Step1PersonalInfo = React.lazy(() => import('./Step1PersonalInfo'));
@@ -26,7 +25,6 @@ const Step4StudyPreferences = React.lazy(() => import('./Step4StudyPreferences')
 const Step5Review = React.lazy(() => import('./Step5Review'));
 
 // --- Zod Schemas for each step and the full form ---
-// Define BASE object schemas first
 const step1BaseSchema = z.object({
   fullName: z.string().min(2, 'Full name must be at least 2 characters.').max(100, 'Full name too long.'),
   age: z.coerce.number().positive("Age must be positive.").min(10, "Age seems too low.").max(100, "Age seems too high.").optional().nullable(),
@@ -80,7 +78,7 @@ const getBaseSchemaForStep = (step: number) => {
   if (step === 2) return step2BaseSchema;
   if (step === 3) return step3BaseSchema;
   if (step === 4) return step4BaseSchema;
-  return fullOnboardingSchema; // Fallback for review step, though not used for field extraction there
+  return fullOnboardingSchema; 
 };
 
 const TOTAL_STEPS = 5;
@@ -136,7 +134,6 @@ export default function OnboardingForm({ userId, onOnboardingSuccess }: { userId
       distractionStruggles: '',
       motivationType: '',
       socialVisibilityPublic: false,
-      // onboardingCompleted: false, // This is set on submission, not a form field
     },
   });
 
@@ -144,30 +141,39 @@ export default function OnboardingForm({ userId, onOnboardingSuccess }: { userId
   const watchedTargetExams = useWatch({ control, name: 'targetExams' });
 
   React.useEffect(() => {
-    if (currentStep === 2 && watchedTargetExams && watchedTargetExams.length > 0) {
-      const primaryExam = watchedTargetExams[0];
+    if (watchedTargetExams && watchedTargetExams.length > 0) {
+      const primaryExam = watchedTargetExams[0]; 
       const subjectsForExam = EXAM_SUBJECT_MAP[primaryExam] || EXAM_SUBJECT_MAP['other'];
       
-      const currentSubjectDetails = getValues('subjectDetails') || [];
-      const newSubjectDetails = subjectsForExam.map(subject => {
-        const existingDetail = currentSubjectDetails.find(sd => sd.subjectId === subject.id);
+      const currentSubjectDetailsArray = getValues('subjectDetails') || [];
+      
+      const newSubjectDetails = subjectsForExam.map(examSubject => {
+        const existingDetail = currentSubjectDetailsArray.find(sd => sd.subjectId === examSubject.id);
         return existingDetail || {
-          subjectId: subject.id,
-          subjectName: subject.name,
+          subjectId: examSubject.id,
+          subjectName: examSubject.name,
           preparationLevel: '',
           targetScore: '',
           preferredLearningMethods: [],
         };
       });
-      methods.setValue('subjectDetails', newSubjectDetails, { shouldValidate: currentStep === 3 });
-    } else if (currentStep === 2 && (!watchedTargetExams || watchedTargetExams.length === 0)) {
-       methods.setValue('subjectDetails', [], { shouldValidate: currentStep === 3 });
+
+      const currentSubjectIds = currentSubjectDetailsArray.map(sd => sd.subjectId).sort().join(',');
+      const newSubjectIds = newSubjectDetails.map(sd => sd.subjectId).sort().join(',');
+
+      if (currentSubjectIds !== newSubjectIds || currentSubjectDetailsArray.length !== newSubjectDetails.length) {
+        setValue('subjectDetails', newSubjectDetails, { shouldValidate: currentStep === 3, shouldDirty: true });
+      }
+    } else if (watchedTargetExams && watchedTargetExams.length === 0) {
+      if (getValues('subjectDetails')?.length > 0) {
+          setValue('subjectDetails', [], { shouldValidate: currentStep === 3, shouldDirty: true });
+      }
     }
-  }, [watchedTargetExams, currentStep, methods, getValues]);
+  }, [watchedTargetExams, setValue, getValues, currentStep]);
 
 
   const handleNextStep = async () => {
-    if (currentStep === TOTAL_STEPS) { // Already on review step
+    if (currentStep === TOTAL_STEPS) { 
         await handleSubmit(onSubmit)();
         return;
     }
@@ -212,7 +218,7 @@ export default function OnboardingForm({ userId, onOnboardingSuccess }: { userId
 
     const profilePayload: Partial<UserProfileData> = {
       ...finalData,
-      onboardingCompleted: true, // Set onboarding completed flag
+      onboardingCompleted: true, 
     };
 
     try {
@@ -247,7 +253,7 @@ export default function OnboardingForm({ userId, onOnboardingSuccess }: { userId
   };
 
   return (
-    <Card className="w-full max-w-2xl shadow-2xl"> {/* Removed my-4 sm:my-8 */}
+    <Card className="w-full max-w-2xl shadow-2xl">
       <CardHeader className="text-center p-4 sm:p-6">
         <Sparkles className="mx-auto h-8 w-8 sm:h-10 sm:w-10 text-primary mb-1 sm:mb-2" />
         <CardTitle className="text-xl sm:text-2xl md:text-3xl font-bold">
@@ -261,8 +267,7 @@ export default function OnboardingForm({ userId, onOnboardingSuccess }: { userId
         <Progress value={progressValue} className="mb-6 sm:mb-8 h-2.5 sm:h-3" />
         <FormProvider {...methods}>
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-5 sm:space-y-6">
-            {/* Framer Motion components removed from here */}
-            <div>
+            <div> {/* This div no longer uses Framer Motion */}
               <Suspense fallback={<OnboardingStepSkeleton />}>
                 {renderStepContent()}
               </Suspense>
