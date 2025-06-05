@@ -13,13 +13,12 @@ import { useToast } from '@/hooks/use-toast';
 import { db, auth } from '@/lib/firebase';
 import { doc, setDoc } from 'firebase/firestore';
 import { updateProfile } from 'firebase/auth';
-import type { UserProfileData } from '@/lib/profile-types'; // SubjectDetail type will come from here
-import { subjectDetailSchema } from '@/lib/profile-types'; // Import subjectDetailSchema
+import type { UserProfileData } from '@/lib/profile-types'; 
+import { subjectDetailSchema } from '@/lib/profile-types'; 
 import { Skeleton } from '@/components/ui/skeleton';
 import { AnimatePresence, motion } from 'framer-motion';
 import { EXAM_SUBJECT_MAP } from '@/lib/constants';
 
-// Lazy load step components
 const Step1PersonalInfo = React.lazy(() => import('./Step1PersonalInfo'));
 const Step2TargetExam = React.lazy(() => import('./Step2TargetExam'));
 const Step3SubjectDetails = React.lazy(() => import('./Step3SubjectDetails'));
@@ -27,7 +26,8 @@ const Step4StudyPreferences = React.lazy(() => import('./Step4StudyPreferences')
 const Step5Review = React.lazy(() => import('./Step5Review'));
 
 // --- Zod Schemas for each step and the full form ---
-const step1Schema = z.object({
+// Define BASE object schemas first
+const step1BaseSchema = z.object({
   fullName: z.string().min(2, 'Full name must be at least 2 characters.').max(100, 'Full name too long.'),
   age: z.coerce.number().positive("Age must be positive.").min(10, "Age seems too low.").max(100, "Age seems too high.").optional().nullable(),
   location: z.string().max(100, "Location too long.").optional(),
@@ -37,22 +37,17 @@ const step1Schema = z.object({
   previousAttempts: z.string().optional(),
 });
 
-const step2Schema = z.object({
+const step2BaseSchema = z.object({
   targetExams: z.array(z.string()).min(1, "Select at least one target exam."),
   otherExamName: z.string().optional(),
   examAttemptYear: z.string().min(1, "Select your attempt year."),
-}).refine(data => !data.targetExams?.includes('other') || (data.targetExams.includes('other') && data.otherExamName && data.otherExamName.trim() !== ''), {
-  message: "Please specify the exam name if 'Other' is selected.",
-  path: ['otherExamName'],
 });
 
-// SubjectDetail schema is now imported from profile-types.ts
-
-const step3Schema = z.object({
+const step3BaseSchema = z.object({
   subjectDetails: z.array(subjectDetailSchema).min(1, "Please provide details for at least one subject.").optional(),
 });
 
-const step4Schema = z.object({
+const step4BaseSchema = z.object({
   dailyStudyHours: z.string().min(1, "Select daily study hours."),
   preferredStudyTime: z.array(z.string()).min(1, "Select at least one preferred study time."),
   distractionStruggles: z.string().max(500, "Response too long.").optional(),
@@ -60,19 +55,35 @@ const step4Schema = z.object({
   socialVisibilityPublic: z.boolean().optional(),
 });
 
-const fullOnboardingSchema = step1Schema.merge(step2Schema).merge(step3Schema).merge(step4Schema);
+// Merge base schemas
+const mergedBaseSchema = step1BaseSchema
+  .merge(step2BaseSchema)
+  .merge(step3BaseSchema)
+  .merge(step4BaseSchema);
+
+// Apply refinements to the merged schema
+const fullOnboardingSchema = mergedBaseSchema.refine(data => {
+  if (data.targetExams?.includes('other') && (!data.otherExamName || data.otherExamName.trim() === '')) {
+    return false;
+  }
+  return true;
+}, {
+  message: "Please specify the exam name if 'Other' is selected.",
+  path: ['otherExamName'],
+});
+
 export type OnboardingFormData = z.infer<typeof fullOnboardingSchema>;
 
-// --- Helper to get current step schema ---
-const getCurrentSchema = (step: number) => {
-  if (step === 1) return step1Schema;
-  if (step === 2) return step2Schema;
-  if (step === 3) return step3Schema; 
-  if (step === 4) return step4Schema;
-  return fullOnboardingSchema; 
+// --- Helper to get current step's BASE schema for field name extraction ---
+const getBaseSchemaForStep = (step: number) => {
+  if (step === 1) return step1BaseSchema;
+  if (step === 2) return step2BaseSchema;
+  if (step === 3) return step3BaseSchema;
+  if (step === 4) return step4BaseSchema;
+  return fullOnboardingSchema; // Fallback for review step, though not used for field extraction there
 };
 
-const TOTAL_STEPS = 5; 
+const TOTAL_STEPS = 5;
 
 const stepTitles = [
   "Personal & Academic Basics",
@@ -106,8 +117,8 @@ export default function OnboardingForm({ userId, onOnboardingSuccess }: { userId
   const { toast } = useToast();
 
   const methods = useForm<OnboardingFormData>({
-    resolver: zodResolver(fullOnboardingSchema), 
-    mode: 'onTouched', 
+    resolver: zodResolver(fullOnboardingSchema),
+    mode: 'onTouched',
     defaultValues: {
       fullName: '',
       age: null,
@@ -125,17 +136,16 @@ export default function OnboardingForm({ userId, onOnboardingSuccess }: { userId
       distractionStruggles: '',
       motivationType: '',
       socialVisibilityPublic: false,
-      onboardingCompleted: false,
+      // onboardingCompleted: false, // This is set on submission, not a form field
     },
   });
 
   const { handleSubmit, trigger, getValues, control, setValue } = methods;
   const watchedTargetExams = useWatch({ control, name: 'targetExams' });
 
-
   React.useEffect(() => {
     if (currentStep === 2 && watchedTargetExams && watchedTargetExams.length > 0) {
-      const primaryExam = watchedTargetExams[0]; 
+      const primaryExam = watchedTargetExams[0];
       const subjectsForExam = EXAM_SUBJECT_MAP[primaryExam] || EXAM_SUBJECT_MAP['other'];
       
       const currentSubjectDetails = getValues('subjectDetails') || [];
@@ -151,36 +161,24 @@ export default function OnboardingForm({ userId, onOnboardingSuccess }: { userId
       });
       methods.setValue('subjectDetails', newSubjectDetails, { shouldValidate: currentStep === 3 });
     } else if (currentStep === 2 && (!watchedTargetExams || watchedTargetExams.length === 0)) {
-       // If no exams are selected, or user navigates back and deselects, clear subject details
        methods.setValue('subjectDetails', [], { shouldValidate: currentStep === 3 });
     }
   }, [watchedTargetExams, currentStep, methods, getValues]);
 
 
   const handleNextStep = async () => {
-    const currentValidationSchema = getCurrentSchema(currentStep);
-    const fieldsToValidate = Object.keys(currentValidationSchema.shape) as Array<keyof OnboardingFormData>;
-    
-    // Special handling for step 3: subjectDetails might be empty if "other" exam has no predefined subjects
-    // OR if targetExams array is empty. In such cases, step3Schema might fail if it expects min(1).
-    // For step 3, if subjectDetails is optional or empty and targetExams is 'other' or empty, we might allow proceeding.
-    // However, our step3Schema now has .optional(), so it should pass if subjectDetails is empty.
+    if (currentStep === TOTAL_STEPS) { // Already on review step
+        await handleSubmit(onSubmit)();
+        return;
+    }
+    const baseSchemaForCurrentStep = getBaseSchemaForStep(currentStep);
+    const fieldsToValidate = Object.keys(baseSchemaForCurrentStep.shape) as Array<keyof OnboardingFormData>;
     
     let isValid = await trigger(fieldsToValidate);
-
-    if (currentStep === 3) {
-        // If targetExams is empty or only 'other' with no custom subjects defined yet,
-        // subjectDetails might be legitimately empty.
-        // The step3Schema.subjectDetails is optional, so trigger should handle this.
-        // No special logic needed here due to `optional()` on subjectDetails in step3Schema.
-    }
-
 
     if (isValid) {
       if (currentStep < TOTAL_STEPS) {
         setCurrentStep(prev => prev + 1);
-      } else { 
-        await handleSubmit(onSubmit)();
       }
     } else {
       toast({
@@ -210,13 +208,11 @@ export default function OnboardingForm({ userId, onOnboardingSuccess }: { userId
         finalData.age = Number(finalData.age);
     }
     
-    // Ensure subjectDetails is an array, even if empty
     finalData.subjectDetails = finalData.subjectDetails || [];
-
 
     const profilePayload: Partial<UserProfileData> = {
       ...finalData,
-      onboardingCompleted: true,
+      onboardingCompleted: true, // Set onboarding completed flag
     };
 
     try {
@@ -298,3 +294,5 @@ export default function OnboardingForm({ userId, onOnboardingSuccess }: { userId
     </Card>
   );
 }
+
+    
