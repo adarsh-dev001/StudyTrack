@@ -210,14 +210,14 @@ export default function MaterialSummarizerPage() {
     return (
       <Dialog open={showOnboardingModal} onOpenChange={setShowOnboardingModal}>
         <DialogContent className="max-w-2xl w-[95vw] max-h-[90vh] flex flex-col p-0">
-          <DialogHeader className="p-4 sm:p-6 border-b text-center">
+          <DialogHeader className="p-4 sm:p-6 border-b text-center shrink-0">
             <DialogTitle className="text-xl sm:text-2xl">Complete Profile for AI Study Assistant</DialogTitle>
             <DialogDescription className="text-xs sm:text-sm">
               Please complete your profile to get personalized summaries and quizzes.
             </DialogDescription>
           </DialogHeader>
-           <ScrollArea className="flex-grow">
-            <div className="p-1 sm:p-2 md:p-0">
+           <ScrollArea className="flex-grow min-h-0">
+            <div className="p-4 sm:p-6">
              <Suspense fallback={<OnboardingFormFallback />}>
                 <OnboardingForm userId={currentUser.uid} onOnboardingSuccess={handleOnboardingSuccess} />
              </Suspense>
@@ -434,3 +434,4 @@ export default function MaterialSummarizerPage() {
     </div>
   );
 }
+

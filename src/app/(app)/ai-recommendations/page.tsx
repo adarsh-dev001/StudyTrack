@@ -208,14 +208,14 @@ export default function AiRecommendationsPage() {
     return (
       <Dialog open={showOnboardingModal} onOpenChange={setShowOnboardingModal}>
         <DialogContent className="max-w-2xl w-[95vw] max-h-[90vh] flex flex-col p-0">
-          <DialogHeader className="p-4 sm:p-6 border-b text-center">
+          <DialogHeader className="p-4 sm:p-6 border-b text-center shrink-0">
             <DialogTitle className="text-xl sm:text-2xl">Complete Your Profile for AI Coach</DialogTitle>
             <DialogDescription className="text-xs sm:text-sm">
               To get personalized AI recommendations, please complete your academic and personal profile. This helps us tailor the experience just for you!
             </DialogDescription>
           </DialogHeader>
-          <ScrollArea className="flex-grow">
-            <div className="p-1 sm:p-2 md:p-0"> {/* Remove outer padding from OnboardingForm if it has its own */}
+          <ScrollArea className="flex-grow min-h-0">
+            <div className="p-4 sm:p-6">
              <Suspense fallback={<OnboardingFormFallback />}>
                 <OnboardingForm userId={currentUser.uid} onOnboardingSuccess={handleOnboardingSuccess} />
              </Suspense>
@@ -490,3 +490,4 @@ export default function AiRecommendationsPage() {
     </ScrollArea>
   );
 }
+

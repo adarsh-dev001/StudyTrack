@@ -247,7 +247,7 @@ export default function OnboardingForm({ userId, onOnboardingSuccess }: { userId
   };
 
   return (
-    <Card className="w-full max-w-2xl shadow-2xl my-4 sm:my-8">
+    <Card className="w-full max-w-2xl shadow-2xl"> {/* Removed my-4 sm:my-8 */}
       <CardHeader className="text-center p-4 sm:p-6">
         <Sparkles className="mx-auto h-8 w-8 sm:h-10 sm:w-10 text-primary mb-1 sm:mb-2" />
         <CardTitle className="text-xl sm:text-2xl md:text-3xl font-bold">
