@@ -24,6 +24,11 @@ import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/auth-context';
 import { recordPlatformInteraction } from '@/lib/activity-utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { db } from '@/lib/firebase'; // Added db import
+import { doc, getDoc } from 'firebase/firestore'; // Added getDoc import
+import type { UserProfileData } from '@/lib/profile-types'; // Added UserProfileData import
+import OnboardingRequiredGate from '@/components/onboarding/OnboardingRequiredGate'; // Import the gate
+
 
 const quizFormSchema = GenerateQuizInputSchema;
 type QuizFormData = GenerateQuizInput;
@@ -62,6 +67,9 @@ export default function SmartQuizPage() {
   const quizAreaRef = useRef<HTMLDivElement>(null);
   const questionCardRef = useRef<HTMLDivElement>(null);
 
+  const [isLoadingProfile, setIsLoadingProfile] = useState(true);
+  const [onboardingCompleted, setOnboardingCompleted] = useState(false);
+
   const form = useForm<QuizFormData>({
     resolver: zodResolver(quizFormSchema),
     defaultValues: {
@@ -71,6 +79,37 @@ export default function SmartQuizPage() {
       numQuestions: 5,
     },
   });
+  
+  useEffect(() => {
+    async function fetchUserProfile() {
+      if (currentUser?.uid) {
+        setIsLoadingProfile(true);
+        const profileDocRef = doc(db, 'users', currentUser.uid, 'userProfile', 'profile');
+        const profileSnap = await getDoc(profileDocRef);
+        if (profileSnap.exists()) {
+          const data = profileSnap.data() as UserProfileData;
+          setOnboardingCompleted(data.onboardingCompleted || false);
+          // Pre-fill exam type if available
+          if (data.onboardingCompleted && data.targetExams && data.targetExams.length > 0) {
+            const primaryExam = data.targetExams[0] === 'other' && data.otherExamName ? data.otherExamName.toLowerCase() : data.targetExams[0];
+            // Find a matching examTypeOption, otherwise keep default
+            const matchingExamOption = examTypeOptions.find(opt => primaryExam?.includes(opt.value) || opt.value.includes(primaryExam || ''));
+            if (matchingExamOption) {
+              form.setValue('examType', matchingExamOption.value as QuizFormData['examType']);
+            }
+          }
+        } else {
+          setOnboardingCompleted(false);
+        }
+        setIsLoadingProfile(false);
+      } else {
+         setIsLoadingProfile(false);
+         setOnboardingCompleted(false);
+      }
+    }
+    fetchUserProfile();
+  }, [currentUser, form]);
+
 
   useEffect(() => {
     if ((quizState === 'inProgress' || quizState === 'submitted') && quizAreaRef.current) {
@@ -185,7 +224,9 @@ export default function SmartQuizPage() {
   };
   
   const handleCreateNewQuiz = () => {
-    form.reset();
+    form.reset(); // Resets to defaultValues, which might be pre-filled by useEffect
+    // Explicitly set examType to general or fetch from profile again if needed
+    form.setValue('examType', 'general');
     setQuizData(null);
     setUserAnswers({});
     setCurrentQuestionIndex(0);
@@ -197,6 +238,19 @@ export default function SmartQuizPage() {
   const isLastQuestion = quizData ? currentQuestionIndex === quizData.questions.length - 1 : false;
   const canProceed = userAnswers[currentQuestionIndex]?.selectedOption !== undefined || userAnswers[currentQuestionIndex]?.skipped === true;
 
+
+  if (isLoadingProfile) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[calc(100vh-200px)] text-center p-6">
+        <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
+        <p className="text-muted-foreground">Loading SmartQuiz...</p>
+      </div>
+    );
+  }
+
+  if (!onboardingCompleted) {
+    return <OnboardingRequiredGate featureName="SmartQuiz AI" />;
+  }
 
   return (
     <div className="w-full space-y-6 sm:space-y-8">
@@ -270,7 +324,7 @@ export default function SmartQuizPage() {
                       <FormItem>
                         <FormLabel className="text-sm sm:text-base font-semibold">Target Exam Type <span className="text-destructive">*</span></FormLabel>
                          <FormDescription className="text-xs sm:text-sm pb-1">Helps AI tailor question style & tone.</FormDescription>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <Select onValueChange={field.onChange} value={field.value}>
                           <FormControl>
                             <SelectTrigger className="text-sm sm:text-base h-10 sm:h-11"><SelectValue placeholder="Select exam type..." /></SelectTrigger>
                           </FormControl>

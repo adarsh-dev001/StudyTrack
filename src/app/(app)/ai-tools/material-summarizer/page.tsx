@@ -22,6 +22,7 @@ import { recordPlatformInteraction } from '@/lib/activity-utils';
 import { db } from '@/lib/firebase';
 import { doc, getDoc } from 'firebase/firestore';
 import type { UserProfileData } from '@/lib/profile-types';
+import OnboardingRequiredGate from '@/components/onboarding/OnboardingRequiredGate'; // Import the gate
 
 const summarizerFormSchema = z.object({
   material: z.string().min(50, { message: 'Study material must be at least 50 characters long.' }).max(10000, { message: 'Study material cannot exceed 10,000 characters.' }),
@@ -42,7 +43,10 @@ export default function MaterialSummarizerPage() {
   const [mcqAnswers, setMcqAnswers] = useState<Record<number, MCQWithUserAnswer>>({});
   const { toast } = useToast();
   const resultsRef = useRef<HTMLDivElement>(null);
-  const [userProfileContext, setUserProfileContext] = useState<{examType?: string, userLevel?: string, userName?: string}>({});
+  
+  const [isLoadingProfile, setIsLoadingProfile] = useState(true);
+  const [userFullProfile, setUserFullProfile] = useState<UserProfileData | null>(null);
+  const [onboardingCompleted, setOnboardingCompleted] = useState(false);
 
 
   useEffect(() => {
@@ -54,18 +58,20 @@ export default function MaterialSummarizerPage() {
   useEffect(() => {
     async function fetchUserProfile() {
       if (currentUser?.uid) {
+        setIsLoadingProfile(true);
         const profileDocRef = doc(db, 'users', currentUser.uid, 'userProfile', 'profile');
         const profileSnap = await getDoc(profileDocRef);
         if (profileSnap.exists()) {
           const data = profileSnap.data() as UserProfileData;
-          const examType = data.targetExams && data.targetExams.length > 0 ? data.targetExams[0] : undefined;
-          // Attempt to find a general preparation level or use the first subject's
-          let userLevel = data.preparationLevel; // Assuming a general prep level field might exist from settings/onboarding
-          if (!userLevel && data.subjectDetails && data.subjectDetails.length > 0) {
-            userLevel = data.subjectDetails[0].preparationLevel;
-          }
-          setUserProfileContext({ examType, userLevel, userName: data.fullName || currentUser.displayName || undefined });
+          setUserFullProfile(data);
+          setOnboardingCompleted(data.onboardingCompleted || false);
+        } else {
+          setOnboardingCompleted(false);
         }
+        setIsLoadingProfile(false);
+      } else {
+        setIsLoadingProfile(false);
+        setOnboardingCompleted(false); // Assume not completed if no user
       }
     }
     fetchUserProfile();
@@ -84,12 +90,28 @@ export default function MaterialSummarizerPage() {
     setIsLoading(true);
     setAnalysisResult(null);
     setMcqAnswers({});
+
+    let examTypeForAI: string | undefined;
+    let userLevelForAI: string | undefined;
+    let userNameForAI: string | undefined;
+
+    if (userFullProfile) {
+        examTypeForAI = userFullProfile.targetExams && userFullProfile.targetExams.length > 0 
+                            ? (userFullProfile.targetExams[0] === 'other' && userFullProfile.otherExamName ? userFullProfile.otherExamName : userFullProfile.targetExams[0]) 
+                            : undefined;
+        userLevelForAI = userFullProfile.subjectDetails && userFullProfile.subjectDetails.length > 0 
+                            ? userFullProfile.subjectDetails[0].preparationLevel 
+                            : undefined; // Or a general prep level if available
+        userNameForAI = userFullProfile.fullName || currentUser?.displayName || undefined;
+    }
+
+
     try {
       const result: SummarizeStudyMaterialOutput = await summarizeStudyMaterial({
         ...data,
-        examType: userProfileContext.examType,
-        userLevel: userProfileContext.userLevel,
-        userName: userProfileContext.userName,
+        examType: examTypeForAI,
+        userLevel: userLevelForAI,
+        userName: userNameForAI,
       });
       setAnalysisResult(result);
       const initialMcqAnswers: Record<number, MCQWithUserAnswer> = {};
@@ -137,6 +159,20 @@ export default function MaterialSummarizerPage() {
       await recordPlatformInteraction(currentUser.uid);
     }
   };
+
+  if (isLoadingProfile) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[calc(100vh-200px)] text-center p-6">
+        <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
+        <p className="text-muted-foreground">Loading Summarizer...</p>
+      </div>
+    );
+  }
+
+  if (!onboardingCompleted) {
+    return <OnboardingRequiredGate featureName="AI Study Assistant (Summarizer)" />;
+  }
+
 
   return (
     <div className="w-full space-y-6">

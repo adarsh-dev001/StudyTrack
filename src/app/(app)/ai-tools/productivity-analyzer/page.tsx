@@ -16,6 +16,11 @@ import { useAuth } from '@/contexts/auth-context';
 import { getUnlockAndProgressStatus, type UnlockStatus } from '@/lib/activity-utils';
 import { Progress } from '@/components/ui/progress';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { db } from '@/lib/firebase'; // Added db import
+import { doc, getDoc } from 'firebase/firestore'; // Added getDoc import
+import type { UserProfileData } from '@/lib/profile-types'; // Added UserProfileData import
+import OnboardingRequiredGate from '@/components/onboarding/OnboardingRequiredGate'; // Import the gate
+
 
 const productivityAnalyzerFormSchema = z.object({
   studyHours: z.coerce.number().min(0, { message: 'Study hours cannot be negative.' }).max(100, { message: 'Study hours seem too high for a week.' }),
@@ -36,31 +41,57 @@ export default function ProductivityAnalyzerPage() {
   const { toast } = useToast();
   const [analysisResult, setAnalysisResult] = useState<AnalyzeProductivityDataOutput | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  
+  const [isLoadingOnboardingStatus, setIsLoadingOnboardingStatus] = useState(true);
+  const [onboardingCompleted, setOnboardingCompleted] = useState(false);
+  
   const [unlockState, setUnlockState] = useState<UnlockStatus | null>(null);
-  const [isLoadingUnlockStatus, setIsLoadingUnlockStatus] = useState(true);
+  const [isLoadingUnlockStatus, setIsLoadingUnlockStatus] = useState(true); // For streak unlock
   const [hasShownUnlockToast, setHasShownUnlockToast] = useState(false);
 
 
   useEffect(() => {
-    if (currentUser?.uid) {
-      setIsLoadingUnlockStatus(true);
-      getUnlockAndProgressStatus(currentUser.uid).then(status => {
-        const previouslyLocked = unlockState ? !unlockState.unlocked : true; // Assume locked if no previous state
-        setUnlockState(status);
-        if (status.unlocked && previouslyLocked && !hasShownUnlockToast) {
-          toast({
-            title: '🎉 Productivity Analysis AI Unlocked! 🎉',
-            description: "You've gained access to your personal productivity coach!",
-          });
-          setHasShownUnlockToast(true);
+    async function fetchOnboardingStatus() {
+      if (currentUser?.uid) {
+        setIsLoadingOnboardingStatus(true);
+        const profileDocRef = doc(db, 'users', currentUser.uid, 'userProfile', 'profile');
+        const profileSnap = await getDoc(profileDocRef);
+        if (profileSnap.exists()) {
+          const data = profileSnap.data() as UserProfileData;
+          setOnboardingCompleted(data.onboardingCompleted || false);
+        } else {
+          setOnboardingCompleted(false);
         }
-        setIsLoadingUnlockStatus(false);
-      });
-    } else {
-      setUnlockState({ unlocked: false, displayProgress: 0, progressTarget: 7, message: "Log in to access this tool.", unlockReason: 'none', studyStreakCount: 0, interactionStreakCount: 0 });
-      setIsLoadingUnlockStatus(false);
+        setIsLoadingOnboardingStatus(false);
+      } else {
+        setIsLoadingOnboardingStatus(false);
+        setOnboardingCompleted(false);
+      }
     }
-  }, [currentUser?.uid, toast, hasShownUnlockToast, unlockState]); // Added unlockState to deps for re-check if needed.
+    fetchOnboardingStatus();
+  }, [currentUser?.uid]);
+
+
+  useEffect(() => {
+    if (!onboardingCompleted || !currentUser?.uid) {
+      setIsLoadingUnlockStatus(false); // No need to check streak if onboarding not done or no user
+      return;
+    }
+
+    setIsLoadingUnlockStatus(true);
+    getUnlockAndProgressStatus(currentUser.uid).then(status => {
+      const previouslyLocked = unlockState ? !unlockState.unlocked : true;
+      setUnlockState(status);
+      if (status.unlocked && previouslyLocked && !hasShownUnlockToast) {
+        toast({
+          title: '🎉 Productivity Analysis AI Unlocked! 🎉',
+          description: "You've gained access to your personal productivity coach!",
+        });
+        setHasShownUnlockToast(true);
+      }
+      setIsLoadingUnlockStatus(false);
+    });
+  }, [currentUser?.uid, toast, hasShownUnlockToast, unlockState, onboardingCompleted]); // Added onboardingCompleted
 
   const form = useForm<ProductivityAnalyzerFormData>({
     resolver: zodResolver(productivityAnalyzerFormSchema),
@@ -116,6 +147,20 @@ export default function ProductivityAnalyzerPage() {
     }
   };
 
+  if (isLoadingOnboardingStatus) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[calc(100vh-200px)] text-center p-6">
+        <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
+        <p className="text-muted-foreground">Checking profile status...</p>
+      </div>
+    );
+  }
+
+  if (!onboardingCompleted) {
+    return <OnboardingRequiredGate featureName="Productivity Analysis AI" />;
+  }
+  
+  // Onboarding is completed, now check streak unlock status
   if (isLoadingUnlockStatus || !unlockState) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[calc(100vh-200px)] text-center p-6">
@@ -182,7 +227,7 @@ export default function ProductivityAnalyzerPage() {
     );
   }
 
-  // If unlocked, show the original form
+  // If onboarding completed AND streak unlocked, show the main form
   return (
     <div className="w-full space-y-6">
       <div>
@@ -364,4 +409,3 @@ export default function ProductivityAnalyzerPage() {
   );
 }
     
-

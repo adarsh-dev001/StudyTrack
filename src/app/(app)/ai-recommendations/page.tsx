@@ -21,6 +21,7 @@ import {
 import type { LucideIcon } from 'lucide-react';
 import Link from 'next/link';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import OnboardingRequiredGate from '@/components/onboarding/OnboardingRequiredGate'; // Import the gate
 
 interface ProgressStep {
   text: string;
@@ -52,6 +53,8 @@ export default function AiRecommendationsPage() {
   const [isLoadingProfile, setIsLoadingProfile] = useState(true);
   const [isLoadingRecommendations, setIsLoadingRecommendations] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [onboardingCompleted, setOnboardingCompleted] = useState(false);
+
 
   const [currentProgressStepIndex, setCurrentProgressStepIndex] = useState(0);
   const [currentTipIndex, setCurrentTipIndex] = useState(0);
@@ -70,11 +73,12 @@ export default function AiRecommendationsPage() {
         const profileSnap = await getDoc(profileDocRef);
 
         if (!profileSnap.exists() || !profileSnap.data()?.onboardingCompleted) {
-          setError("Please complete your profile onboarding to receive personalized recommendations.");
+          setOnboardingCompleted(false);
           setProfile(null);
           setIsLoadingProfile(false);
           return;
         }
+        setOnboardingCompleted(true);
 
         const userProfileData = profileSnap.data() as UserProfileData;
         setProfile(userProfileData);
@@ -130,7 +134,7 @@ export default function AiRecommendationsPage() {
     }
 
     fetchProfileAndGenerateRecommendations();
-  }, [currentUser?.uid, currentUser?.displayName]); // Added currentUser.displayName as dependency
+  }, [currentUser?.uid, currentUser?.displayName]);
 
   useEffect(() => {
     let progressInterval: NodeJS.Timeout;
@@ -160,9 +164,13 @@ export default function AiRecommendationsPage() {
     return (
       <div className="flex flex-col items-center justify-center min-h-[calc(100vh-150px)] text-center p-6">
         <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
-        <p className="text-muted-foreground">Loading your profile...</p>
+        <p className="text-muted-foreground">Loading your profile and recommendations settings...</p>
       </div>
     );
+  }
+
+  if (!onboardingCompleted) {
+    return <OnboardingRequiredGate featureName="AI Personalized Recommendations" />;
   }
 
   if (isLoadingRecommendations) {
@@ -247,19 +255,16 @@ export default function AiRecommendationsPage() {
     );
   }
 
-  if (!profile && !isLoadingProfile && !error) {
+  if (!profile && !isLoadingProfile && !error && onboardingCompleted) {
      return (
       <div className="flex flex-col items-center justify-center min-h-[calc(100vh-150px)] text-center p-6">
         <Alert className="max-w-md">
           <Lightbulb className="h-5 w-5" />
-          <AlertTitle>Profile Not Found or Incomplete</AlertTitle>
+          <AlertTitle>Profile Data Issue</AlertTitle>
           <AlertDescription>
-            We couldn't find your profile information or it's not complete. Please ensure you've completed the onboarding process to get AI recommendations.
+            Your onboarding is complete, but we couldn't load your profile data for recommendations. Please try again or contact support.
           </AlertDescription>
         </Alert>
-         <Button asChild className="mt-6 mr-2" variant="default">
-          <Link href="/onboarding">Complete Onboarding</Link>
-        </Button>
         <Button asChild className="mt-6" variant="outline">
           <Link href="/dashboard">Go to Dashboard</Link>
         </Button>
@@ -412,13 +417,13 @@ export default function AiRecommendationsPage() {
         </div>
       )}
 
-       {!isLoadingProfile && !isLoadingRecommendations && !recommendations && !error && profile && (
+       {!isLoadingProfile && !isLoadingRecommendations && !recommendations && !error && profile && onboardingCompleted && (
          <div className="flex flex-col items-center justify-center min-h-[calc(100vh-300px)] text-center p-6">
             <Alert className="max-w-md">
               <Lightbulb className="h-5 w-5" />
               <AlertTitle>Ready for Your Plan!</AlertTitle>
               <AlertDescription>
-                We have your profile. If recommendations didn't load, try refreshing or check back shortly.
+                We have your profile. If recommendations didn't load, try refreshing or check back shortly. The AI might be busy.
               </AlertDescription>
             </Alert>
              <Button asChild className="mt-6">

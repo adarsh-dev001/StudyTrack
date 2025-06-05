@@ -16,13 +16,14 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import { format, addDays } from "date-fns";
-import { Loader2, ListTree, CalendarIcon, Sparkles, BookOpen, CalendarDays, Target, Lightbulb, Brain, Users, FileText, Goal } from 'lucide-react'; // Added icons
+import { Loader2, ListTree, CalendarIcon, Sparkles, BookOpen, CalendarDays, Target, Lightbulb, Brain, Users, FileText, Goal } from 'lucide-react';
 import { suggestStudyTopics, type SuggestStudyTopicsInput, type SuggestStudyTopicsOutput } from '@/ai/flows/suggest-study-topics';
 import { useToast } from '@/hooks/use-toast';
-import { useAuth } from '@/contexts/auth-context'; // For fetching user name
-import { db } from '@/lib/firebase'; // For fetching profile data
-import { doc, getDoc } from 'firebase/firestore'; // For fetching profile data
-import type { UserProfileData } from '@/lib/profile-types'; // For profile data type
+import { useAuth } from '@/contexts/auth-context';
+import { db } from '@/lib/firebase';
+import { doc, getDoc } from 'firebase/firestore';
+import type { UserProfileData } from '@/lib/profile-types';
+import OnboardingRequiredGate from '@/components/onboarding/OnboardingRequiredGate'; // Import the gate
 
 const commonSubjects = [
   { id: 'physics', label: 'Physics' },
@@ -79,6 +80,9 @@ export default function SyllabusSuggesterPage() {
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
   const syllabusResultRef = useRef<HTMLDivElement>(null); 
+  
+  const [isLoadingProfile, setIsLoadingProfile] = useState(true);
+  const [onboardingCompleted, setOnboardingCompleted] = useState(false);
 
   const form = useForm<SyllabusFormData>({
     resolver: zodResolver(syllabusFormSchema),
@@ -95,30 +99,41 @@ export default function SyllabusSuggesterPage() {
     },
   });
   
-  // Pre-fill form with user profile data
   useEffect(() => {
     async function fetchAndSetProfileData() {
         if (currentUser?.uid) {
+            setIsLoadingProfile(true);
             const profileDocRef = doc(db, 'users', currentUser.uid, 'userProfile', 'profile');
             const profileSnap = await getDoc(profileDocRef);
             if (profileSnap.exists()) {
                 const data = profileSnap.data() as UserProfileData;
-                form.reset({
-                    examType: data.targetExams && data.targetExams.length > 0 ? data.targetExams[0] : '', // Use first target exam
-                    subjects: data.weakSubjects || [], // Or map from subjectDetails if better
-                    timeAvailablePerDay: data.dailyStudyHours ? parseFloat(data.dailyStudyHours.split('-')[0]) : 4, // Approx
-                    targetDate: data.examAttemptYear ? new Date(parseInt(data.examAttemptYear), 5, 1) : addDays(new Date(), 90), // Mid-year of attempt year
-                    preparationLevel: (data.subjectDetails && data.subjectDetails.length > 0 ? data.subjectDetails[0].preparationLevel : 'intermediate') as 'beginner' | 'intermediate' | 'advanced',
-                    studyMode: data.studyMode || 'self_study',
-                    weakTopics: data.weakSubjects || [], // This is already an array of strings
-                    preferredLanguage: data.languageMedium || 'english',
-                    goals: '', // Goals are usually more specific to a plan
-                });
+                setOnboardingCompleted(data.onboardingCompleted || false);
+                if (data.onboardingCompleted) {
+                    form.reset({
+                        examType: data.targetExams && data.targetExams.length > 0 
+                                    ? (data.targetExams[0] === 'other' && data.otherExamName ? data.otherExamName : data.targetExams[0]) 
+                                    : '',
+                        subjects: data.subjectDetails?.map(sd => sd.subjectId) || [], 
+                        timeAvailablePerDay: data.dailyStudyHours ? parseFloat(data.dailyStudyHours.split('-')[0]) : 4,
+                        targetDate: data.examAttemptYear ? new Date(parseInt(data.examAttemptYear), 5, 1) : addDays(new Date(), 90),
+                        preparationLevel: (data.subjectDetails && data.subjectDetails.length > 0 ? data.subjectDetails[0].preparationLevel : 'intermediate') as 'beginner' | 'intermediate' | 'advanced',
+                        studyMode: data.studyMode || 'self_study',
+                        weakTopics: data.weakSubjects || [],
+                        preferredLanguage: data.languageMedium || 'english',
+                        goals: '', // Goals are usually specific to a plan
+                    });
+                }
+            } else {
+              setOnboardingCompleted(false);
             }
+            setIsLoadingProfile(false);
+        } else {
+            setIsLoadingProfile(false);
+            setOnboardingCompleted(false);
         }
     }
     fetchAndSetProfileData();
-  }, [currentUser, form.reset]);
+  }, [currentUser, form.reset, form]); // Added form to dependencies
 
 
   useEffect(() => {
@@ -159,6 +174,19 @@ export default function SyllabusSuggesterPage() {
       setIsLoading(false);
     }
   };
+
+  if (isLoadingProfile) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[calc(100vh-200px)] text-center p-6">
+        <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
+        <p className="text-muted-foreground">Loading Syllabus Suggester...</p>
+      </div>
+    );
+  }
+
+  if (!onboardingCompleted) {
+    return <OnboardingRequiredGate featureName="AI Syllabus Suggester" />;
+  }
 
   return (
     <div className="w-full space-y-6">
@@ -204,6 +232,7 @@ export default function SyllabusSuggesterPage() {
                             placeholder="Specify other exam type"
                             onChange={(e) => field.onChange(e.target.value)}
                             className="mt-2 text-sm sm:text-base"
+                            value={form.watch('examType') === 'Other' ? field.value : ''} // Only show/bind if 'Other' is selected
                         />
                     )}
                     <FormDescription className="text-xs sm:text-sm">
