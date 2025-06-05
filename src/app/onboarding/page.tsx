@@ -1,14 +1,11 @@
 
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useEffect } from 'react'; // Removed useState as it's handled in OnboardingForm
 import { useAuth } from '@/contexts/auth-context';
 import { useRouter } from 'next/navigation';
-import OnboardingForm from '@/components/onboarding/onboarding-form';
-import { Loader2, CheckCircle } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import Link from 'next/link';
+import OnboardingForm from '@/components/onboarding/onboarding-form'; // Path will be updated
+import { Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 export default function OnboardingPage() {
@@ -25,10 +22,12 @@ export default function OnboardingPage() {
   const handleOnboardingSuccess = () => {
     toast({
         title: 'Profile Setup Complete! 🎉',
-        description: "We've saved your preferences. Generating your AI recommendations...",
+        description: "We've saved your preferences. You're all set!", // Updated description
+        duration: 3000,
     });
     setTimeout(() => {
-        router.push('/ai-recommendations'); // Redirect to the new AI recommendations page
+        // Redirect to dashboard or AI recommendations as per previous logic
+        router.push('/dashboard'); 
     }, 1500); 
   };
 
@@ -41,15 +40,14 @@ export default function OnboardingPage() {
   }
 
   if (!currentUser) {
+    // This state should ideally be caught by the useEffect above,
+    // but as a fallback, prevent rendering the form.
     return null; 
   }
 
-
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-br from-sky-100 via-indigo-50 to-purple-100 dark:from-sky-900 dark:via-indigo-950 dark:to-purple-900 p-4 sm:p-6 lg:p-8">
+    <div className="flex min-h-screen flex-col items-center justify-start bg-gradient-to-br from-sky-100 via-indigo-50 to-purple-100 dark:from-sky-900 dark:via-indigo-950 dark:to-purple-900 p-2 sm:p-4 md:p-6 lg:p-8 overflow-y-auto">
         <OnboardingForm userId={currentUser.uid} onOnboardingSuccess={handleOnboardingSuccess} />
     </div>
   );
 }
-
-    

@@ -10,6 +10,73 @@ export const TARGET_EXAMS = [
   { value: 'other', label: 'Other' },
 ];
 
+export const EXAM_SUBJECT_MAP: Record<string, { id: string, name: string }[]> = {
+  jee: [
+    { id: 'mathematics', name: 'Mathematics' },
+    { id: 'physics', name: 'Physics' },
+    { id: 'chemistry', name: 'Chemistry' },
+  ],
+  neet: [
+    { id: 'physics', name: 'Physics' },
+    { id: 'chemistry', name: 'Chemistry' },
+    { id: 'biology', name: 'Biology (Botany & Zoology)' },
+  ],
+  upsc: [ // Example subjects, can be more comprehensive
+    { id: 'history', name: 'History' },
+    { id: 'geography', name: 'Geography' },
+    { id: 'polity', name: 'Polity' },
+    { id: 'economy', name: 'Economy' },
+    { id: 'current_affairs', name: 'Current Affairs' },
+    { id: 'optional_subject_1', name: 'Optional Subject 1' },
+    { id: 'optional_subject_2', name: 'Optional Subject 2' },
+  ],
+  cat: [ // Example subjects
+    { id: 'quantitative_aptitude', name: 'Quantitative Aptitude' },
+    { id: 'verbal_ability', name: 'Verbal Ability & Reading Comprehension' },
+    { id: 'data_interpretation', name: 'Data Interpretation & Logical Reasoning' },
+  ],
+  bank_exams: [
+    { id: 'reasoning_ability', name: 'Reasoning Ability' },
+    { id: 'quantitative_aptitude', name: 'Quantitative Aptitude' },
+    { id: 'english_language', name: 'English Language' },
+    { id: 'general_awareness', name: 'General/Financial Awareness' },
+  ],
+  ssc: [
+    { id: 'general_intelligence', name: 'General Intelligence & Reasoning' },
+    { id: 'quantitative_aptitude', name: 'Quantitative Aptitude' },
+    { id: 'english_comprehension', name: 'English Comprehension' },
+    { id: 'general_awareness', name: 'General Awareness' },
+  ],
+  psc: [ // Generic, often varies by state
+    { id: 'general_studies_state', name: 'General Studies (State Specific)' },
+    { id: 'aptitude_reasoning', name: 'Aptitude & Reasoning' },
+    { id: 'regional_language', name: 'Regional Language Paper' },
+  ],
+  other: [ // For 'Other' exam type, allow manual input or generic subjects
+    { id: 'custom_subject_1', name: 'Custom Subject 1' },
+    { id: 'custom_subject_2', name: 'Custom Subject 2' },
+    { id: 'custom_subject_3', name: 'Custom Subject 3' },
+  ],
+};
+
+export const PREPARATION_LEVELS = [
+  { value: 'beginner', label: 'Beginner (Just Started)' },
+  { value: 'intermediate', label: 'Intermediate (Covered Basics)' },
+  { value: 'advanced', label: 'Advanced (Syllabus Covered, Revising)' },
+  { value: 'expert', label: 'Expert (Mock Tests & Refinement)' },
+];
+
+export const PREFERRED_LEARNING_METHODS_PER_SUBJECT = [
+  { id: 'videos', label: 'Video Lectures' },
+  { id: 'textbooks', label: 'Textbooks/Notes' },
+  { id: 'practice_problems', label: 'Practice Problems/MCQs' },
+  { id: 'interactive_simulations', label: 'Interactive Simulations' },
+  { id: 'discussion_groups', label: 'Discussion Groups' },
+  { id: 'past_papers', label: 'Solving Past Papers' },
+  { id: 'mind_maps', label: 'Mind Maps/Flashcards' },
+];
+
+
 export const EXAM_ATTEMPT_YEARS = () => {
   const currentYear = new Date().getFullYear();
   const years = [];
@@ -39,9 +106,11 @@ export const PREFERRED_STUDY_TIMES = [
   { id: 'afternoon', label: 'Afternoon (12 PM - 5 PM)' },
   { id: 'evening', label: 'Evening (5 PM - 9 PM)' },
   { id: 'night', label: 'Night (9 PM - 1 AM)' },
-  { id: 'flexible', label: 'Flexible' },
+  { id: 'flexible', label: 'Flexible (Any time)' },
 ];
 
+// General subject options, might be used if not dynamically loading based on exam.
+// For the new form, EXAM_SUBJECT_MAP is more relevant for dynamic subjects.
 export const SUBJECT_OPTIONS = [
   { id: 'physics', label: 'Physics' },
   { id: 'chemistry', label: 'Chemistry' },
@@ -58,40 +127,34 @@ export const SUBJECT_OPTIONS = [
 ];
 
 
-export const PREFERRED_LEARNING_STYLES = [
-  { id: 'videos', label: 'Watching Videos' },
-  { id: 'notes', label: 'Reading Notes/Textbooks' },
-  { id: 'mcqs', label: 'Solving MCQs/Quizzes' },
-  { id: 'interactive', label: 'Interactive Exercises' },
-  { id: 'discussions', label: 'Group Discussions' },
-];
-
 export const MOTIVATION_TYPES = [
   { value: 'xp_badges', label: 'Earning XP & Badges' },
   { value: 'leaderboard', label: 'Climbing the Leaderboard' },
   { value: 'personal_goals', label: 'Achieving Personal Goals' },
   { value: 'calm_mode', label: 'Calm, Focused Environment' },
+  { value: 'peer_competition', label: 'Healthy Peer Competition'},
+  { value: 'knowledge_mastery', label: 'Mastery of Subjects'},
 ];
 
 export const STUDY_MODES = [
   { value: 'self_study', label: 'Self-Study' },
   { value: 'coaching', label: 'Coaching Classes' },
   { value: 'hybrid', label: 'Hybrid (Self-Study + Coaching)' },
+  { value: 'online_courses', label: 'Online Courses/Platforms'},
 ];
 
 export const EXAM_PHASES = [
-  { value: 'not_started', label: 'Not Started Yet' },
-  { value: 'prelims', label: 'Preparing for Prelims' },
-  { value: 'mains', label: 'Preparing for Mains' },
-  { value: 'interview', label: 'Preparing for Interview' },
-  { value: 'completed_cycle', label: 'Completed a Full Cycle / Repeating' },
+  { value: 'not_started', label: 'Not Started Yet / Foundation Building' },
+  { value: 'syllabus_coverage', label: 'Actively Covering Syllabus' },
+  { value: 'revision_phase', label: 'Revision Phase' },
+  { value: 'mock_tests', label: 'Mock Tests & Practice' },
+  { value: 'final_touch', label: 'Final Touch & Strategy Refinement' },
 ];
 
 export const PREVIOUS_ATTEMPTS_OPTIONS = [
-  { value: '0', label: '0 (First Attempt)' },
-  { value: '1', label: '1' },
-  { value: '2', label: '2' },
-  { value: '3', label: '3' },
-  { value: '4', label: '4' },
-  { value: '5+', label: '5+' },
+  { value: '0', label: '0 (This is my first attempt)' },
+  { value: '1', label: '1 Previous Attempt' },
+  { value: '2', label: '2 Previous Attempts' },
+  { value: '3', label: '3 Previous Attempts' },
+  { value: '4+', label: '4 or More Previous Attempts' },
 ];
