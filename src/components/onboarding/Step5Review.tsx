@@ -5,7 +5,7 @@ import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import type { OnboardingFormData } from './onboarding-form';
-import { TARGET_EXAMS, EXAM_ATTEMPT_YEARS, LANGUAGE_MEDIUMS, STUDY_MODES, EXAM_PHASES, PREVIOUS_ATTEMPTS_OPTIONS, DAILY_STUDY_HOURS_OPTIONS, PREFERRED_STUDY_TIMES, PREFERRED_LEARNING_METHODS_PER_SUBJECT, MOTIVATION_TYPES, EXAM_SUBJECT_MAP } from '@/lib/constants';
+import { TARGET_EXAMS, EXAM_ATTEMPT_YEARS, LANGUAGE_MEDIUMS, STUDY_MODES, EXAM_PHASES, PREVIOUS_ATTEMPTS_OPTIONS, DAILY_STUDY_HOURS_OPTIONS, PREFERRED_STUDY_TIMES, PREFERRED_LEARNING_METHODS_PER_SUBJECT, MOTIVATION_TYPES, EXAM_SUBJECT_MAP, PREPARATION_LEVELS } from '@/lib/constants'; // Added PREPARATION_LEVELS
 import { Separator } from '@/components/ui/separator';
 
 interface Step5ReviewProps {
