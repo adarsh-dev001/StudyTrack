@@ -78,10 +78,11 @@ export default function AiRecommendationsPage() {
 
         const userProfileData = profileSnap.data() as UserProfileData;
         setProfile(userProfileData);
-        setIsLoadingProfile(false);
+        
 
         // Map all relevant UserProfileData fields to PersonalizedRecommendationsInput
         const aiInput: PersonalizedRecommendationsInput = {
+          name: userProfileData.fullName || currentUser.displayName || undefined,
           targetExams: userProfileData.targetExams,
           otherExamName: userProfileData.otherExamName,
           examAttemptYear: userProfileData.examAttemptYear,
@@ -91,15 +92,17 @@ export default function AiRecommendationsPage() {
           previousAttempts: userProfileData.previousAttempts,
           dailyStudyHours: userProfileData.dailyStudyHours,
           preferredStudyTime: userProfileData.preferredStudyTime,
-          weakSubjects: userProfileData.weakSubjects, // Kept for potential fallback
-          strongSubjects: userProfileData.strongSubjects, // Kept for potential fallback
-          subjectDetails: userProfileData.subjectDetails, // New detailed field
-          preferredLearningStyles: userProfileData.preferredLearningStyles, // General preference
+          weakSubjects: userProfileData.weakSubjects, 
+          strongSubjects: userProfileData.strongSubjects, 
+          subjectDetails: userProfileData.subjectDetails, 
+          preferredLearningStyles: userProfileData.preferredLearningStyles, 
           motivationType: userProfileData.motivationType,
           age: userProfileData.age,
           location: userProfileData.location,
           distractionStruggles: userProfileData.distractionStruggles,
         };
+        
+        setIsLoadingProfile(false); // Profile loaded, now load recommendations
 
         setIsLoadingRecommendations(true);
         setError(null);
@@ -120,13 +123,14 @@ export default function AiRecommendationsPage() {
         setError(err.message || "An error occurred while generating recommendations.");
         setRecommendations(null);
       } finally {
-        setIsLoadingProfile(false);
+        // Ensure both loading states are false regardless of path
+        setIsLoadingProfile(false); 
         setIsLoadingRecommendations(false);
       }
     }
 
     fetchProfileAndGenerateRecommendations();
-  }, [currentUser?.uid]);
+  }, [currentUser?.uid, currentUser?.displayName]); // Added currentUser.displayName as dependency
 
   useEffect(() => {
     let progressInterval: NodeJS.Timeout;
@@ -272,7 +276,7 @@ export default function AiRecommendationsPage() {
           <Brain className="mr-2 sm:mr-3 h-7 w-7 sm:h-8 sm:w-8 text-primary" /> Your AI Study Blueprint
         </h1>
         <p className="text-md sm:text-lg text-muted-foreground">
-          Personalized recommendations to help you ace your {profile?.targetExams?.map(exam => profile.otherExamName && exam === 'other' ? profile.otherExamName : exam).join(', ') || 'exams'}!
+          Personalized recommendations for {profile?.fullName || 'you'} to help ace your {profile?.targetExams?.map(exam => profile.otherExamName && exam === 'other' ? profile.otherExamName : exam).join(', ') || 'exams'}!
           This plan is AI-generated; adapt it to your needs and always cross-verify critical information.
         </p>
       </header>
@@ -427,4 +431,3 @@ export default function AiRecommendationsPage() {
     </ScrollArea>
   );
 }
-

@@ -17,8 +17,11 @@ import { Loader2, Wand2, Sparkles, ListChecks, HelpCircle, CheckCircle, XCircle,
 import { summarizeStudyMaterial, type SummarizeStudyMaterialOutput, type MCQ } from '@/ai/flows/summarize-study-material';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
-import { useAuth } from '@/contexts/auth-context'; // Added import
-import { recordPlatformInteraction } from '@/lib/activity-utils'; // Added import
+import { useAuth } from '@/contexts/auth-context';
+import { recordPlatformInteraction } from '@/lib/activity-utils';
+import { db } from '@/lib/firebase';
+import { doc, getDoc } from 'firebase/firestore';
+import type { UserProfileData } from '@/lib/profile-types';
 
 const summarizerFormSchema = z.object({
   material: z.string().min(50, { message: 'Study material must be at least 50 characters long.' }).max(10000, { message: 'Study material cannot exceed 10,000 characters.' }),
@@ -33,12 +36,40 @@ interface MCQWithUserAnswer extends MCQ {
 }
 
 export default function MaterialSummarizerPage() {
-  const { currentUser } = useAuth(); // Added
+  const { currentUser } = useAuth();
   const [analysisResult, setAnalysisResult] = useState<SummarizeStudyMaterialOutput | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [mcqAnswers, setMcqAnswers] = useState<Record<number, MCQWithUserAnswer>>({});
   const { toast } = useToast();
-  const resultsRef = useRef<HTMLDivElement>(null); 
+  const resultsRef = useRef<HTMLDivElement>(null);
+  const [userProfileContext, setUserProfileContext] = useState<{examType?: string, userLevel?: string, userName?: string}>({});
+
+
+  useEffect(() => {
+    if (analysisResult && resultsRef.current) {
+      resultsRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }, [analysisResult]);
+  
+  useEffect(() => {
+    async function fetchUserProfile() {
+      if (currentUser?.uid) {
+        const profileDocRef = doc(db, 'users', currentUser.uid, 'userProfile', 'profile');
+        const profileSnap = await getDoc(profileDocRef);
+        if (profileSnap.exists()) {
+          const data = profileSnap.data() as UserProfileData;
+          const examType = data.targetExams && data.targetExams.length > 0 ? data.targetExams[0] : undefined;
+          // Attempt to find a general preparation level or use the first subject's
+          let userLevel = data.preparationLevel; // Assuming a general prep level field might exist from settings/onboarding
+          if (!userLevel && data.subjectDetails && data.subjectDetails.length > 0) {
+            userLevel = data.subjectDetails[0].preparationLevel;
+          }
+          setUserProfileContext({ examType, userLevel, userName: data.fullName || currentUser.displayName || undefined });
+        }
+      }
+    }
+    fetchUserProfile();
+  }, [currentUser]);
 
   const form = useForm<SummarizerFormData>({
     resolver: zodResolver(summarizerFormSchema),
@@ -48,18 +79,18 @@ export default function MaterialSummarizerPage() {
     },
   });
 
-  useEffect(() => {
-    if (analysisResult && resultsRef.current) {
-      resultsRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
-  }, [analysisResult]);
 
   const onSubmit: SubmitHandler<SummarizerFormData> = async (data) => {
     setIsLoading(true);
     setAnalysisResult(null);
     setMcqAnswers({});
     try {
-      const result: SummarizeStudyMaterialOutput = await summarizeStudyMaterial(data);
+      const result: SummarizeStudyMaterialOutput = await summarizeStudyMaterial({
+        ...data,
+        examType: userProfileContext.examType,
+        userLevel: userProfileContext.userLevel,
+        userName: userProfileContext.userName,
+      });
       setAnalysisResult(result);
       const initialMcqAnswers: Record<number, MCQWithUserAnswer> = {};
       result.multipleChoiceQuestions.forEach((mcq, index) => {
@@ -94,7 +125,7 @@ export default function MaterialSummarizerPage() {
     }));
   };
 
-  const handleShowAnswer = async (questionIndex: number) => { // Made async
+  const handleShowAnswer = async (questionIndex: number) => {
     setMcqAnswers(prev => ({
       ...prev,
       [questionIndex]: {
@@ -102,7 +133,7 @@ export default function MaterialSummarizerPage() {
         answerRevealed: true,
       }
     }));
-    if (currentUser?.uid) { // Record interaction
+    if (currentUser?.uid) {
       await recordPlatformInteraction(currentUser.uid);
     }
   };
@@ -312,4 +343,3 @@ export default function MaterialSummarizerPage() {
     </div>
   );
 }
-

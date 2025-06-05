@@ -14,6 +14,7 @@ import {z} from 'genkit';
 import { format } from 'date-fns';
 
 const SuggestStudyTopicsInputSchema = z.object({
+  userName: z.string().optional().describe("The user's name for a personalized touch."),
   examType: z
     .string()
     .describe('The type of exam the user is preparing for (e.g., NEET, UPSC, JEE).'),
@@ -38,20 +39,18 @@ const SuggestStudyTopicsInputSchema = z.object({
     .array(z.string())
     .optional()
     .describe('A list of topics the student considers weak or wants to focus on more.'),
-  // Add other relevant fields from master template as needed, e.g., preferredLanguage, goals
+  preferredLanguage: z.string().optional().describe("User's preferred language for study materials, if relevant for topic suggestions."),
+  goals: z.string().optional().describe("User's broader study goals which might influence topic prioritization or phasing.")
 });
 export type SuggestStudyTopicsInput = z.infer<typeof SuggestStudyTopicsInputSchema>;
 
-// Internal schema for the prompt, including the calculated currentDate
 const SuggestStudyTopicsPromptInputSchema = SuggestStudyTopicsInputSchema.extend({
     currentDate: z.string().describe("The current date in YYYY-MM-DD format, used as a reference for planning by the AI."),
-    // Add other fields that might be derived or always passed to prompt here
 });
 
 const WeeklyScheduleItemSchema = z.object({
   weekLabel: z.string().describe("The label for the week, e.g., 'Week 1', 'Week 2', 'Phase 1 - Week 1'."),
   topics: z.array(z.string().describe("Topic for this week. Include estimated hours if feasible, e.g., 'Topic X (4h)' or ensure weekly load matches time constraints.")),
-  // Optionally add a phase property here if needed, or handle phasing in weekLabel/summary
 });
 
 const SubjectSyllabusSchema = z.object({
@@ -76,30 +75,32 @@ const prompt = ai.definePrompt({
   input: {schema: SuggestStudyTopicsPromptInputSchema}, 
   output: {schema: SuggestStudyTopicsOutputSchema},
   prompt: `You are an AI study assistant for students preparing for competitive exams like JEE, NEET, CAT, SSC, and Banking exams.
+{{#if userName}}Hello {{userName}}!{{/if}} Let's craft a study plan for you.
 
 Student Profile:
 - Exam: {{{examType}}}
 - Subjects: {{#each subjects}}{{{this}}}{{#unless @last}}, {{/unless}}{{/each}}
 - Level: {{{preparationLevel}}}
-- Target Year for Completion: {{{targetDate}}} (Assume current date is {{{currentDate}}})
-{{#if studyMode}}- Preferred Study Mode: {{{studyMode}}}{{/if}}
+- Target Completion Date: {{{targetDate}}} (Current Date: {{{currentDate}}})
+{{#if preferredLanguage}}- Preferred Language: {{{preferredLanguage}}}{{/if}}
+{{#if goals}}- Goals: {{{goals}}}{{/if}}
 {{#if weakTopics.length}}- Weak Areas/Topics to Focus: {{#each weakTopics}}{{{this}}}{{#unless @last}}, {{/unless}}{{/each}}{{/if}}
 - Study Time per Day: {{{timeAvailablePerDay}}} hours
+{{#if studyMode}}- Preferred Study Mode: {{{studyMode}}}{{/if}}
 
 User Request Type: syllabus_suggester
-User’s Query/Need: "Generate a detailed, topic-wise weekly study plan for EACH selected subject, broken down into manageable phases leading up to the target completion date. Prioritize high-weightage topics first and consider my preparation level and weak areas."
+User’s Query/Need: "Generate a detailed, topic-wise weekly study plan for EACH selected subject, broken down into manageable phases leading up to the target completion date. Prioritize high-weightage topics first and consider my preparation level, weak areas, and overall goals."
 
 Instructions:
 Based on the above student profile and request type, provide a highly relevant and personalized output. Your response should:
 - Match the syllabus and difficulty level of the user’s exam ({{{examType}}}).
-- Respect their weak areas ({{{weakTopics}}}), study time ({{{timeAvailablePerDay}}} hours/day), preparation level ({{{preparationLevel}}}), and target date ({{{targetDate}}}).
+- Respect their weak areas ({{{weakTopics}}}), study time ({{{timeAvailablePerDay}}} hours/day), preparation level ({{{preparationLevel}}}), target date ({{{targetDate}}}), and stated goals ({{{goals}}}).
 - Be clear, concise, and practical for the user.
-- Break down the syllabus into phases within the weekly schedule for each subject. This means the topics listed per week should naturally progress through different stages of learning (e.g., foundational, core concepts, advanced topics, revision).
-- Prioritize high-weightage topics based on typical patterns for the {{{examType}}} exam, adjusting based on the user's preparation level and weak topics.
-- The schedule for each subject should be an array of weekly plan objects. Each object in this array must have a 'weekLabel' (string, e.g., "Week 1", "Phase 1 - Week 2") and a 'topics' (array of strings) property.
-- For each week, list the topics to be covered for that subject under the 'topics' array. If possible, indicate an estimated study time for topics or ensure the weekly load is reasonable.
-- The number of weeks should be realistic based on the target date and average daily study time.
-- Calculate the total number of days available from today ({{{currentDate}}}) until the targetDate. Then calculate total study weeks for planning.
+- Break down the syllabus into phases within the weekly schedule for each subject. The topics listed per week should naturally progress through different stages of learning (e.g., foundational, core concepts, advanced topics, revision).
+- Prioritize high-weightage topics typical for the {{{examType}}} exam, adjusted based on the user's preparation level and weak topics.
+- The schedule for each subject must be an array of weekly plan objects, each with 'weekLabel' (e.g., "Week 1", "Phase 1 - Week 2") and 'topics' (array of strings).
+- For each week, list topics under 'topics'. Indicate estimated study time for topics if possible, or ensure the weekly load is reasonable.
+- The number of weeks should be realistic based on the target date, current date, and average daily study time. Calculate total days available from {{{currentDate}}} to {{{targetDate}}} for planning.
 
 ---
 **Content Generation Guidelines (for string values in JSON):**
@@ -114,7 +115,7 @@ Output a JSON object strictly conforming to the SuggestStudyTopicsOutputSchema.
 The 'generatedSyllabus' array must contain one object for each subject listed by the user.
 Optionally, include a 'summary' for each subject's plan and 'overallFeedback' for the entire plan.
 
-Example for a single subject in the 'generatedSyllabus' array:
+Example for a single subject in 'generatedSyllabus':
 {
   "subject": "Physics",
   "schedule": [
@@ -147,4 +148,3 @@ const suggestStudyTopicsFlow = ai.defineFlow(
     return output;
   }
 );
-

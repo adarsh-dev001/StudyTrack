@@ -16,9 +16,13 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import { format, addDays } from "date-fns";
-import { Loader2, ListTree, CalendarIcon, Sparkles, BookOpen, CalendarDays, Target, Lightbulb, Brain, Users } from 'lucide-react';
+import { Loader2, ListTree, CalendarIcon, Sparkles, BookOpen, CalendarDays, Target, Lightbulb, Brain, Users, FileText, Goal } from 'lucide-react'; // Added icons
 import { suggestStudyTopics, type SuggestStudyTopicsInput, type SuggestStudyTopicsOutput } from '@/ai/flows/suggest-study-topics';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/contexts/auth-context'; // For fetching user name
+import { db } from '@/lib/firebase'; // For fetching profile data
+import { doc, getDoc } from 'firebase/firestore'; // For fetching profile data
+import type { UserProfileData } from '@/lib/profile-types'; // For profile data type
 
 const commonSubjects = [
   { id: 'physics', label: 'Physics' },
@@ -51,6 +55,8 @@ const syllabusFormSchema = z.object({
   preparationLevel: z.enum(['beginner', 'intermediate', 'advanced'], { required_error: "Preparation level is required."}),
   studyMode: z.string().optional(),
   weakTopics: z.string().optional().transform(val => val ? val.split(',').map(s => s.trim()).filter(s => s.length > 0) : []),
+  preferredLanguage: z.string().optional(),
+  goals: z.string().max(300, {message: "Goals should be concise (max 300 chars)."}).optional(),
 });
 
 type SyllabusFormData = z.infer<typeof syllabusFormSchema>;
@@ -67,6 +73,7 @@ const predefinedExams = [
 ];
 
 export default function SyllabusSuggesterPage() {
+  const { currentUser } = useAuth();
   const [generatedSyllabus, setGeneratedSyllabus] = useState<SuggestStudyTopicsOutput['generatedSyllabus'] | null>(null);
   const [overallFeedback, setOverallFeedback] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -83,8 +90,36 @@ export default function SyllabusSuggesterPage() {
       preparationLevel: 'intermediate',
       studyMode: 'self_study',
       weakTopics: [],
+      preferredLanguage: 'english',
+      goals: '',
     },
   });
+  
+  // Pre-fill form with user profile data
+  useEffect(() => {
+    async function fetchAndSetProfileData() {
+        if (currentUser?.uid) {
+            const profileDocRef = doc(db, 'users', currentUser.uid, 'userProfile', 'profile');
+            const profileSnap = await getDoc(profileDocRef);
+            if (profileSnap.exists()) {
+                const data = profileSnap.data() as UserProfileData;
+                form.reset({
+                    examType: data.targetExams && data.targetExams.length > 0 ? data.targetExams[0] : '', // Use first target exam
+                    subjects: data.weakSubjects || [], // Or map from subjectDetails if better
+                    timeAvailablePerDay: data.dailyStudyHours ? parseFloat(data.dailyStudyHours.split('-')[0]) : 4, // Approx
+                    targetDate: data.examAttemptYear ? new Date(parseInt(data.examAttemptYear), 5, 1) : addDays(new Date(), 90), // Mid-year of attempt year
+                    preparationLevel: (data.subjectDetails && data.subjectDetails.length > 0 ? data.subjectDetails[0].preparationLevel : 'intermediate') as 'beginner' | 'intermediate' | 'advanced',
+                    studyMode: data.studyMode || 'self_study',
+                    weakTopics: data.weakSubjects || [], // This is already an array of strings
+                    preferredLanguage: data.languageMedium || 'english',
+                    goals: '', // Goals are usually more specific to a plan
+                });
+            }
+        }
+    }
+    fetchAndSetProfileData();
+  }, [currentUser, form.reset]);
+
 
   useEffect(() => {
     if (generatedSyllabus && generatedSyllabus.length > 0 && syllabusResultRef.current) {
@@ -99,6 +134,7 @@ export default function SyllabusSuggesterPage() {
 
     const inputForAI: SuggestStudyTopicsInput = {
       ...data,
+      userName: currentUser?.displayName || undefined,
       targetDate: format(data.targetDate, 'yyyy-MM-dd'),
     };
 
@@ -149,7 +185,7 @@ export default function SyllabusSuggesterPage() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel className="text-sm sm:text-base">Exam Type <span className="text-destructive">*</span></FormLabel>
-                     <Select onValueChange={field.onChange} defaultValue={field.value}>
+                     <Select onValueChange={field.onChange} value={field.value || ''}>
                       <FormControl>
                         <SelectTrigger className="text-sm sm:text-base">
                           <SelectValue placeholder="Select the exam you're preparing for" />
@@ -166,7 +202,7 @@ export default function SyllabusSuggesterPage() {
                     {form.watch('examType') === "Other" && (
                         <Input
                             placeholder="Specify other exam type"
-                            onChange={(e) => field.onChange(e.target.value)} // This might need refinement if 'Other' is the value
+                            onChange={(e) => field.onChange(e.target.value)}
                             className="mt-2 text-sm sm:text-base"
                         />
                     )}
@@ -239,9 +275,6 @@ export default function SyllabusSuggesterPage() {
                       <FormControl>
                         <Input type="number" step="0.5" placeholder="e.g., 4.5" {...field} className="text-sm sm:text-base"/>
                       </FormControl>
-                      <FormDescription className="text-xs sm:text-sm">
-                        Average hours you can dedicate to study each day.
-                      </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -283,9 +316,6 @@ export default function SyllabusSuggesterPage() {
                           />
                         </PopoverContent>
                       </Popover>
-                      <FormDescription className="text-xs sm:text-sm">
-                        When do you aim to complete this syllabus?
-                      </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -317,7 +347,7 @@ export default function SyllabusSuggesterPage() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel className="text-sm sm:text-base">Preferred Study Mode <Users className="inline h-4 w-4 text-muted-foreground" /></FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
+                      <Select onValueChange={field.onChange} value={field.value || ''}>
                         <FormControl><SelectTrigger className="text-sm sm:text-base"><SelectValue placeholder="e.g., Self-study" /></SelectTrigger></FormControl>
                         <SelectContent>
                           <SelectItem value="self_study" className="text-sm sm:text-base">Self-study</SelectItem>
@@ -341,9 +371,9 @@ export default function SyllabusSuggesterPage() {
                     <FormControl>
                       <Textarea
                         placeholder="List topics you find challenging, separated by commas (e.g., Organic Chemistry, Modern Physics)"
-                        className="min-h-[80px] resize-y text-sm sm:text-base"
+                        className="min-h-[70px] resize-y text-sm sm:text-base"
                         value={Array.isArray(field.value) ? field.value.join(', ') : field.value || ''}
-                        onChange={(e) => field.onChange(e.target.value)} // Store as string, flow will parse
+                        onChange={(e) => field.onChange(e.target.value)}
                       />
                     </FormControl>
                     <FormDescription className="text-xs sm:text-sm">Helps AI tailor the plan to your needs.</FormDescription>
@@ -351,6 +381,44 @@ export default function SyllabusSuggesterPage() {
                   </FormItem>
                 )}
               />
+              <FormField
+                control={form.control}
+                name="preferredLanguage"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-sm sm:text-base">Preferred Language (Optional) <FileText className="inline h-4 w-4 text-muted-foreground" /></FormLabel>
+                     <Select onValueChange={field.onChange} value={field.value || ''}>
+                      <FormControl><SelectTrigger className="text-sm sm:text-base"><SelectValue placeholder="Select language" /></SelectTrigger></FormControl>
+                      <SelectContent>
+                        <SelectItem value="english" className="text-sm sm:text-base">English</SelectItem>
+                        <SelectItem value="hindi" className="text-sm sm:text-base">Hindi</SelectItem>
+                        <SelectItem value="other_regional" className="text-sm sm:text-base">Other Regional Language</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormDescription className="text-xs sm:text-sm">If relevant for study material suggestions.</FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+               <FormField
+                control={form.control}
+                name="goals"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-sm sm:text-base">Overall Study Goals (Optional) <Goal className="inline h-4 w-4 text-muted-foreground" /></FormLabel>
+                    <FormControl>
+                      <Textarea
+                        placeholder="e.g., Cover 70% syllabus in 3 months, Achieve 95th percentile in mocks..."
+                        className="min-h-[70px] resize-y text-sm sm:text-base"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormDescription className="text-xs sm:text-sm">What are your broader objectives for this preparation period?</FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
 
             </CardContent>
             <CardFooter className="p-4 sm:p-6">
@@ -362,7 +430,7 @@ export default function SyllabusSuggesterPage() {
                   </>
                 ) : (
                   <>
-                    <Sparkles className="mr-2 h-4 w-4 sm:h-5 sm:w-5" /> {/* Changed icon to Sparkles */}
+                    <Sparkles className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />
                     Generate Personalized Syllabus
                   </>
                 )}
@@ -443,4 +511,3 @@ export default function SyllabusSuggesterPage() {
     </div>
   );
 }
-
