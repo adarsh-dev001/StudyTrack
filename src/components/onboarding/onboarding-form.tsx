@@ -16,7 +16,7 @@ import { updateProfile } from 'firebase/auth';
 import type { UserProfileData } from '@/lib/profile-types'; 
 import { subjectDetailSchema } from '@/lib/profile-types'; 
 import { Skeleton } from '@/components/ui/skeleton';
-import { AnimatePresence, motion } from 'framer-motion';
+// AnimatePresence and motion removed
 import { EXAM_SUBJECT_MAP } from '@/lib/constants';
 
 const Step1PersonalInfo = React.lazy(() => import('./Step1PersonalInfo'));
@@ -261,19 +261,12 @@ export default function OnboardingForm({ userId, onOnboardingSuccess }: { userId
         <Progress value={progressValue} className="mb-6 sm:mb-8 h-2.5 sm:h-3" />
         <FormProvider {...methods}>
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-5 sm:space-y-6">
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={currentStep}
-                initial={{ opacity: 0, x: currentStep > (currentStep -1) ? 50 : -50 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: currentStep > (currentStep + 1) ? -50 : 50 }}
-                transition={{ duration: 0.3, ease: "easeInOut" }}
-              >
-                <Suspense fallback={<OnboardingStepSkeleton />}>
-                  {renderStepContent()}
-                </Suspense>
-              </motion.div>
-            </AnimatePresence>
+            {/* Framer Motion components removed from here */}
+            <div>
+              <Suspense fallback={<OnboardingStepSkeleton />}>
+                {renderStepContent()}
+              </Suspense>
+            </div>
           </form>
         </FormProvider>
       </CardContent>
@@ -294,5 +287,4 @@ export default function OnboardingForm({ userId, onOnboardingSuccess }: { userId
     </Card>
   );
 }
-
     
