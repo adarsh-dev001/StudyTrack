@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, Suspense } from 'react';
 import { useForm, type SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -21,9 +21,13 @@ import { suggestStudyTopics, type SuggestStudyTopicsInput, type SuggestStudyTopi
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/auth-context';
 import { db } from '@/lib/firebase';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, onSnapshot, Unsubscribe } from 'firebase/firestore';
 import type { UserProfileData } from '@/lib/profile-types';
-import OnboardingRequiredGate from '@/components/onboarding/OnboardingRequiredGate'; // Import the gate
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import OnboardingForm from '@/components/onboarding/onboarding-form';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Skeleton } from '@/components/ui/skeleton';
+
 
 const commonSubjects = [
   { id: 'physics', label: 'Physics' },
@@ -73,6 +77,25 @@ const predefinedExams = [
   { value: 'Other', label: 'Other (Specify)' },
 ];
 
+function OnboardingFormFallback() {
+  return (
+    <div className="p-6 space-y-6">
+      <Skeleton className="h-8 w-3/4 mx-auto mb-2" />
+      <Skeleton className="h-4 w-full mb-6" />
+      {[...Array(3)].map((_, i) => (
+        <div key={i} className="space-y-2">
+          <Skeleton className="h-5 w-1/3" />
+          <Skeleton className="h-10 w-full" />
+        </div>
+      ))}
+      <div className="flex justify-end gap-2 pt-4">
+        <Skeleton className="h-10 w-24" />
+        <Skeleton className="h-10 w-24" />
+      </div>
+    </div>
+  );
+}
+
 export default function SyllabusSuggesterPage() {
   const { currentUser } = useAuth();
   const [generatedSyllabus, setGeneratedSyllabus] = useState<SuggestStudyTopicsOutput['generatedSyllabus'] | null>(null);
@@ -82,7 +105,8 @@ export default function SyllabusSuggesterPage() {
   const syllabusResultRef = useRef<HTMLDivElement>(null); 
   
   const [isLoadingProfile, setIsLoadingProfile] = useState(true);
-  const [onboardingCompleted, setOnboardingCompleted] = useState(false);
+  // No need for userProfile state if only onboardingCompleted is used
+  const [showOnboardingModal, setShowOnboardingModal] = useState(false);
 
   const form = useForm<SyllabusFormData>({
     resolver: zodResolver(syllabusFormSchema),
@@ -100,16 +124,20 @@ export default function SyllabusSuggesterPage() {
   });
   
   useEffect(() => {
-    async function fetchAndSetProfileData() {
-        if (currentUser?.uid) {
-            setIsLoadingProfile(true);
-            const profileDocRef = doc(db, 'users', currentUser.uid, 'userProfile', 'profile');
-            const profileSnap = await getDoc(profileDocRef);
+    let unsubscribeProfile: Unsubscribe | undefined;
+    if (currentUser?.uid) {
+        setIsLoadingProfile(true);
+        const profileDocRef = doc(db, 'users', currentUser.uid, 'userProfile', 'profile');
+        unsubscribeProfile = onSnapshot(profileDocRef, (profileSnap) => {
             if (profileSnap.exists()) {
                 const data = profileSnap.data() as UserProfileData;
-                setOnboardingCompleted(data.onboardingCompleted || false);
-                if (data.onboardingCompleted) {
-                    form.reset({
+                if (!data.onboardingCompleted) {
+                  setShowOnboardingModal(true);
+                } else {
+                  setShowOnboardingModal(false);
+                  // Pre-fill form if profile is complete and form hasn't been touched
+                  if (!form.formState.isDirty) {
+                     form.reset({
                         examType: data.targetExams && data.targetExams.length > 0 
                                     ? (data.targetExams[0] === 'other' && data.otherExamName ? data.otherExamName : data.targetExams[0]) 
                                     : '',
@@ -120,20 +148,31 @@ export default function SyllabusSuggesterPage() {
                         studyMode: data.studyMode || 'self_study',
                         weakTopics: data.weakSubjects || [],
                         preferredLanguage: data.languageMedium || 'english',
-                        goals: '', // Goals are usually specific to a plan
+                        goals: '', 
                     });
+                  }
                 }
             } else {
-              setOnboardingCompleted(false);
+              setShowOnboardingModal(true);
             }
             setIsLoadingProfile(false);
-        } else {
+        }, (err) => {
+            console.error("Error fetching profile:", err);
+            toast({ title: "Error", description: "Could not load your profile.", variant: "destructive" });
             setIsLoadingProfile(false);
-            setOnboardingCompleted(false);
-        }
+        });
+    } else {
+        setIsLoadingProfile(false);
     }
-    fetchAndSetProfileData();
-  }, [currentUser, form.reset, form]); // Added form to dependencies
+     return () => {
+      if (unsubscribeProfile) unsubscribeProfile();
+    };
+  }, [currentUser?.uid, form, toast]);
+
+  const handleOnboardingSuccess = () => {
+    setShowOnboardingModal(false);
+    // Profile will update via onSnapshot, triggering pre-fill logic if form isn't dirty
+  };
 
 
   useEffect(() => {
@@ -184,8 +223,26 @@ export default function SyllabusSuggesterPage() {
     );
   }
 
-  if (!onboardingCompleted) {
-    return <OnboardingRequiredGate featureName="AI Syllabus Suggester" />;
+  if (showOnboardingModal && currentUser) {
+    return (
+      <Dialog open={showOnboardingModal} onOpenChange={setShowOnboardingModal}>
+        <DialogContent className="max-w-2xl w-[95vw] max-h-[90vh] flex flex-col p-0">
+          <DialogHeader className="p-4 sm:p-6 border-b text-center">
+            <DialogTitle className="text-xl sm:text-2xl">Complete Profile for AI Syllabus Suggester</DialogTitle>
+            <DialogDescription className="text-xs sm:text-sm">
+              To get personalized syllabus suggestions, please complete your profile.
+            </DialogDescription>
+          </DialogHeader>
+           <ScrollArea className="flex-grow">
+            <div className="p-1 sm:p-2 md:p-0">
+             <Suspense fallback={<OnboardingFormFallback />}>
+                <OnboardingForm userId={currentUser.uid} onOnboardingSuccess={handleOnboardingSuccess} />
+             </Suspense>
+            </div>
+          </ScrollArea>
+        </DialogContent>
+      </Dialog>
+    );
   }
 
   return (
@@ -232,7 +289,7 @@ export default function SyllabusSuggesterPage() {
                             placeholder="Specify other exam type"
                             onChange={(e) => field.onChange(e.target.value)}
                             className="mt-2 text-sm sm:text-base"
-                            value={form.watch('examType') === 'Other' ? field.value : ''} // Only show/bind if 'Other' is selected
+                            value={form.watch('examType') === 'Other' ? field.value : ''} 
                         />
                     )}
                     <FormDescription className="text-xs sm:text-sm">
@@ -246,7 +303,7 @@ export default function SyllabusSuggesterPage() {
               <FormField
                 control={form.control}
                 name="subjects"
-                render={() => (
+                render={({ field }) => (
                   <FormItem>
                     <div className="mb-1 sm:mb-2">
                       <FormLabel className="text-sm sm:text-base font-semibold">Subjects <span className="text-destructive">*</span></FormLabel>
@@ -256,43 +313,32 @@ export default function SyllabusSuggesterPage() {
                     </div>
                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-x-3 gap-y-2 sm:gap-x-4 sm:gap-y-2.5 pt-1 sm:pt-2">
                     {commonSubjects.map((item) => (
-                      <FormField
+                      <FormItem
                         key={item.id}
-                        control={form.control}
-                        name="subjects"
-                        render={({ field }) => {
-                          return (
-                            <FormItem
-                              key={item.id}
-                              className="flex flex-row items-center space-x-2 space-y-0"
-                            >
-                              <FormControl>
-                                <Checkbox
-                                  checked={field.value?.includes(item.id)}
-                                  onCheckedChange={(checked) => {
-                                    return checked
-                                      ? field.onChange([...(field.value || []), item.id])
-                                      : field.onChange(
-                                          (field.value || []).filter(
-                                            (value) => value !== item.id
-                                          )
-                                        );
-                                  }}
-                                />
-                              </FormControl>
-                              <FormLabel className="text-xs sm:text-sm font-normal">
-                                {item.label}
-                              </FormLabel>
-                            </FormItem>
-                          );
-                        }}
-                      />
+                        className="flex flex-row items-center space-x-2 space-y-0"
+                      >
+                        <FormControl>
+                          <Checkbox
+                            checked={field.value?.includes(item.id)}
+                            onCheckedChange={(checked) => {
+                              const currentSelection = field.value || [];
+                              return checked
+                                ? field.onChange([...currentSelection, item.id])
+                                : field.onChange(currentSelection.filter(value => value !== item.id));
+                            }}
+                          />
+                        </FormControl>
+                        <FormLabel className="text-xs sm:text-sm font-normal">
+                          {item.label}
+                        </FormLabel>
+                      </FormItem>
                     ))}
                     </div>
                     <FormMessage />
                   </FormItem>
                 )}
               />
+
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
                 <FormField

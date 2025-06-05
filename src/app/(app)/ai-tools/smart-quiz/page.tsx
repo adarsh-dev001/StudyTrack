@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, Suspense } from 'react';
 import { useForm, type SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Button } from '@/components/ui/button';
@@ -15,7 +15,7 @@ import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from '@/components/ui/badge';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Loader2, Sparkles, Brain, HelpCircle, CheckCircle, XCircle, Lightbulb, Award, Percent, SkipForward, ChevronsRight, Wand2 } from 'lucide-react';
+import { Loader2, Sparkles, Brain, HelpCircle, CheckCircle, XCircle, Lightbulb, Award, Percent, SkipForward, ChevronsRight, Wand2, ArrowUp } from 'lucide-react';
 import { generateQuiz } from '@/ai/flows/generate-quiz-flow';
 import type { GenerateQuizInput, GenerateQuizOutput, QuizQuestion } from '@/ai/schemas/quiz-tool-schemas';
 import { GenerateQuizInputSchema } from '@/ai/schemas/quiz-tool-schemas';
@@ -24,10 +24,12 @@ import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/auth-context';
 import { recordPlatformInteraction } from '@/lib/activity-utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { db } from '@/lib/firebase'; // Added db import
-import { doc, getDoc } from 'firebase/firestore'; // Added getDoc import
-import type { UserProfileData } from '@/lib/profile-types'; // Added UserProfileData import
-import OnboardingRequiredGate from '@/components/onboarding/OnboardingRequiredGate'; // Import the gate
+import { db } from '@/lib/firebase'; 
+import { doc, getDoc, onSnapshot, Unsubscribe } from 'firebase/firestore'; 
+import type { UserProfileData } from '@/lib/profile-types'; 
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import OnboardingForm from '@/components/onboarding/onboarding-form';
+import { Skeleton } from '@/components/ui/skeleton';
 
 
 const quizFormSchema = GenerateQuizInputSchema;
@@ -55,6 +57,25 @@ const difficultyLevels = [
   { value: 'advanced', label: 'Advanced', icon: '🔥' },
 ];
 
+function OnboardingFormFallback() {
+  return (
+    <div className="p-6 space-y-6">
+      <Skeleton className="h-8 w-3/4 mx-auto mb-2" />
+      <Skeleton className="h-4 w-full mb-6" />
+      {[...Array(3)].map((_, i) => (
+        <div key={i} className="space-y-2">
+          <Skeleton className="h-5 w-1/3" />
+          <Skeleton className="h-10 w-full" />
+        </div>
+      ))}
+      <div className="flex justify-end gap-2 pt-4">
+        <Skeleton className="h-10 w-24" />
+        <Skeleton className="h-10 w-24" />
+      </div>
+    </div>
+  );
+}
+
 export default function SmartQuizPage() {
   const { currentUser } = useAuth();
   const [quizData, setQuizData] = useState<GenerateQuizOutput | null>(null);
@@ -66,9 +87,12 @@ export default function SmartQuizPage() {
   const { toast } = useToast();
   const quizAreaRef = useRef<HTMLDivElement>(null);
   const questionCardRef = useRef<HTMLDivElement>(null);
+  const resultsScrollRef = useRef<HTMLDivElement>(null);
+  const [showScrollToTop, setShowScrollToTop] = useState(false);
 
   const [isLoadingProfile, setIsLoadingProfile] = useState(true);
-  const [onboardingCompleted, setOnboardingCompleted] = useState(false);
+  // No need for userProfile state if only onboardingCompleted is used from it
+  const [showOnboardingModal, setShowOnboardingModal] = useState(false);
 
   const form = useForm<QuizFormData>({
     resolver: zodResolver(quizFormSchema),
@@ -81,34 +105,45 @@ export default function SmartQuizPage() {
   });
   
   useEffect(() => {
-    async function fetchUserProfile() {
-      if (currentUser?.uid) {
-        setIsLoadingProfile(true);
-        const profileDocRef = doc(db, 'users', currentUser.uid, 'userProfile', 'profile');
-        const profileSnap = await getDoc(profileDocRef);
+    let unsubscribeProfile: Unsubscribe | undefined;
+    if (currentUser?.uid) {
+      setIsLoadingProfile(true);
+      const profileDocRef = doc(db, 'users', currentUser.uid, 'userProfile', 'profile');
+      unsubscribeProfile = onSnapshot(profileDocRef, (profileSnap) => {
         if (profileSnap.exists()) {
           const data = profileSnap.data() as UserProfileData;
-          setOnboardingCompleted(data.onboardingCompleted || false);
-          // Pre-fill exam type if available
-          if (data.onboardingCompleted && data.targetExams && data.targetExams.length > 0) {
-            const primaryExam = data.targetExams[0] === 'other' && data.otherExamName ? data.otherExamName.toLowerCase() : data.targetExams[0];
-            // Find a matching examTypeOption, otherwise keep default
-            const matchingExamOption = examTypeOptions.find(opt => primaryExam?.includes(opt.value) || opt.value.includes(primaryExam || ''));
-            if (matchingExamOption) {
-              form.setValue('examType', matchingExamOption.value as QuizFormData['examType']);
+          if (!data.onboardingCompleted) {
+            setShowOnboardingModal(true);
+          } else {
+            setShowOnboardingModal(false);
+            if (data.targetExams && data.targetExams.length > 0) {
+              const primaryExam = data.targetExams[0] === 'other' && data.otherExamName ? data.otherExamName.toLowerCase() : data.targetExams[0];
+              const matchingExamOption = examTypeOptions.find(opt => primaryExam?.includes(opt.value) || opt.value.includes(primaryExam || ''));
+              if (matchingExamOption) {
+                form.setValue('examType', matchingExamOption.value as QuizFormData['examType']);
+              }
             }
           }
         } else {
-          setOnboardingCompleted(false);
+          setShowOnboardingModal(true); 
         }
         setIsLoadingProfile(false);
-      } else {
-         setIsLoadingProfile(false);
-         setOnboardingCompleted(false);
-      }
+      }, (err) => {
+        console.error("Error fetching profile:", err);
+        toast({ title: "Error", description: "Could not load your profile.", variant: "destructive" });
+        setIsLoadingProfile(false);
+      });
+    } else {
+       setIsLoadingProfile(false);
     }
-    fetchUserProfile();
-  }, [currentUser, form]);
+     return () => {
+      if (unsubscribeProfile) unsubscribeProfile();
+    };
+  }, [currentUser?.uid, form, toast]);
+
+  const handleOnboardingSuccess = () => {
+    setShowOnboardingModal(false);
+  };
 
 
   useEffect(() => {
@@ -116,6 +151,28 @@ export default function SmartQuizPage() {
       quizAreaRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
   }, [quizState, currentQuestionIndex]);
+  
+  useEffect(() => {
+    const scrollAreaElement = resultsScrollRef.current;
+    const handleScroll = () => {
+      if (scrollAreaElement) {
+        setShowScrollToTop(scrollAreaElement.scrollTop > 200);
+      }
+    };
+    if (scrollAreaElement) {
+      scrollAreaElement.addEventListener('scroll', handleScroll);
+    }
+    return () => {
+      if (scrollAreaElement) {
+        scrollAreaElement.removeEventListener('scroll', handleScroll);
+      }
+    };
+  }, [quizState]);
+
+  const scrollToResultsTop = () => {
+    resultsScrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
 
 
   const onSubmit: SubmitHandler<QuizFormData> = async (data) => {
@@ -128,7 +185,6 @@ export default function SmartQuizPage() {
     try {
       const result = await generateQuiz(data);
       setQuizData(result);
-      // Initialize userAnswers structure
       const initialAnswers: Record<number, UserAnswer> = {};
       result.questions.forEach((_, index) => {
         initialAnswers[index] = { selectedOption: undefined, skipped: false };
@@ -172,7 +228,6 @@ export default function SmartQuizPage() {
 
   const handleNextQuestion = () => {
     if (!quizData) return;
-     // User must have selected an option or explicitly skipped to proceed
     const currentAnswer = userAnswers[currentQuestionIndex];
     if (currentAnswer?.selectedOption === undefined && !currentAnswer?.skipped) {
         toast({
@@ -224,8 +279,7 @@ export default function SmartQuizPage() {
   };
   
   const handleCreateNewQuiz = () => {
-    form.reset(); // Resets to defaultValues, which might be pre-filled by useEffect
-    // Explicitly set examType to general or fetch from profile again if needed
+    form.reset(); 
     form.setValue('examType', 'general');
     setQuizData(null);
     setUserAnswers({});
@@ -236,8 +290,6 @@ export default function SmartQuizPage() {
 
   const currentQuestion = quizData?.questions[currentQuestionIndex];
   const isLastQuestion = quizData ? currentQuestionIndex === quizData.questions.length - 1 : false;
-  const canProceed = userAnswers[currentQuestionIndex]?.selectedOption !== undefined || userAnswers[currentQuestionIndex]?.skipped === true;
-
 
   if (isLoadingProfile) {
     return (
@@ -248,8 +300,26 @@ export default function SmartQuizPage() {
     );
   }
 
-  if (!onboardingCompleted) {
-    return <OnboardingRequiredGate featureName="SmartQuiz AI" />;
+  if (showOnboardingModal && currentUser) {
+    return (
+       <Dialog open={showOnboardingModal} onOpenChange={setShowOnboardingModal}>
+        <DialogContent className="max-w-2xl w-[95vw] max-h-[90vh] flex flex-col p-0">
+          <DialogHeader className="p-4 sm:p-6 border-b text-center">
+            <DialogTitle className="text-xl sm:text-2xl">Complete Profile for SmartQuiz AI</DialogTitle>
+            <DialogDescription className="text-xs sm:text-sm">
+              To generate personalized quizzes, please complete your profile.
+            </DialogDescription>
+          </DialogHeader>
+           <ScrollArea className="flex-grow">
+            <div className="p-1 sm:p-2 md:p-0">
+             <Suspense fallback={<OnboardingFormFallback />}>
+                <OnboardingForm userId={currentUser.uid} onOnboardingSuccess={handleOnboardingSuccess} />
+             </Suspense>
+            </div>
+          </ScrollArea>
+        </DialogContent>
+      </Dialog>
+    );
   }
 
   return (
@@ -469,8 +539,8 @@ export default function SmartQuizPage() {
                         You scored {score} out of {quizData.questions.length} ({((score / quizData.questions.length) * 100).toFixed(0)}%)
                     </CardDescription>
                 </CardHeader>
-                <CardContent className="p-0">
-                 <ScrollArea className="max-h-[calc(100vh-350px)] sm:max-h-[calc(100vh-450px)]">
+                <CardContent className="p-0 relative">
+                 <ScrollArea ref={resultsScrollRef} className="max-h-[calc(100vh-400px)] sm:max-h-[calc(100vh-480px)]">
                     <div className="divide-y divide-border">
                     {quizData.questions.map((q, qIndex) => {
                         const userAnswer = userAnswers[qIndex];
@@ -486,17 +556,18 @@ export default function SmartQuizPage() {
                             <div className="space-y-1.5 sm:space-y-2 mb-2 sm:mb-3">
                             {q.options.map((option, optIndex) => (
                                 <div key={optIndex} className={cn(
-                                "flex items-center space-x-2 p-2 sm:p-2.5 rounded-md border text-xs sm:text-sm",
+                                "flex items-start space-x-2 p-2 sm:p-2.5 rounded-md border text-xs sm:text-sm",
                                 optIndex === q.correctAnswerIndex && "bg-green-100 dark:bg-green-900/60 border-green-400 dark:border-green-600 font-medium text-green-800 dark:text-green-300",
                                 userSelectedThisOption(optIndex) && optIndex !== q.correctAnswerIndex && !wasSkipped && "bg-red-100 dark:bg-red-900/60 border-red-400 dark:border-red-600 text-red-800 dark:text-red-300",
                                 !userSelectedThisOption(optIndex) && optIndex !== q.correctAnswerIndex && "border-muted-foreground/30"
                                 )}>
-                                {optIndex === q.correctAnswerIndex && <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400 shrink-0" />}
-                                {userSelectedThisOption(optIndex) && optIndex !== q.correctAnswerIndex && !wasSkipped && <XCircle className="h-4 w-4 text-red-600 dark:text-red-400 shrink-0" />}
+                                {optIndex === q.correctAnswerIndex && <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400 shrink-0 mt-px" />}
+                                {userSelectedThisOption(optIndex) && optIndex !== q.correctAnswerIndex && !wasSkipped && <XCircle className="h-4 w-4 text-red-600 dark:text-red-400 shrink-0 mt-px" />}
                                 {!userSelectedThisOption(optIndex) && optIndex !== q.correctAnswerIndex && <div className="h-4 w-4 shrink-0"></div>}
                                 
                                 <span className="flex-1">{option}</span>
-                                {userSelectedThisOption(optIndex) && !wasSkipped && <Badge variant="outline" className="text-[10px] px-1.5 py-0.5">{optIndex === q.correctAnswerIndex ? "Your Answer (Correct)" : "Your Answer (Incorrect)"}</Badge>}
+                                {userSelectedThisOption(optIndex) && !wasSkipped && <Badge variant="outline" className="text-[10px] px-1.5 py-0.5 ml-auto self-center">{optIndex === q.correctAnswerIndex ? "Your Answer (Correct)" : "Your Answer (Incorrect)"}</Badge>}
+                                {optIndex === q.correctAnswerIndex && (!userSelectedThisOption(optIndex) || wasSkipped) && <Badge variant="outline" className="text-[10px] px-1.5 py-0.5 ml-auto self-center">Correct Answer</Badge>}
                                 </div>
                             ))}
                             </div>
@@ -505,14 +576,13 @@ export default function SmartQuizPage() {
                                     <div className="flex items-center font-semibold">
                                         <SkipForward className="mr-1.5 h-4 w-4" /> You skipped this question.
                                     </div>
-                                    <p className="mt-0.5">The correct answer was: "{q.options[q.correctAnswerIndex]}"</p>
                                 </div>
                             )}
                             <div className={cn(
                                 "p-2 sm:p-3 rounded-md text-xs sm:text-sm border",
                                 isCorrect ? "bg-green-50 dark:bg-green-900/50 border-green-200 dark:border-green-700 text-green-800 dark:text-green-200"
                                         : (userAnswer?.selectedOption !== undefined && !wasSkipped ? "bg-red-50 dark:bg-red-900/50 border-red-200 dark:border-red-700 text-red-800 dark:text-red-200"
-                                                                    : "bg-muted/50 dark:bg-muted/30 border-border") // Neutral for skipped or non-error if not selected
+                                                                    : "bg-muted/50 dark:bg-muted/30 border-border")
                             )}>
                                 <div className="flex items-center font-semibold mb-1">
                                     <Lightbulb className="mr-1.5 h-4 w-4 sm:h-5 sm:w-5 text-yellow-500 dark:text-yellow-400 shrink-0" />
@@ -525,6 +595,17 @@ export default function SmartQuizPage() {
                     })}
                     </div>
                  </ScrollArea>
+                  {showScrollToTop && (
+                    <Button
+                        onClick={scrollToResultsTop}
+                        variant="outline"
+                        size="icon"
+                        className="absolute bottom-4 right-4 sm:bottom-6 sm:right-6 h-10 w-10 sm:h-12 sm:w-12 rounded-full shadow-lg bg-background hover:bg-muted"
+                        aria-label="Scroll to top"
+                    >
+                        <ArrowUp className="h-5 w-5 sm:h-6 sm:w-6" />
+                    </Button>
+                  )}
                 </CardContent>
                 <CardFooter className="flex flex-col sm:flex-row justify-center items-center gap-2 sm:gap-4 p-4 sm:p-6 border-t">
                     <Button onClick={handleRetakeQuiz} variant="outline" className="w-full sm:w-auto text-sm sm:text-base">
@@ -541,4 +622,3 @@ export default function SmartQuizPage() {
     </div>
   );
 }
-

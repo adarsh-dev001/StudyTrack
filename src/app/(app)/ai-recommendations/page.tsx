@@ -1,10 +1,10 @@
 
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { useAuth } from '@/contexts/auth-context';
 import { db } from '@/lib/firebase';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, onSnapshot, Unsubscribe } from 'firebase/firestore';
 import type { UserProfileData } from '@/lib/profile-types';
 import {
   generatePersonalizedRecommendations,
@@ -21,7 +21,10 @@ import {
 import type { LucideIcon } from 'lucide-react';
 import Link from 'next/link';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import OnboardingRequiredGate from '@/components/onboarding/OnboardingRequiredGate'; // Import the gate
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import OnboardingForm from '@/components/onboarding/onboarding-form';
+import { Skeleton } from '@/components/ui/skeleton';
+
 
 interface ProgressStep {
   text: string;
@@ -45,6 +48,25 @@ const motivationalTips = [
   "🎯 Set clear, achievable goals for each study session."
 ];
 
+function OnboardingFormFallback() {
+  return (
+    <div className="p-6 space-y-6">
+      <Skeleton className="h-8 w-3/4 mx-auto mb-2" />
+      <Skeleton className="h-4 w-full mb-6" />
+      {[...Array(3)].map((_, i) => (
+        <div key={i} className="space-y-2">
+          <Skeleton className="h-5 w-1/3" />
+          <Skeleton className="h-10 w-full" />
+        </div>
+      ))}
+      <div className="flex justify-end gap-2 pt-4">
+        <Skeleton className="h-10 w-24" />
+        <Skeleton className="h-10 w-24" />
+      </div>
+    </div>
+  );
+}
+
 
 export default function AiRecommendationsPage() {
   const { currentUser } = useAuth();
@@ -53,88 +75,101 @@ export default function AiRecommendationsPage() {
   const [isLoadingProfile, setIsLoadingProfile] = useState(true);
   const [isLoadingRecommendations, setIsLoadingRecommendations] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [onboardingCompleted, setOnboardingCompleted] = useState(false);
-
+  const [showOnboardingModal, setShowOnboardingModal] = useState(false);
 
   const [currentProgressStepIndex, setCurrentProgressStepIndex] = useState(0);
   const [currentTipIndex, setCurrentTipIndex] = useState(0);
 
   useEffect(() => {
-    async function fetchProfileAndGenerateRecommendations() {
-      if (!currentUser?.uid) {
-        setIsLoadingProfile(false);
-        setError("Please log in to get personalized recommendations.");
-        return;
-      }
-
+    let unsubscribeProfile: Unsubscribe | undefined;
+    if (currentUser?.uid) {
       setIsLoadingProfile(true);
-      try {
-        const profileDocRef = doc(db, 'users', currentUser.uid, 'userProfile', 'profile');
-        const profileSnap = await getDoc(profileDocRef);
-
-        if (!profileSnap.exists() || !profileSnap.data()?.onboardingCompleted) {
-          setOnboardingCompleted(false);
-          setProfile(null);
-          setIsLoadingProfile(false);
-          return;
-        }
-        setOnboardingCompleted(true);
-
-        const userProfileData = profileSnap.data() as UserProfileData;
-        setProfile(userProfileData);
-        
-
-        // Map all relevant UserProfileData fields to PersonalizedRecommendationsInput
-        const aiInput: PersonalizedRecommendationsInput = {
-          name: userProfileData.fullName || currentUser.displayName || undefined,
-          targetExams: userProfileData.targetExams,
-          otherExamName: userProfileData.otherExamName,
-          examAttemptYear: userProfileData.examAttemptYear,
-          languageMedium: userProfileData.languageMedium,
-          studyMode: userProfileData.studyMode,
-          examPhase: userProfileData.examPhase,
-          previousAttempts: userProfileData.previousAttempts,
-          dailyStudyHours: userProfileData.dailyStudyHours,
-          preferredStudyTime: userProfileData.preferredStudyTime,
-          weakSubjects: userProfileData.weakSubjects, 
-          strongSubjects: userProfileData.strongSubjects, 
-          subjectDetails: userProfileData.subjectDetails, 
-          preferredLearningStyles: userProfileData.preferredLearningStyles, 
-          motivationType: userProfileData.motivationType,
-          age: userProfileData.age,
-          location: userProfileData.location,
-          distractionStruggles: userProfileData.distractionStruggles,
-        };
-        
-        setIsLoadingProfile(false); // Profile loaded, now load recommendations
-
-        setIsLoadingRecommendations(true);
-        setError(null);
-        setCurrentProgressStepIndex(0);
-        setCurrentTipIndex(0);
-        
-        const aiOutput = await generatePersonalizedRecommendations(aiInput);
-        
-        if (aiOutput.fallback) {
-            setError("⚠️ AI is currently overloaded. Please try again shortly for personalized recommendations.");
-            setRecommendations(null); 
+      const profileDocRef = doc(db, 'users', currentUser.uid, 'userProfile', 'profile');
+      unsubscribeProfile = onSnapshot(profileDocRef, (profileSnap) => {
+        if (profileSnap.exists()) {
+          const userProfileData = profileSnap.data() as UserProfileData;
+          setProfile(userProfileData);
+          if (!userProfileData.onboardingCompleted) {
+            setShowOnboardingModal(true);
+          } else {
+            setShowOnboardingModal(false);
+            // Only generate recommendations if onboarding is complete
+            if(!recommendations && !isLoadingRecommendations && !error) { // Avoid re-fetching if already loaded or loading
+                 fetchRecommendations(userProfileData);
+            }
+          }
         } else {
-            setRecommendations(aiOutput);
+          setProfile(null);
+          setShowOnboardingModal(true); // Profile doesn't exist, trigger onboarding
         }
-
-      } catch (err: any) {
-        console.error("Error fetching profile or generating recommendations:", err);
-        setError(err.message || "An error occurred while generating recommendations.");
-        setRecommendations(null);
-      } finally {
-        // Ensure both loading states are false regardless of path
-        setIsLoadingProfile(false); 
-        setIsLoadingRecommendations(false);
-      }
+        setIsLoadingProfile(false);
+      }, (err) => {
+        console.error("Error fetching profile:", err);
+        setError("Could not load your profile. Please try again.");
+        setIsLoadingProfile(false);
+      });
+    } else {
+      setIsLoadingProfile(false);
+      setError("Please log in to get personalized recommendations.");
     }
+    return () => {
+      if (unsubscribeProfile) unsubscribeProfile();
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentUser?.uid]);
 
-    fetchProfileAndGenerateRecommendations();
-  }, [currentUser?.uid, currentUser?.displayName]);
+
+  const fetchRecommendations = async (userProfileData: UserProfileData) => {
+    if (!userProfileData || !userProfileData.onboardingCompleted) return;
+
+    setIsLoadingRecommendations(true);
+    setError(null);
+    setCurrentProgressStepIndex(0);
+    setCurrentTipIndex(0);
+
+    const aiInput: PersonalizedRecommendationsInput = {
+      name: userProfileData.fullName || currentUser?.displayName || undefined,
+      targetExams: userProfileData.targetExams,
+      otherExamName: userProfileData.otherExamName,
+      examAttemptYear: userProfileData.examAttemptYear,
+      languageMedium: userProfileData.languageMedium,
+      studyMode: userProfileData.studyMode,
+      examPhase: userProfileData.examPhase,
+      previousAttempts: userProfileData.previousAttempts,
+      dailyStudyHours: userProfileData.dailyStudyHours,
+      preferredStudyTime: userProfileData.preferredStudyTime,
+      weakSubjects: userProfileData.weakSubjects,
+      strongSubjects: userProfileData.strongSubjects,
+      subjectDetails: userProfileData.subjectDetails,
+      preferredLearningStyles: userProfileData.preferredLearningStyles,
+      motivationType: userProfileData.motivationType,
+      age: userProfileData.age,
+      location: userProfileData.location,
+      distractionStruggles: userProfileData.distractionStruggles,
+    };
+
+    try {
+      const aiOutput = await generatePersonalizedRecommendations(aiInput);
+      if (aiOutput.fallback) {
+        setError("⚠️ AI is currently overloaded. Please try again shortly for personalized recommendations.");
+        setRecommendations(null);
+      } else {
+        setRecommendations(aiOutput);
+      }
+    } catch (err: any) {
+      console.error("Error generating recommendations:", err);
+      setError(err.message || "An error occurred while generating recommendations.");
+      setRecommendations(null);
+    } finally {
+      setIsLoadingRecommendations(false);
+    }
+  };
+  
+  const handleOnboardingSuccess = () => {
+    setShowOnboardingModal(false);
+    // Profile will be re-fetched by onSnapshot, triggering fetchRecommendations if onboarding is now complete
+  };
+
 
   useEffect(() => {
     let progressInterval: NodeJS.Timeout;
@@ -164,14 +199,33 @@ export default function AiRecommendationsPage() {
     return (
       <div className="flex flex-col items-center justify-center min-h-[calc(100vh-150px)] text-center p-6">
         <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
-        <p className="text-muted-foreground">Loading your profile and recommendations settings...</p>
+        <p className="text-muted-foreground">Loading your profile...</p>
       </div>
     );
   }
 
-  if (!onboardingCompleted) {
-    return <OnboardingRequiredGate featureName="AI Personalized Recommendations" />;
+  if (showOnboardingModal && currentUser) {
+    return (
+      <Dialog open={showOnboardingModal} onOpenChange={setShowOnboardingModal}>
+        <DialogContent className="max-w-2xl w-[95vw] max-h-[90vh] flex flex-col p-0">
+          <DialogHeader className="p-4 sm:p-6 border-b text-center">
+            <DialogTitle className="text-xl sm:text-2xl">Complete Your Profile for AI Coach</DialogTitle>
+            <DialogDescription className="text-xs sm:text-sm">
+              To get personalized AI recommendations, please complete your academic and personal profile. This helps us tailor the experience just for you!
+            </DialogDescription>
+          </DialogHeader>
+          <ScrollArea className="flex-grow">
+            <div className="p-1 sm:p-2 md:p-0"> {/* Remove outer padding from OnboardingForm if it has its own */}
+             <Suspense fallback={<OnboardingFormFallback />}>
+                <OnboardingForm userId={currentUser.uid} onOnboardingSuccess={handleOnboardingSuccess} />
+             </Suspense>
+            </div>
+          </ScrollArea>
+        </DialogContent>
+      </Dialog>
+    );
   }
+
 
   if (isLoadingRecommendations) {
     return (
@@ -255,14 +309,14 @@ export default function AiRecommendationsPage() {
     );
   }
 
-  if (!profile && !isLoadingProfile && !error && onboardingCompleted) {
+  if (!profile && !isLoadingProfile && !error && !showOnboardingModal) { // Added !showOnboardingModal check
      return (
       <div className="flex flex-col items-center justify-center min-h-[calc(100vh-150px)] text-center p-6">
         <Alert className="max-w-md">
           <Lightbulb className="h-5 w-5" />
           <AlertTitle>Profile Data Issue</AlertTitle>
           <AlertDescription>
-            Your onboarding is complete, but we couldn't load your profile data for recommendations. Please try again or contact support.
+            We couldn't load your profile data for recommendations. Please try refreshing or contact support.
           </AlertDescription>
         </Alert>
         <Button asChild className="mt-6" variant="outline">
@@ -417,7 +471,7 @@ export default function AiRecommendationsPage() {
         </div>
       )}
 
-       {!isLoadingProfile && !isLoadingRecommendations && !recommendations && !error && profile && onboardingCompleted && (
+       {!isLoadingProfile && !isLoadingRecommendations && !recommendations && !error && profile && !showOnboardingModal && (
          <div className="flex flex-col items-center justify-center min-h-[calc(100vh-300px)] text-center p-6">
             <Alert className="max-w-md">
               <Lightbulb className="h-5 w-5" />

@@ -7,23 +7,23 @@ import {
   onAuthStateChanged,
   signInWithEmailAndPassword,
   signOut,
-  updateProfile, // Keep for updating profile later
+  updateProfile, 
 } from 'firebase/auth';
 import { useRouter } from 'next/navigation';
 import type { ReactNode } from 'react';
 import React, { createContext, useContext, useEffect, useState, useCallback, useMemo } from 'react';
-import { auth, db } from '@/lib/firebase'; // Import db
-import { doc, setDoc } from 'firebase/firestore'; // Import doc and setDoc
+import { auth, db } from '@/lib/firebase'; 
+import { doc, setDoc } from 'firebase/firestore'; 
 import { useToast } from '@/hooks/use-toast';
-import { DEFAULT_THEME_ID } from '@/lib/themes'; // Import default theme ID
-import type { UserProfileData } from '@/lib/profile-types'; // Import UserProfileData
+import { DEFAULT_THEME_ID } from '@/lib/themes'; 
+import type { UserProfileData } from '@/lib/profile-types'; 
 
 
 interface AuthContextType {
   currentUser: User | null;
   loading: boolean;
   error: string | null;
-  signUp: (email_param: string, password_param: string) => Promise<void>; // Removed fullName_param
+  signUp: (email_param: string, password_param: string) => Promise<void>; 
   signIn: (email_param: string, password_param: string) => Promise<void>;
   logOut: () => Promise<void>;
 }
@@ -74,9 +74,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     setError(null);
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email_param, password_param);
-      // Do NOT update Firebase Auth profile displayName here. It will be done after full onboarding.
       
-      // Create a minimal Firestore profile document
       const userProfileRef = doc(db, 'users', userCredential.user.uid, 'userProfile', 'profile');
       const initialProfileData: UserProfileData = {
         email: email_param,
@@ -88,16 +86,15 @@ export function AuthProvider({ children }: AuthProviderProps) {
         activeThemeId: DEFAULT_THEME_ID,
         dailyChallengeStatus: {},
         lastInteractionDates: [],
-        // fullName and other profile fields will be populated during onboarding
       };
       await setDoc(userProfileRef, initialProfileData);
 
       setCurrentUser(userCredential.user); 
       toast({
         title: 'Signup Successful!',
-        description: 'Welcome to StudyTrack! Please complete your profile.',
+        description: 'Welcome to StudyTrack! Explore your dashboard.',
       });
-      router.push('/onboarding'); // Redirect to onboarding after minimal signup
+      router.push('/dashboard'); // Redirect to dashboard after signup
     } catch (err: any) {
       setError(err.message);
       if (err.code === 'auth/email-already-in-use') {
@@ -127,7 +124,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
         title: 'Login Successful!',
         description: 'Welcome back!',
       });
-      // Logic in AppLayout will check onboardingCompleted and redirect if necessary
       router.push('/dashboard');
     } catch (err: any)      {
         setError(err.message);

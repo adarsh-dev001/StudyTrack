@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { useForm, type SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -16,10 +16,12 @@ import { useAuth } from '@/contexts/auth-context';
 import { getUnlockAndProgressStatus, type UnlockStatus } from '@/lib/activity-utils';
 import { Progress } from '@/components/ui/progress';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { db } from '@/lib/firebase'; // Added db import
-import { doc, getDoc } from 'firebase/firestore'; // Added getDoc import
-import type { UserProfileData } from '@/lib/profile-types'; // Added UserProfileData import
-import OnboardingRequiredGate from '@/components/onboarding/OnboardingRequiredGate'; // Import the gate
+import { db } from '@/lib/firebase'; 
+import { doc, getDoc, onSnapshot, Unsubscribe } from 'firebase/firestore'; 
+import type { UserProfileData } from '@/lib/profile-types'; 
+import OnboardingForm from '@/components/onboarding/onboarding-form';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Skeleton } from '@/components/ui/skeleton';
 
 
 const productivityAnalyzerFormSchema = z.object({
@@ -36,45 +38,83 @@ const productivityAnalyzerFormSchema = z.object({
 
 type ProductivityAnalyzerFormData = z.infer<typeof productivityAnalyzerFormSchema>;
 
+function OnboardingFormFallback() {
+  return (
+    <div className="p-6 space-y-6">
+      <Skeleton className="h-8 w-3/4 mx-auto mb-2" />
+      <Skeleton className="h-4 w-full mb-6" />
+      {[...Array(3)].map((_, i) => (
+        <div key={i} className="space-y-2">
+          <Skeleton className="h-5 w-1/3" />
+          <Skeleton className="h-10 w-full" />
+        </div>
+      ))}
+      <div className="flex justify-end gap-2 pt-4">
+        <Skeleton className="h-10 w-24" />
+        <Skeleton className="h-10 w-24" />
+      </div>
+    </div>
+  );
+}
+
+
 export default function ProductivityAnalyzerPage() {
   const { currentUser } = useAuth();
   const { toast } = useToast();
   const [analysisResult, setAnalysisResult] = useState<AnalyzeProductivityDataOutput | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   
-  const [isLoadingOnboardingStatus, setIsLoadingOnboardingStatus] = useState(true);
-  const [onboardingCompleted, setOnboardingCompleted] = useState(false);
+  const [isLoadingProfile, setIsLoadingProfile] = useState(true);
+  const [showOnboardingModal, setShowOnboardingModal] = useState(false);
+  const [onboardingCompleted, setOnboardingCompletedState] = useState(false); // Local state for onboarding
   
   const [unlockState, setUnlockState] = useState<UnlockStatus | null>(null);
-  const [isLoadingUnlockStatus, setIsLoadingUnlockStatus] = useState(true); // For streak unlock
+  const [isLoadingUnlockStatus, setIsLoadingUnlockStatus] = useState(true); 
   const [hasShownUnlockToast, setHasShownUnlockToast] = useState(false);
 
 
   useEffect(() => {
-    async function fetchOnboardingStatus() {
-      if (currentUser?.uid) {
-        setIsLoadingOnboardingStatus(true);
-        const profileDocRef = doc(db, 'users', currentUser.uid, 'userProfile', 'profile');
-        const profileSnap = await getDoc(profileDocRef);
+    let unsubscribeProfile: Unsubscribe | undefined;
+    if (currentUser?.uid) {
+      setIsLoadingProfile(true);
+      const profileDocRef = doc(db, 'users', currentUser.uid, 'userProfile', 'profile');
+      unsubscribeProfile = onSnapshot(profileDocRef, (profileSnap) => {
         if (profileSnap.exists()) {
           const data = profileSnap.data() as UserProfileData;
-          setOnboardingCompleted(data.onboardingCompleted || false);
+          setOnboardingCompletedState(data.onboardingCompleted || false);
+          if (!data.onboardingCompleted) {
+            setShowOnboardingModal(true);
+          } else {
+            setShowOnboardingModal(false);
+          }
         } else {
-          setOnboardingCompleted(false);
+          setOnboardingCompletedState(false);
+          setShowOnboardingModal(true); 
         }
-        setIsLoadingOnboardingStatus(false);
-      } else {
-        setIsLoadingOnboardingStatus(false);
-        setOnboardingCompleted(false);
-      }
+        setIsLoadingProfile(false);
+      }, (err) => {
+        console.error("Error fetching profile:", err);
+        toast({ title: "Error", description: "Could not load your profile.", variant: "destructive" });
+        setIsLoadingProfile(false);
+      });
+    } else {
+      setIsLoadingProfile(false);
+      setOnboardingCompletedState(false);
     }
-    fetchOnboardingStatus();
-  }, [currentUser?.uid]);
+    return () => {
+      if (unsubscribeProfile) unsubscribeProfile();
+    };
+  }, [currentUser?.uid, toast]);
+
+  const handleOnboardingSuccess = () => {
+    setShowOnboardingModal(false);
+    setOnboardingCompletedState(true); // Update local state
+  };
 
 
   useEffect(() => {
     if (!onboardingCompleted || !currentUser?.uid) {
-      setIsLoadingUnlockStatus(false); // No need to check streak if onboarding not done or no user
+      setIsLoadingUnlockStatus(false); 
       return;
     }
 
@@ -91,7 +131,7 @@ export default function ProductivityAnalyzerPage() {
       }
       setIsLoadingUnlockStatus(false);
     });
-  }, [currentUser?.uid, toast, hasShownUnlockToast, unlockState, onboardingCompleted]); // Added onboardingCompleted
+  }, [currentUser?.uid, toast, hasShownUnlockToast, unlockState, onboardingCompleted]); 
 
   const form = useForm<ProductivityAnalyzerFormData>({
     resolver: zodResolver(productivityAnalyzerFormSchema),
@@ -147,7 +187,7 @@ export default function ProductivityAnalyzerPage() {
     }
   };
 
-  if (isLoadingOnboardingStatus) {
+  if (isLoadingProfile) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[calc(100vh-200px)] text-center p-6">
         <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
@@ -156,11 +196,42 @@ export default function ProductivityAnalyzerPage() {
     );
   }
 
-  if (!onboardingCompleted) {
-    return <OnboardingRequiredGate featureName="Productivity Analysis AI" />;
+  if (showOnboardingModal && currentUser) {
+     return (
+      <Dialog open={showOnboardingModal} onOpenChange={(isOpen) => {
+          if (!isOpen) { // If user tries to close modal without completing, consider what to do.
+            // For now, we allow closing, but they won't access the feature.
+            setShowOnboardingModal(false); 
+          }
+      }}>
+        <DialogContent className="max-w-2xl w-[95vw] max-h-[90vh] flex flex-col p-0">
+          <DialogHeader className="p-4 sm:p-6 border-b text-center">
+            <DialogTitle className="text-xl sm:text-2xl">Complete Profile for Productivity AI</DialogTitle>
+            <DialogDescription className="text-xs sm:text-sm">
+              Please complete your profile to unlock and use the Productivity Analysis AI.
+            </DialogDescription>
+          </DialogHeader>
+           <ScrollArea className="flex-grow">
+            <div className="p-1 sm:p-2 md:p-0">
+             <Suspense fallback={<OnboardingFormFallback />}>
+                <OnboardingForm userId={currentUser.uid} onOnboardingSuccess={handleOnboardingSuccess} />
+             </Suspense>
+            </div>
+          </ScrollArea>
+        </DialogContent>
+      </Dialog>
+    );
   }
   
-  // Onboarding is completed, now check streak unlock status
+  if (!onboardingCompleted && !isLoadingProfile) { // Gate if onboarding is not complete AFTER profile check
+     return (
+        <div className="flex flex-col items-center justify-center min-h-[calc(100vh-200px)] text-center p-6">
+            <p className="text-muted-foreground">Please complete your profile first by clicking on another AI tool.</p>
+            {/* This message is a fallback if somehow the modal didn't show or was dismissed. */}
+        </div>
+     );
+  }
+  
   if (isLoadingUnlockStatus || !unlockState) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[calc(100vh-200px)] text-center p-6">
@@ -227,7 +298,6 @@ export default function ProductivityAnalyzerPage() {
     );
   }
 
-  // If onboarding completed AND streak unlocked, show the main form
   return (
     <div className="w-full space-y-6">
       <div>
@@ -408,4 +478,3 @@ export default function ProductivityAnalyzerPage() {
     </div>
   );
 }
-    

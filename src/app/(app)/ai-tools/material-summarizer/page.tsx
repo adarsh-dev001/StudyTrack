@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react'; 
+import React, { useState, useEffect, useRef, Suspense } from 'react'; 
 import { useForm, type SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -20,9 +20,13 @@ import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/auth-context';
 import { recordPlatformInteraction } from '@/lib/activity-utils';
 import { db } from '@/lib/firebase';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, onSnapshot, Unsubscribe } from 'firebase/firestore';
 import type { UserProfileData } from '@/lib/profile-types';
-import OnboardingRequiredGate from '@/components/onboarding/OnboardingRequiredGate'; // Import the gate
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import OnboardingForm from '@/components/onboarding/onboarding-form';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Skeleton } from '@/components/ui/skeleton';
+
 
 const summarizerFormSchema = z.object({
   material: z.string().min(50, { message: 'Study material must be at least 50 characters long.' }).max(10000, { message: 'Study material cannot exceed 10,000 characters.' }),
@@ -36,6 +40,25 @@ interface MCQWithUserAnswer extends MCQ {
   answerRevealed?: boolean;
 }
 
+function OnboardingFormFallback() {
+  return (
+    <div className="p-6 space-y-6">
+      <Skeleton className="h-8 w-3/4 mx-auto mb-2" />
+      <Skeleton className="h-4 w-full mb-6" />
+      {[...Array(3)].map((_, i) => (
+        <div key={i} className="space-y-2">
+          <Skeleton className="h-5 w-1/3" />
+          <Skeleton className="h-10 w-full" />
+        </div>
+      ))}
+      <div className="flex justify-end gap-2 pt-4">
+        <Skeleton className="h-10 w-24" />
+        <Skeleton className="h-10 w-24" />
+      </div>
+    </div>
+  );
+}
+
 export default function MaterialSummarizerPage() {
   const { currentUser } = useAuth();
   const [analysisResult, setAnalysisResult] = useState<SummarizeStudyMaterialOutput | null>(null);
@@ -46,8 +69,7 @@ export default function MaterialSummarizerPage() {
   
   const [isLoadingProfile, setIsLoadingProfile] = useState(true);
   const [userFullProfile, setUserFullProfile] = useState<UserProfileData | null>(null);
-  const [onboardingCompleted, setOnboardingCompleted] = useState(false);
-
+  const [showOnboardingModal, setShowOnboardingModal] = useState(false);
 
   useEffect(() => {
     if (analysisResult && resultsRef.current) {
@@ -56,26 +78,41 @@ export default function MaterialSummarizerPage() {
   }, [analysisResult]);
   
   useEffect(() => {
-    async function fetchUserProfile() {
-      if (currentUser?.uid) {
-        setIsLoadingProfile(true);
-        const profileDocRef = doc(db, 'users', currentUser.uid, 'userProfile', 'profile');
-        const profileSnap = await getDoc(profileDocRef);
+    let unsubscribeProfile: Unsubscribe | undefined;
+    if (currentUser?.uid) {
+      setIsLoadingProfile(true);
+      const profileDocRef = doc(db, 'users', currentUser.uid, 'userProfile', 'profile');
+      unsubscribeProfile = onSnapshot(profileDocRef, (profileSnap) => {
         if (profileSnap.exists()) {
           const data = profileSnap.data() as UserProfileData;
           setUserFullProfile(data);
-          setOnboardingCompleted(data.onboardingCompleted || false);
+          if (!data.onboardingCompleted) {
+            setShowOnboardingModal(true);
+          } else {
+            setShowOnboardingModal(false);
+          }
         } else {
-          setOnboardingCompleted(false);
+          setUserFullProfile(null);
+          setShowOnboardingModal(true); 
         }
         setIsLoadingProfile(false);
-      } else {
+      }, (err) => {
+        console.error("Error fetching profile:", err);
+        toast({ title: "Error", description: "Could not load your profile.", variant: "destructive" });
         setIsLoadingProfile(false);
-        setOnboardingCompleted(false); // Assume not completed if no user
-      }
+      });
+    } else {
+      setIsLoadingProfile(false);
     }
-    fetchUserProfile();
-  }, [currentUser]);
+    return () => {
+      if (unsubscribeProfile) unsubscribeProfile();
+    };
+  }, [currentUser?.uid, toast]);
+
+  const handleOnboardingSuccess = () => {
+    setShowOnboardingModal(false);
+    // Profile will update via onSnapshot, no explicit re-fetch needed here for `userFullProfile`
+  };
 
   const form = useForm<SummarizerFormData>({
     resolver: zodResolver(summarizerFormSchema),
@@ -101,7 +138,7 @@ export default function MaterialSummarizerPage() {
                             : undefined;
         userLevelForAI = userFullProfile.subjectDetails && userFullProfile.subjectDetails.length > 0 
                             ? userFullProfile.subjectDetails[0].preparationLevel 
-                            : undefined; // Or a general prep level if available
+                            : undefined; 
         userNameForAI = userFullProfile.fullName || currentUser?.displayName || undefined;
     }
 
@@ -169,8 +206,26 @@ export default function MaterialSummarizerPage() {
     );
   }
 
-  if (!onboardingCompleted) {
-    return <OnboardingRequiredGate featureName="AI Study Assistant (Summarizer)" />;
+  if (showOnboardingModal && currentUser) {
+    return (
+      <Dialog open={showOnboardingModal} onOpenChange={setShowOnboardingModal}>
+        <DialogContent className="max-w-2xl w-[95vw] max-h-[90vh] flex flex-col p-0">
+          <DialogHeader className="p-4 sm:p-6 border-b text-center">
+            <DialogTitle className="text-xl sm:text-2xl">Complete Profile for AI Study Assistant</DialogTitle>
+            <DialogDescription className="text-xs sm:text-sm">
+              Please complete your profile to get personalized summaries and quizzes.
+            </DialogDescription>
+          </DialogHeader>
+           <ScrollArea className="flex-grow">
+            <div className="p-1 sm:p-2 md:p-0">
+             <Suspense fallback={<OnboardingFormFallback />}>
+                <OnboardingForm userId={currentUser.uid} onOnboardingSuccess={handleOnboardingSuccess} />
+             </Suspense>
+            </div>
+          </ScrollArea>
+        </DialogContent>
+      </Dialog>
+    );
   }
 
 

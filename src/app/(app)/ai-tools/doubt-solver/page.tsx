@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { useForm, type SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -15,9 +15,13 @@ import { solveAcademicDoubt, type SolveAcademicDoubtInput, type SolveAcademicDou
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/auth-context';
 import { db } from '@/lib/firebase';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, onSnapshot, Unsubscribe } from 'firebase/firestore';
 import type { UserProfileData } from '@/lib/profile-types';
-import OnboardingRequiredGate from '@/components/onboarding/OnboardingRequiredGate'; // Import the gate
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import OnboardingForm from '@/components/onboarding/onboarding-form';
+import { Input } from '@/components/ui/input';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Skeleton } from '@/components/ui/skeleton';
 
 
 const doubtSolverFormSchema = z.object({
@@ -27,6 +31,25 @@ const doubtSolverFormSchema = z.object({
 
 type DoubtSolverFormData = z.infer<typeof doubtSolverFormSchema>;
 
+function OnboardingFormFallback() {
+  return (
+    <div className="p-6 space-y-6">
+      <Skeleton className="h-8 w-3/4 mx-auto mb-2" />
+      <Skeleton className="h-4 w-full mb-6" />
+      {[...Array(3)].map((_, i) => (
+        <div key={i} className="space-y-2">
+          <Skeleton className="h-5 w-1/3" />
+          <Skeleton className="h-10 w-full" />
+        </div>
+      ))}
+      <div className="flex justify-end gap-2 pt-4">
+        <Skeleton className="h-10 w-24" />
+        <Skeleton className="h-10 w-24" />
+      </div>
+    </div>
+  );
+}
+
 export default function DoubtSolverPage() {
   const { currentUser } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
@@ -35,7 +58,7 @@ export default function DoubtSolverPage() {
   
   const [isLoadingProfile, setIsLoadingProfile] = useState(true);
   const [userProfile, setUserProfile] = useState<UserProfileData | null>(null);
-  const [onboardingCompleted, setOnboardingCompleted] = useState(false);
+  const [showOnboardingModal, setShowOnboardingModal] = useState(false);
 
   const form = useForm<DoubtSolverFormData>({
     resolver: zodResolver(doubtSolverFormSchema),
@@ -46,35 +69,47 @@ export default function DoubtSolverPage() {
   });
   
   useEffect(() => {
-    async function fetchUserProfile() {
-      if (currentUser?.uid) {
-        setIsLoadingProfile(true);
-        const profileDocRef = doc(db, 'users', currentUser.uid, 'userProfile', 'profile');
-        const profileSnap = await getDoc(profileDocRef);
+    let unsubscribeProfile: Unsubscribe | undefined;
+    if (currentUser?.uid) {
+      setIsLoadingProfile(true);
+      const profileDocRef = doc(db, 'users', currentUser.uid, 'userProfile', 'profile');
+      unsubscribeProfile = onSnapshot(profileDocRef, (profileSnap) => {
         if (profileSnap.exists()) {
           const data = profileSnap.data() as UserProfileData;
           setUserProfile(data);
-          setOnboardingCompleted(data.onboardingCompleted || false);
-          // Pre-fill subject context if available from user's primary interests
-          if (data.onboardingCompleted && data.subjectDetails && data.subjectDetails.length > 0) {
-             form.setValue('subjectContext', data.subjectDetails[0].subjectName);
-          } else if (data.onboardingCompleted && data.targetExams && data.targetExams.length > 0) {
-            // Fallback to exam type as context if no specific subjects
-            const primaryExam = data.targetExams[0] === 'other' && data.otherExamName ? data.otherExamName : data.targetExams[0];
-            form.setValue('subjectContext', primaryExam);
+          if (!data.onboardingCompleted) {
+            setShowOnboardingModal(true);
+          } else {
+            setShowOnboardingModal(false);
+            if (data.subjectDetails && data.subjectDetails.length > 0) {
+              form.setValue('subjectContext', data.subjectDetails[0].subjectName);
+            } else if (data.targetExams && data.targetExams.length > 0) {
+              const primaryExam = data.targetExams[0] === 'other' && data.otherExamName ? data.otherExamName : data.targetExams[0];
+              form.setValue('subjectContext', primaryExam);
+            }
           }
-
         } else {
-          setOnboardingCompleted(false);
+          setUserProfile(null);
+          setShowOnboardingModal(true); 
         }
         setIsLoadingProfile(false);
-      } else {
+      }, (err) => {
+        console.error("Error fetching profile:", err);
+        toast({ title: "Error", description: "Could not load your profile.", variant: "destructive" });
         setIsLoadingProfile(false);
-        setOnboardingCompleted(false);
-      }
+      });
+    } else {
+      setIsLoadingProfile(false);
     }
-    fetchUserProfile();
-  }, [currentUser, form]);
+    return () => {
+      if (unsubscribeProfile) unsubscribeProfile();
+    };
+  }, [currentUser?.uid, form, toast]);
+
+  const handleOnboardingSuccess = () => {
+    setShowOnboardingModal(false);
+    // Profile state will update via onSnapshot, and then fields might be pre-filled
+  };
 
 
   const onSubmit: SubmitHandler<DoubtSolverFormData> = async (data) => {
@@ -87,10 +122,10 @@ export default function DoubtSolverPage() {
       examType: userProfile?.targetExams && userProfile.targetExams.length > 0 
                 ? (userProfile.targetExams[0] === 'other' && userProfile.otherExamName ? userProfile.otherExamName : userProfile.targetExams[0])
                 : undefined,
-      subjectContext: data.subjectContext || undefined, // Use form input first
+      subjectContext: data.subjectContext || userProfile?.subjectDetails?.[0]?.subjectName || undefined,
       preparationLevel: userProfile?.subjectDetails && userProfile.subjectDetails.length > 0 
-                        ? userProfile.subjectDetails[0].preparationLevel // Simplistic: uses first subject's level
-                        : undefined, // Or a general level from profile if available
+                        ? userProfile.subjectDetails[0].preparationLevel 
+                        : undefined, 
     };
 
     try {
@@ -121,8 +156,26 @@ export default function DoubtSolverPage() {
     );
   }
 
-  if (!onboardingCompleted) {
-    return <OnboardingRequiredGate featureName="AI Doubt Solver" />;
+  if (showOnboardingModal && currentUser) {
+    return (
+      <Dialog open={showOnboardingModal} onOpenChange={setShowOnboardingModal}>
+        <DialogContent className="max-w-2xl w-[95vw] max-h-[90vh] flex flex-col p-0">
+          <DialogHeader className="p-4 sm:p-6 border-b text-center">
+            <DialogTitle className="text-xl sm:text-2xl">Complete Profile for AI Doubt Solver</DialogTitle>
+            <DialogDescription className="text-xs sm:text-sm">
+              Please complete your profile to get personalized help from the AI Doubt Solver.
+            </DialogDescription>
+          </DialogHeader>
+          <ScrollArea className="flex-grow">
+            <div className="p-1 sm:p-2 md:p-0">
+             <Suspense fallback={<OnboardingFormFallback />}>
+                <OnboardingForm userId={currentUser.uid} onOnboardingSuccess={handleOnboardingSuccess} />
+             </Suspense>
+            </div>
+          </ScrollArea>
+        </DialogContent>
+      </Dialog>
+    );
   }
 
   return (
