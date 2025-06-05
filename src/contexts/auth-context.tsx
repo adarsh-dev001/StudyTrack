@@ -7,20 +7,23 @@ import {
   onAuthStateChanged,
   signInWithEmailAndPassword,
   signOut,
-  updateProfile,
+  updateProfile, // Keep for updating profile later
 } from 'firebase/auth';
 import { useRouter } from 'next/navigation';
 import type { ReactNode } from 'react';
 import React, { createContext, useContext, useEffect, useState, useCallback, useMemo } from 'react';
-import { auth } from '@/lib/firebase';
+import { auth, db } from '@/lib/firebase'; // Import db
+import { doc, setDoc } from 'firebase/firestore'; // Import doc and setDoc
 import { useToast } from '@/hooks/use-toast';
+import { DEFAULT_THEME_ID } from '@/lib/themes'; // Import default theme ID
+import type { UserProfileData } from '@/lib/profile-types'; // Import UserProfileData
 
 
 interface AuthContextType {
   currentUser: User | null;
   loading: boolean;
   error: string | null;
-  signUp: (email_param: string, password_param: string, fullName_param: string) => Promise<void>;
+  signUp: (email_param: string, password_param: string) => Promise<void>; // Removed fullName_param
   signIn: (email_param: string, password_param: string) => Promise<void>;
   logOut: () => Promise<void>;
 }
@@ -64,21 +67,37 @@ export function AuthProvider({ children }: AuthProviderProps) {
       }
     );
     return unsubscribe;
-  }, [toast]); // auth should be stable, toast is from a hook
+  }, [toast]);
 
-  const signUp = useCallback(async (email_param: string, password_param: string, fullName_param: string) => {
+  const signUp = useCallback(async (email_param: string, password_param: string) => {
     setLoading(true);
     setError(null);
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email_param, password_param);
-      await updateProfile(userCredential.user, { displayName: fullName_param });
-      // onAuthStateChanged should pick this up, but to be safe for immediate UI updates:
+      // Do NOT update Firebase Auth profile displayName here. It will be done after full onboarding.
+      
+      // Create a minimal Firestore profile document
+      const userProfileRef = doc(db, 'users', userCredential.user.uid, 'userProfile', 'profile');
+      const initialProfileData: UserProfileData = {
+        email: email_param,
+        onboardingCompleted: false,
+        xp: 0,
+        coins: 0,
+        earnedBadgeIds: [],
+        purchasedItemIds: [],
+        activeThemeId: DEFAULT_THEME_ID,
+        dailyChallengeStatus: {},
+        lastInteractionDates: [],
+        // fullName and other profile fields will be populated during onboarding
+      };
+      await setDoc(userProfileRef, initialProfileData);
+
       setCurrentUser(userCredential.user); 
       toast({
         title: 'Signup Successful!',
-        description: 'Welcome to StudyTrack!',
+        description: 'Welcome to StudyTrack! Please complete your profile.',
       });
-      router.push('/dashboard');
+      router.push('/onboarding'); // Redirect to onboarding after minimal signup
     } catch (err: any) {
       setError(err.message);
       if (err.code === 'auth/email-already-in-use') {
@@ -97,7 +116,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     } finally {
       setLoading(false);
     }
-  }, [auth, router, toast]); // setLoading, setError, setCurrentUser are stable
+  }, [router, toast]);
 
   const signIn = useCallback(async (email_param: string, password_param: string) => {
     setLoading(true);
@@ -108,49 +127,50 @@ export function AuthProvider({ children }: AuthProviderProps) {
         title: 'Login Successful!',
         description: 'Welcome back!',
       });
+      // Logic in AppLayout will check onboardingCompleted and redirect if necessary
       router.push('/dashboard');
-    } catch (err: any) {
-      setError(err.message);
-      toast({
-        title: 'Login Failed',
-        description: err.message,
-        variant: 'destructive',
-      });
-    } finally {
-      setLoading(false);
-    }
-  }, [auth, router, toast]); // setLoading, setError are stable
-
-  const logOut = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      await signOut(auth);
-      toast({
-        title: 'Logged Out',
-        description: 'You have been successfully logged out.',
-      });
-      router.push('/login');
-    } catch (err: any) {
-      setError(err.message);
-      toast({
-        title: 'Logout Failed',
-        description: err.message,
-        variant: 'destructive',
-      });
-    } finally {
-      setLoading(false);
-    }
-  }, [auth, router, toast]); // setLoading, setError are stable
-
-  const value = useMemo(() => ({
-    currentUser,
-    loading,
-    error,
-    signUp,
-    signIn,
-    logOut,
-  }), [currentUser, loading, error, signUp, signIn, logOut]);
-
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
-}
+    } catch (err: any)      {
+        setError(err.message);
+        toast({
+          title: 'Login Failed',
+          description: err.message,
+          variant: 'destructive',
+        });
+      } finally {
+        setLoading(false);
+      }
+    }, [router, toast]);
+  
+    const logOut = useCallback(async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        await signOut(auth);
+        toast({
+          title: 'Logged Out',
+          description: 'You have been successfully logged out.',
+        });
+        router.push('/login');
+      } catch (err: any) {
+        setError(err.message);
+        toast({
+          title: 'Logout Failed',
+          description: err.message,
+          variant: 'destructive',
+        });
+      } finally {
+        setLoading(false);
+      }
+    }, [router, toast]);
+  
+    const value = useMemo(() => ({
+      currentUser,
+      loading,
+      error,
+      signUp,
+      signIn,
+      logOut,
+    }), [currentUser, loading, error, signUp, signIn, logOut]);
+  
+    return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  }

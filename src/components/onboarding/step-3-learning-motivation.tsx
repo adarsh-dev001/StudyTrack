@@ -17,6 +17,25 @@ export default function Step3LearningMotivation() {
     <div className="space-y-4 md:space-y-6">
       <FormField
         control={control}
+        name="fullName"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel className="text-sm sm:text-base font-semibold">Full Name <span className="text-destructive">*</span></FormLabel>
+             <FormDescription className="text-xs sm:text-sm">This will be your display name in the app.</FormDescription>
+            <FormControl>
+              <Input 
+                placeholder="e.g., Ada Lovelace" 
+                {...field} 
+                className="text-sm sm:text-base"
+              />
+            </FormControl>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+
+      <FormField
+        control={control}
         name="preferredLearningStyles"
         render={() => (
           <FormItem>

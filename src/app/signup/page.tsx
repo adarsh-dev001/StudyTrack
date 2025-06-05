@@ -10,14 +10,13 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
-import { BookOpenText, Loader2, User, Mail, Lock, Eye, EyeOff, ShieldAlert } from 'lucide-react';
+import { BookOpenText, Loader2, Mail, Lock, Eye, EyeOff } from 'lucide-react'; // Removed User icon
 import { useAuth } from '@/contexts/auth-context';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import React, { useState } from 'react';
 import { Separator } from '@/components/ui/separator';
 
 const signupSchema = z.object({
-  fullName: z.string().min(2, { message: 'Full name must be at least 2 characters' }),
   email: z.string().email({ message: 'Invalid email address' }),
   password: z.string().min(6, { message: 'Password must be at least 6 characters' }),
   confirmPassword: z.string().min(6, { message: 'Confirm password must be at least 6 characters' }),
@@ -40,7 +39,6 @@ export default function SignupPage() {
   const form = useForm<SignupFormData>({
     resolver: zodResolver(signupSchema),
     defaultValues: {
-      fullName: '',
       email: '',
       password: '',
       confirmPassword: '',
@@ -51,7 +49,8 @@ export default function SignupPage() {
   const { handleSubmit, control, formState: { isSubmitting } } = form;
 
   const onSubmit: SubmitHandler<SignupFormData> = async (data) => {
-    await signUp(data.email, data.password, data.fullName);
+    // Pass only email and password to signUp context method
+    await signUp(data.email, data.password);
     // Redirection is handled within signUp on success
   };
 
@@ -67,27 +66,11 @@ export default function SignupPage() {
             <span className="font-headline text-3xl font-bold text-foreground">StudyTrack</span>
           </Link>
           <CardTitle className="font-headline text-2xl">🚀 Let’s Get You Started!</CardTitle>
-          <CardDescription>Create your StudyTrack account and start achieving more.</CardDescription>
+          <CardDescription>Create your StudyTrack account with just email & password.</CardDescription>
         </CardHeader>
         <Form {...form}>
           <form onSubmit={handleSubmit(onSubmit)}>
             <CardContent className="space-y-5 p-6">
-              <FormField
-                control={control}
-                name="fullName"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel htmlFor="fullName">Full Name</FormLabel>
-                    <div className="relative">
-                      <User className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                      <FormControl>
-                        <Input id="fullName" type="text" placeholder="Your Name" {...field} className="pl-10" />
-                      </FormControl>
-                    </div>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
               <FormField
                 control={control}
                 name="email"
@@ -213,15 +196,6 @@ export default function SignupPage() {
 
               <div className="space-y-2 w-full text-center">
                 <p className="text-xs text-muted-foreground">Social sign-up (Google, GitHub) coming soon!</p>
-                {/* 
-                Example of how they might look:
-                <Button variant="outline" className="w-full" disabled>
-                  <Github className="mr-2 h-4 w-4" /> Sign up with GitHub
-                </Button>
-                <Button variant="outline" className="w-full" disabled>
-                  <Chrome className="mr-2 h-4 w-4" /> Sign up with Google
-                </Button> 
-                */}
               </div>
               
               <p className="text-center text-sm text-muted-foreground mt-2">
@@ -237,5 +211,4 @@ export default function SignupPage() {
     </div>
   );
 }
-
     

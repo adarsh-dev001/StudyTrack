@@ -10,8 +10,9 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Progress } from '@/components/ui/progress';
 import { Loader2, Sparkles } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { db } from '@/lib/firebase';
-import { doc, setDoc } from 'firebase/firestore';
+import { db, auth } from '@/lib/firebase'; // Import auth
+import { doc, setDoc, updateDoc } from 'firebase/firestore'; // Import updateDoc
+import { updateProfile } from 'firebase/auth'; // Import updateProfile for Firebase Auth
 import type { UserProfileData } from '@/lib/profile-types';
 import { Skeleton } from '@/components/ui/skeleton';
 
@@ -20,7 +21,6 @@ const Step1ExamFocus = React.lazy(() => import('./step-1-exam-focus'));
 const Step2StudyHabits = React.lazy(() => import('./step-2-study-habits'));
 const Step3LearningMotivation = React.lazy(() => import('./step-3-learning-motivation'));
 
-// Base object schema for step 1
 const baseStep1ObjectSchema = z.object({
   targetExams: z.array(z.string()).min(1, "Please select at least one target exam."),
   otherExamName: z.string().optional(),
@@ -31,7 +31,6 @@ const baseStep1ObjectSchema = z.object({
   previousAttempts: z.string().optional(),
 });
 
-// Step 1 schema with refinement
 const step1Schema = baseStep1ObjectSchema.refine(data => {
   if (data.targetExams?.includes('other') && (!data.otherExamName || data.otherExamName.trim() === '')) {
     return false;
@@ -52,6 +51,7 @@ const step2Schema = z.object({
 });
 
 const step3Schema = z.object({
+  fullName: z.string().min(2, { message: 'Full name must be at least 2 characters' }).max(100, { message: 'Full name too long' }), // Added fullName
   preferredLearningStyles: z.array(z.string()).min(1, "Select at least one learning style."),
   motivationType: z.string().min(1, "Please select your motivation type."),
   age: z.coerce.number().positive("Age must be a positive number").min(10, "Age seems too low").max(100, "Age seems too high").optional().nullable(),
@@ -59,11 +59,10 @@ const step3Schema = z.object({
   socialVisibilityPublic: z.boolean().optional(),
 });
 
-// Combine schemas for the full form
-const fullOnboardingSchema = baseStep1ObjectSchema // Use the base object for merging
+const fullOnboardingSchema = baseStep1ObjectSchema
   .merge(step2Schema)
   .merge(step3Schema)
-  .refine(data => { // Re-apply the refinement to the full schema
+  .refine(data => {
     if (data.targetExams?.includes('other') && (!data.otherExamName || data.otherExamName.trim() === '')) {
       return false;
     }
@@ -104,7 +103,7 @@ export default function OnboardingForm({ userId, onOnboardingSuccess }: Onboardi
   const { toast } = useToast();
 
   const methods = useForm<OnboardingFormData>({
-    resolver: zodResolver(fullOnboardingSchema), // Use the full schema for the main resolver
+    resolver: zodResolver(fullOnboardingSchema),
     mode: 'onBlur',
     defaultValues: {
       targetExams: [],
@@ -119,12 +118,13 @@ export default function OnboardingForm({ userId, onOnboardingSuccess }: Onboardi
       weakSubjects: [],
       strongSubjects: [],
       distractionStruggles: '',
+      fullName: '', // Added fullName default
       preferredLearningStyles: [],
       motivationType: '',
       age: null,
       location: '',
       socialVisibilityPublic: false,
-      onboardingCompleted: false,
+      onboardingCompleted: false, // This will be set to true upon successful submission
     },
   });
 
@@ -144,7 +144,7 @@ export default function OnboardingForm({ userId, onOnboardingSuccess }: Onboardi
         ]);
     } else if (currentStep === 3) {
         isValid = await trigger([
-            'preferredLearningStyles', 'motivationType', 'age',
+            'fullName', 'preferredLearningStyles', 'motivationType', 'age', // Added fullName to trigger
             'location', 'socialVisibilityPublic'
         ]);
     }
@@ -174,12 +174,19 @@ export default function OnboardingForm({ userId, onOnboardingSuccess }: Onboardi
     }
 
     const profilePayload: Partial<UserProfileData> = {
-      ...finalData,
+      ...finalData, // Includes fullName now
       onboardingCompleted: true,
     };
 
     try {
+      // Update Firestore profile
       await setDoc(userProfileRef, profilePayload, { merge: true });
+
+      // Update Firebase Auth profile displayName
+      if (auth.currentUser && data.fullName) {
+        await updateProfile(auth.currentUser, { displayName: data.fullName });
+      }
+      
       onOnboardingSuccess();
     } catch (error: any) {
       console.error('Error saving onboarding data:', error);

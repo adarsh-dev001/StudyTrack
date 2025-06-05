@@ -3,24 +3,24 @@ import type { Timestamp } from 'firebase/firestore';
 
 // Keep existing profile fields from other features
 export interface UserProfileData {
-  // From Streaks/Rewards
+  // From Streaks/Rewards & Auth
+  email: string; // Made non-optional
+  fullName?: string; // Will be populated during onboarding
   coins: number;
   xp: number;
   earnedBadgeIds: string[];
   purchasedItemIds: string[];
   activeThemeId?: string | null;
-  dailyChallengeStatus?: { [challengeId: string]: { completedOn: Timestamp } }; // Store completion date
+  dailyChallengeStatus?: { [challengeId: string]: { completedOn: Timestamp } };
 
   // Onboarding/Profile Fields
-  fullName?: string;
-
   targetExams?: string[];
-  otherExamName?: string; // For when 'other' is selected in targetExams
+  otherExamName?: string;
   examAttemptYear?: string;
   languageMedium?: string;
-  studyMode?: string; // e.g., 'self_study', 'coaching', 'hybrid'
-  examPhase?: string; // e.g., 'prelims', 'mains', 'not_started'
-  previousAttempts?: string; // Added from settings
+  studyMode?: string;
+  examPhase?: string;
+  previousAttempts?: string;
   
   dailyStudyHours?: string;
   preferredStudyTime?: string[];
@@ -30,17 +30,15 @@ export interface UserProfileData {
 
   preferredLearningStyles?: string[];
   motivationType?: string;
-  age?: number | null; // Changed from string to number | null
+  age?: number | null;
   location?: string;
   socialVisibilityPublic?: boolean;
 
   onboardingCompleted?: boolean;
 
-  // New field for interaction tracking
-  lastInteractionDates?: string[]; // Stores unique YYYY-MM-DD date strings
+  lastInteractionDates?: string[];
 }
 
-// Moved StreakData here
 export interface StreakData {
   currentStreak: number;
   longestStreak: number;
