@@ -235,7 +235,7 @@ export default function SettingsPage() {
                   <FormItem>
                     <FormLabel className="text-sm sm:text-base font-semibold">Target Exam(s)</FormLabel>
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-x-3 gap-y-2 sm:gap-x-4 sm:gap-y-3 pt-1 sm:pt-2">
-                      {TARGET_EXAMS.map((exam) => (
+                      {(TARGET_EXAMS || []).map((exam) => (
                         <FormField key={exam.value} control={control} name="targetExams" render={({ field }) => (
                             <FormItem className="flex flex-row items-center space-x-2 space-y-0">
                               <FormControl><Checkbox checked={field.value?.includes(exam.value)} onCheckedChange={(checked) => field.onChange(checked ? [...(field.value || []), exam.value] : (field.value || []).filter((v) => v !== exam.value))} /></FormControl>
@@ -250,19 +250,19 @@ export default function SettingsPage() {
                 )} />
               )}
               <FormField control={control} name="examAttemptYear" render={({ field }) => (
-                <FormItem><FormLabel className="text-sm sm:text-base font-semibold">Attempt Year</FormLabel><Select onValueChange={field.onChange} value={field.value || ''}><FormControl><SelectTrigger className="text-sm sm:text-base"><SelectValue placeholder="Select year" /></SelectTrigger></FormControl><SelectContent>{EXAM_ATTEMPT_YEARS().map(y => <SelectItem key={y.value} value={y.value} className="text-sm sm:text-base">{y.label}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>
+                <FormItem><FormLabel className="text-sm sm:text-base font-semibold">Attempt Year</FormLabel><Select onValueChange={field.onChange} value={field.value || ''}><FormControl><SelectTrigger className="text-sm sm:text-base"><SelectValue placeholder="Select year" /></SelectTrigger></FormControl><SelectContent>{(EXAM_ATTEMPT_YEARS() || []).map(y => <SelectItem key={y.value} value={y.value} className="text-sm sm:text-base">{y.label}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>
               )} />
               <FormField control={control} name="languageMedium" render={({ field }) => (
-                <FormItem><FormLabel className="text-sm sm:text-base font-semibold">Language Medium</FormLabel><Select onValueChange={field.onChange} value={field.value || ''}><FormControl><SelectTrigger className="text-sm sm:text-base"><SelectValue placeholder="Select language" /></SelectTrigger></FormControl><SelectContent>{LANGUAGE_MEDIUMS.map(m => <SelectItem key={m.value} value={m.value} className="text-sm sm:text-base">{m.label}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>
+                <FormItem><FormLabel className="text-sm sm:text-base font-semibold">Language Medium</FormLabel><Select onValueChange={field.onChange} value={field.value || ''}><FormControl><SelectTrigger className="text-sm sm:text-base"><SelectValue placeholder="Select language" /></SelectTrigger></FormControl><SelectContent>{(LANGUAGE_MEDIUMS || []).map(m => <SelectItem key={m.value} value={m.value} className="text-sm sm:text-base">{m.label}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>
               )} />
               <FormField control={control} name="studyMode" render={({ field }) => (
-                <FormItem><FormLabel className="text-sm sm:text-base font-semibold">Study Mode</FormLabel><Select onValueChange={field.onChange} value={field.value || ''}><FormControl><SelectTrigger className="text-sm sm:text-base"><SelectValue placeholder="Select study mode" /></SelectTrigger></FormControl><SelectContent>{STUDY_MODES.map(m => <SelectItem key={m.value} value={m.value} className="text-sm sm:text-base">{m.label}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>
+                <FormItem><FormLabel className="text-sm sm:text-base font-semibold">Study Mode</FormLabel><Select onValueChange={field.onChange} value={field.value || ''}><FormControl><SelectTrigger className="text-sm sm:text-base"><SelectValue placeholder="Select study mode" /></SelectTrigger></FormControl><SelectContent>{(STUDY_MODES || []).map(m => <SelectItem key={m.value} value={m.value} className="text-sm sm:text-base">{m.label}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>
               )} />
               <FormField control={control} name="examPhase" render={({ field }) => (
-                <FormItem><FormLabel className="text-sm sm:text-base font-semibold">Current Exam Phase</FormLabel><Select onValueChange={field.onChange} value={field.value || ''}><FormControl><SelectTrigger className="text-sm sm:text-base"><SelectValue placeholder="Select phase" /></SelectTrigger></FormControl><SelectContent>{EXAM_PHASES.map(p => <SelectItem key={p.value} value={p.value} className="text-sm sm:text-base">{p.label}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>
+                <FormItem><FormLabel className="text-sm sm:text-base font-semibold">Current Exam Phase</FormLabel><Select onValueChange={field.onChange} value={field.value || ''}><FormControl><SelectTrigger className="text-sm sm:text-base"><SelectValue placeholder="Select phase" /></SelectTrigger></FormControl><SelectContent>{(EXAM_PHASES || []).map(p => <SelectItem key={p.value} value={p.value} className="text-sm sm:text-base">{p.label}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>
               )} />
                <FormField control={control} name="previousAttempts" render={({ field }) => (
-                <FormItem><FormLabel className="text-sm sm:text-base font-semibold">Previous Attempts</FormLabel><Select onValueChange={field.onChange} value={field.value || ''}><FormControl><SelectTrigger className="text-sm sm:text-base"><SelectValue placeholder="Select attempts" /></SelectTrigger></FormControl><SelectContent>{PREVIOUS_ATTEMPTS_OPTIONS.map(opt => <SelectItem key={opt.value} value={opt.value} className="text-sm sm:text-base">{opt.label}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>
+                <FormItem><FormLabel className="text-sm sm:text-base font-semibold">Previous Attempts</FormLabel><Select onValueChange={field.onChange} value={field.value || ''}><FormControl><SelectTrigger className="text-sm sm:text-base"><SelectValue placeholder="Select attempts" /></SelectTrigger></FormControl><SelectContent>{(PREVIOUS_ATTEMPTS_OPTIONS || []).map(opt => <SelectItem key={opt.value} value={opt.value} className="text-sm sm:text-base">{opt.label}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>
               )} />
             </CardContent>
           </Card>
@@ -271,13 +271,13 @@ export default function SettingsPage() {
             <CardHeader className="p-4 sm:p-6"><CardTitle className="text-lg sm:text-xl">Study Habits</CardTitle></CardHeader>
             <CardContent className="space-y-4 sm:space-y-6 p-4 sm:p-6">
               <FormField control={control} name="dailyStudyHours" render={({ field }) => (
-                <FormItem><FormLabel className="text-sm sm:text-base font-semibold">Daily Study Hours</FormLabel><Select onValueChange={field.onChange} value={field.value || ''}><FormControl><SelectTrigger className="text-sm sm:text-base"><SelectValue placeholder="Select hours" /></SelectTrigger></FormControl><SelectContent>{DAILY_STUDY_HOURS_OPTIONS.map(h => <SelectItem key={h.value} value={h.value} className="text-sm sm:text-base">{h.label}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>
+                <FormItem><FormLabel className="text-sm sm:text-base font-semibold">Daily Study Hours</FormLabel><Select onValueChange={field.onChange} value={field.value || ''}><FormControl><SelectTrigger className="text-sm sm:text-base"><SelectValue placeholder="Select hours" /></SelectTrigger></FormControl><SelectContent>{(DAILY_STUDY_HOURS_OPTIONS || []).map(h => <SelectItem key={h.value} value={h.value} className="text-sm sm:text-base">{h.label}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>
               )} />
               <FormField control={control} name="preferredStudyTime" render={() => (
                   <FormItem>
                     <FormLabel className="text-sm sm:text-base font-semibold">Preferred Study Time(s)</FormLabel>
                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-3 gap-y-2 sm:gap-x-4 sm:gap-y-3 pt-1 sm:pt-2">
-                      {PREFERRED_STUDY_TIMES.map((time) => (
+                      {(PREFERRED_STUDY_TIMES || []).map((time) => (
                         <FormField key={time.id} control={control} name="preferredStudyTime" render={({ field }) => (
                             <FormItem className="flex flex-row items-center space-x-2 space-y-0">
                               <FormControl><Checkbox checked={field.value?.includes(time.id)} onCheckedChange={(checked) => field.onChange(checked ? [...(field.value || []), time.id] : (field.value || []).filter((v) => v !== time.id))} /></FormControl>
@@ -289,7 +289,7 @@ export default function SettingsPage() {
                   <FormItem>
                     <FormLabel className="text-sm sm:text-base font-semibold">Weak Subject(s)</FormLabel>
                     <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-2 md:grid-cols-3 gap-x-3 gap-y-2 sm:gap-x-4 sm:gap-y-3 pt-1 sm:pt-2">
-                      {SUBJECT_OPTIONS.map((subject) => (
+                      {(SUBJECT_OPTIONS || []).map((subject) => (
                         <FormField key={subject.id + "-weak"} control={control} name="weakSubjects" render={({ field }) => (
                             <FormItem className="flex flex-row items-center space-x-2 space-y-0">
                               <FormControl><Checkbox checked={field.value?.includes(subject.id)} onCheckedChange={(checked) => field.onChange(checked ? [...(field.value || []), subject.id] : (field.value || []).filter((v) => v !== subject.id))} /></FormControl>
@@ -301,7 +301,7 @@ export default function SettingsPage() {
                   <FormItem>
                     <FormLabel className="text-sm sm:text-base font-semibold">Strong Subject(s)</FormLabel>
                     <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-2 md:grid-cols-3 gap-x-3 gap-y-2 sm:gap-x-4 sm:gap-y-3 pt-1 sm:pt-2">
-                      {SUBJECT_OPTIONS.map((subject) => (
+                      {(SUBJECT_OPTIONS || []).map((subject) => (
                         <FormField key={subject.id + "-strong"} control={control} name="strongSubjects" render={({ field }) => (
                             <FormItem className="flex flex-row items-center space-x-2 space-y-0">
                               <FormControl><Checkbox checked={field.value?.includes(subject.id)} onCheckedChange={(checked) => field.onChange(checked ? [...(field.value || []), subject.id] : (field.value || []).filter((v) => v !== subject.id))} /></FormControl>
@@ -322,7 +322,7 @@ export default function SettingsPage() {
                   <FormItem>
                     <FormLabel className="text-sm sm:text-base font-semibold">Preferred Learning Style(s)</FormLabel>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-3 gap-y-2 sm:gap-x-4 sm:gap-y-3 pt-1 sm:pt-2">
-                      {PREFERRED_LEARNING_STYLES.map((style) => (
+                      {(PREFERRED_LEARNING_STYLES || []).map((style) => (
                          <FormField key={style.id} control={control} name="preferredLearningStyles" render={({ field }) => (
                             <FormItem className="flex flex-row items-center space-x-2 space-y-0">
                               <FormControl><Checkbox checked={field.value?.includes(style.id)} onCheckedChange={(checked) => field.onChange(checked ? [...(field.value || []), style.id] : (field.value || []).filter((v) => v !== style.id))} /></FormControl>
@@ -334,7 +334,7 @@ export default function SettingsPage() {
                   <FormItem className="space-y-2 sm:space-y-3">
                     <FormLabel className="text-sm sm:text-base font-semibold">Primary Motivation</FormLabel>
                     <FormControl><RadioGroup onValueChange={field.onChange} value={field.value || ''} className="flex flex-col space-y-1.5 sm:space-y-2">
-                        {MOTIVATION_TYPES.map(type => (
+                        {(MOTIVATION_TYPES || []).map(type => (
                           <FormItem key={type.value} className="flex items-center space-x-3 space-y-0">
                             <FormControl><RadioGroupItem value={type.value} /></FormControl><FormLabel className="font-normal text-xs sm:text-sm">{type.label}</FormLabel>
                           </FormItem>))}
