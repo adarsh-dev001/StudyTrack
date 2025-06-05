@@ -1,14 +1,17 @@
 
 import type { Timestamp } from 'firebase/firestore';
+import { z } from 'zod'; // Added Zod import
 
 // Definition for subject-specific details
-export interface SubjectDetail {
-  subjectId: string; // e.g., 'physics', 'mathematics'
-  subjectName: string; // e.g., 'Physics', 'Mathematics'
-  preparationLevel: string; // e.g., 'beginner', 'intermediate', 'advanced'
-  targetScore?: string; // e.g., '90%+', '150/180'
-  preferredLearningMethods: string[]; // e.g., ['videos', 'mcqs']
-}
+export const subjectDetailSchema = z.object({
+  subjectId: z.string(), // e.g., 'physics', 'mathematics'
+  subjectName: z.string(), // e.g., 'Physics', 'Mathematics'
+  preparationLevel: z.string().min(1, "Preparation level is required."), // e.g., 'beginner', 'intermediate', 'advanced'
+  targetScore: z.string().optional(), // e.g., '90%+', '150/180'
+  preferredLearningMethods: z.array(z.string()).min(1, "At least one learning method is required."), // e.g., ['videos', 'mcqs']
+});
+export type SubjectDetail = z.infer<typeof subjectDetailSchema>;
+
 
 export interface UserProfileData {
   email: string;
@@ -53,3 +56,4 @@ export interface StreakData {
   longestStreak: number;
   lastCheckInDate: Timestamp | null;
 }
+

@@ -13,7 +13,8 @@ import { useToast } from '@/hooks/use-toast';
 import { db, auth } from '@/lib/firebase';
 import { doc, setDoc } from 'firebase/firestore';
 import { updateProfile } from 'firebase/auth';
-import type { UserProfileData, SubjectDetail } from '@/lib/profile-types';
+import type { UserProfileData } from '@/lib/profile-types'; // SubjectDetail type will come from here
+import { subjectDetailSchema } from '@/lib/profile-types'; // Import subjectDetailSchema
 import { Skeleton } from '@/components/ui/skeleton';
 import { AnimatePresence, motion } from 'framer-motion';
 import { EXAM_SUBJECT_MAP } from '@/lib/constants';
@@ -45,13 +46,7 @@ const step2Schema = z.object({
   path: ['otherExamName'],
 });
 
-const subjectDetailSchema = z.object({
-  subjectId: z.string(),
-  subjectName: z.string(),
-  preparationLevel: z.string().min(1, "Select preparation level."),
-  targetScore: z.string().optional(),
-  preferredLearningMethods: z.array(z.string()).min(1, "Select at least one learning method."),
-});
+// SubjectDetail schema is now imported from profile-types.ts
 
 const step3Schema = z.object({
   subjectDetails: z.array(subjectDetailSchema).min(1, "Please provide details for at least one subject.").optional(),
@@ -72,12 +67,12 @@ export type OnboardingFormData = z.infer<typeof fullOnboardingSchema>;
 const getCurrentSchema = (step: number) => {
   if (step === 1) return step1Schema;
   if (step === 2) return step2Schema;
-  if (step === 3) return step3Schema; // Subject details might be optional if no exam is selected that maps to subjects
+  if (step === 3) return step3Schema; 
   if (step === 4) return step4Schema;
-  return fullOnboardingSchema; // For the final submission
+  return fullOnboardingSchema; 
 };
 
-const TOTAL_STEPS = 5; // Including Review Step
+const TOTAL_STEPS = 5; 
 
 const stepTitles = [
   "Personal & Academic Basics",
@@ -111,10 +106,9 @@ export default function OnboardingForm({ userId, onOnboardingSuccess }: { userId
   const { toast } = useToast();
 
   const methods = useForm<OnboardingFormData>({
-    resolver: zodResolver(fullOnboardingSchema), // Validate against full schema on submit
-    mode: 'onTouched', // Validate on blur
+    resolver: zodResolver(fullOnboardingSchema), 
+    mode: 'onTouched', 
     defaultValues: {
-      // Step 1
       fullName: '',
       age: null,
       location: '',
@@ -122,30 +116,26 @@ export default function OnboardingForm({ userId, onOnboardingSuccess }: { userId
       studyMode: '',
       examPhase: '',
       previousAttempts: '',
-      // Step 2
       targetExams: [],
       otherExamName: '',
       examAttemptYear: '',
-      // Step 3
       subjectDetails: [],
-      // Step 4
       dailyStudyHours: '',
       preferredStudyTime: [],
       distractionStruggles: '',
       motivationType: '',
       socialVisibilityPublic: false,
-      // Internal
       onboardingCompleted: false,
     },
   });
 
-  const { handleSubmit, trigger, getValues, control } = methods;
+  const { handleSubmit, trigger, getValues, control, setValue } = methods;
   const watchedTargetExams = useWatch({ control, name: 'targetExams' });
 
-  // Initialize subjectDetails when targetExams change for Step 3
+
   React.useEffect(() => {
     if (currentStep === 2 && watchedTargetExams && watchedTargetExams.length > 0) {
-      const primaryExam = watchedTargetExams[0]; // Assuming first selected exam dictates subjects for now
+      const primaryExam = watchedTargetExams[0]; 
       const subjectsForExam = EXAM_SUBJECT_MAP[primaryExam] || EXAM_SUBJECT_MAP['other'];
       
       const currentSubjectDetails = getValues('subjectDetails') || [];
@@ -160,20 +150,36 @@ export default function OnboardingForm({ userId, onOnboardingSuccess }: { userId
         };
       });
       methods.setValue('subjectDetails', newSubjectDetails, { shouldValidate: currentStep === 3 });
+    } else if (currentStep === 2 && (!watchedTargetExams || watchedTargetExams.length === 0)) {
+       // If no exams are selected, or user navigates back and deselects, clear subject details
+       methods.setValue('subjectDetails', [], { shouldValidate: currentStep === 3 });
     }
   }, [watchedTargetExams, currentStep, methods, getValues]);
 
 
   const handleNextStep = async () => {
     const currentValidationSchema = getCurrentSchema(currentStep);
-    // Extract keys of the current step's schema for targeted validation
     const fieldsToValidate = Object.keys(currentValidationSchema.shape) as Array<keyof OnboardingFormData>;
-    const isValid = await trigger(fieldsToValidate);
+    
+    // Special handling for step 3: subjectDetails might be empty if "other" exam has no predefined subjects
+    // OR if targetExams array is empty. In such cases, step3Schema might fail if it expects min(1).
+    // For step 3, if subjectDetails is optional or empty and targetExams is 'other' or empty, we might allow proceeding.
+    // However, our step3Schema now has .optional(), so it should pass if subjectDetails is empty.
+    
+    let isValid = await trigger(fieldsToValidate);
+
+    if (currentStep === 3) {
+        // If targetExams is empty or only 'other' with no custom subjects defined yet,
+        // subjectDetails might be legitimately empty.
+        // The step3Schema.subjectDetails is optional, so trigger should handle this.
+        // No special logic needed here due to `optional()` on subjectDetails in step3Schema.
+    }
+
 
     if (isValid) {
       if (currentStep < TOTAL_STEPS) {
         setCurrentStep(prev => prev + 1);
-      } else { // This case should ideally be handled by the Finish Setup button if it's the last data entry step
+      } else { 
         await handleSubmit(onSubmit)();
       }
     } else {
@@ -203,6 +209,9 @@ export default function OnboardingForm({ userId, onOnboardingSuccess }: { userId
     } else {
         finalData.age = Number(finalData.age);
     }
+    
+    // Ensure subjectDetails is an array, even if empty
+    finalData.subjectDetails = finalData.subjectDetails || [];
 
 
     const profilePayload: Partial<UserProfileData> = {
@@ -289,9 +298,3 @@ export default function OnboardingForm({ userId, onOnboardingSuccess }: { userId
     </Card>
   );
 }
-
-// Remove old step files as they are no longer used.
-// (No, I cannot delete files, but this is a mental note for the developer)
-// src/components/onboarding/step-1-exam-focus.tsx (deleted)
-// src/components/onboarding/step-2-study-habits.tsx (deleted)
-// src/components/onboarding/step-3-learning-motivation.tsx (deleted)

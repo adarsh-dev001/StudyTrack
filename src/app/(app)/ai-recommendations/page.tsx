@@ -16,7 +16,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import {
     Loader2, AlertTriangle, Lightbulb, BookOpen, CheckSquare, Award, Clock,
-    Target as TargetIcon, Zap, LineChart, Brain, UserCheck, ListChecks, Repeat, Flag, Rocket, CheckCircle
+    Target as TargetIcon, Zap, LineChart, Brain, UserCheck, ListChecks, Repeat, Flag, Rocket, CheckCircle, MessagesSquare
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import Link from 'next/link';
@@ -29,6 +29,7 @@ interface ProgressStep {
 
 const progressSteps: ProgressStep[] = [
   { text: "Analyzing your exam, subjects & focus patterns…", icon: Brain },
+  { text: "Considering your study habits & learning styles…", icon: UserCheck },
   { text: "Matching with latest syllabus & deadlines…", icon: ListChecks },
   { text: "Building study–break cycles that work for you…", icon: Repeat },
   { text: "Setting personalized goals & checkpoints…", icon: TargetIcon },
@@ -36,10 +37,11 @@ const progressSteps: ProgressStep[] = [
 ];
 
 const motivationalTips = [
-  "💡 2 hours of deep focus beats 5 hours of distraction.",
-  "📆 Break big goals into 7-day mini goals for consistency.",
-  "🔁 Revise every 3 days — your brain loves repetition.",
-  "🧘 Stay calm and focused — your progress is compounding.",
+  "💡 Every expert was once a beginner. Keep pushing!",
+  "📆 Small daily improvements lead to big results. Consistency is key.",
+  "🔁 Active recall is more effective than passive re-reading. Test yourself!",
+  "🧘 Protect your focus. Minimize distractions during study blocks.",
+  "🎯 Set clear, achievable goals for each study session."
 ];
 
 
@@ -78,19 +80,25 @@ export default function AiRecommendationsPage() {
         setProfile(userProfileData);
         setIsLoadingProfile(false);
 
+        // Map all relevant UserProfileData fields to PersonalizedRecommendationsInput
         const aiInput: PersonalizedRecommendationsInput = {
           targetExams: userProfileData.targetExams,
           otherExamName: userProfileData.otherExamName,
           examAttemptYear: userProfileData.examAttemptYear,
-          dailyStudyHours: userProfileData.dailyStudyHours,
-          preferredStudyTime: userProfileData.preferredStudyTime,
-          weakSubjects: userProfileData.weakSubjects,
-          strongSubjects: userProfileData.strongSubjects,
-          preferredLearningStyles: userProfileData.preferredLearningStyles,
-          motivationType: userProfileData.motivationType,
           languageMedium: userProfileData.languageMedium,
           studyMode: userProfileData.studyMode,
           examPhase: userProfileData.examPhase,
+          previousAttempts: userProfileData.previousAttempts,
+          dailyStudyHours: userProfileData.dailyStudyHours,
+          preferredStudyTime: userProfileData.preferredStudyTime,
+          weakSubjects: userProfileData.weakSubjects, // Kept for potential fallback
+          strongSubjects: userProfileData.strongSubjects, // Kept for potential fallback
+          subjectDetails: userProfileData.subjectDetails, // New detailed field
+          preferredLearningStyles: userProfileData.preferredLearningStyles, // General preference
+          motivationType: userProfileData.motivationType,
+          age: userProfileData.age,
+          location: userProfileData.location,
+          distractionStruggles: userProfileData.distractionStruggles,
         };
 
         setIsLoadingRecommendations(true);
@@ -102,7 +110,7 @@ export default function AiRecommendationsPage() {
         
         if (aiOutput.fallback) {
             setError("⚠️ AI is currently overloaded. Please try again shortly for personalized recommendations.");
-            setRecommendations(null); // Do not show generic plan if user only wants error message
+            setRecommendations(null); 
         } else {
             setRecommendations(aiOutput);
         }
@@ -162,7 +170,7 @@ export default function AiRecommendationsPage() {
                 🎓✨ Hold on, we’re crafting your perfect study journey...
             </h1>
             <p className="text-md sm:text-lg text-muted-foreground max-w-lg sm:max-w-xl">
-                Based on your profile, we’re building a customized timetable, goal tracker, and focus plan just for your exam prep!
+                Based on your detailed profile, we’re building a truly customized timetable, goal tracker, and focus plan just for your exam prep!
             </p>
         </div>
 
@@ -220,7 +228,7 @@ export default function AiRecommendationsPage() {
   }
 
 
-  if (error && !isLoadingRecommendations) { // This will now also catch the fallback message
+  if (error && !isLoadingRecommendations) { 
     return (
       <div className="flex flex-col items-center justify-center min-h-[calc(100vh-150px)] text-center p-6">
         <Alert variant={error.startsWith("⚠️") ? "default" : "destructive"} className="max-w-md">
@@ -264,7 +272,7 @@ export default function AiRecommendationsPage() {
           <Brain className="mr-2 sm:mr-3 h-7 w-7 sm:h-8 sm:w-8 text-primary" /> Your AI Study Blueprint
         </h1>
         <p className="text-md sm:text-lg text-muted-foreground">
-          Personalized recommendations to help you ace your {profile?.targetExams?.join(', ') || 'exams'}!
+          Personalized recommendations to help you ace your {profile?.targetExams?.map(exam => profile.otherExamName && exam === 'other' ? profile.otherExamName : exam).join(', ') || 'exams'}!
           This plan is AI-generated; adapt it to your needs and always cross-verify critical information.
         </p>
       </header>
@@ -350,7 +358,7 @@ export default function AiRecommendationsPage() {
 
           <Card className="shadow-md">
             <CardHeader className="p-4 sm:p-6">
-              <CardTitle className="text-md sm:text-lg flex items-center"><Award className="mr-2 h-5 w-5 text-primary" /> Milestone Suggestions</CardTitle>
+              <CardTitle className="text-md sm:text-lg flex items-center"><Flag className="mr-2 h-5 w-5 text-primary" /> Milestone Suggestions</CardTitle>
             </CardHeader>
             <CardContent className="p-4 sm:p-6 pt-0">
               <ul className="list-disc list-inside space-y-1 sm:space-y-1.5 text-xs sm:text-sm text-muted-foreground">
@@ -380,6 +388,14 @@ export default function AiRecommendationsPage() {
                 <h4 className="font-semibold text-sm sm:text-md text-foreground mb-1">Motivational Nudges:</h4>
                 <ul className="list-disc list-inside space-y-0.5 sm:space-y-1 text-xs sm:text-sm text-muted-foreground pl-3 sm:pl-4">
                   {recommendations.personalizedTips.motivationalNudges.map((tip, idx) => <li key={`mn-${idx}`}>{tip}</li>)}
+                </ul>
+              </div>
+               <div>
+                <h4 className="font-semibold text-sm sm:text-md text-foreground mb-1 flex items-center">
+                    <MessagesSquare className="mr-1.5 h-4 w-4 text-sky-500" /> Focus & Distraction Management:
+                </h4>
+                <ul className="list-disc list-inside space-y-0.5 sm:space-y-1 text-xs sm:text-sm text-muted-foreground pl-3 sm:pl-4">
+                  {recommendations.personalizedTips.focusAndDistraction.map((tip, idx) => <li key={`fd-${idx}`}>{tip}</li>)}
                 </ul>
               </div>
             </CardContent>

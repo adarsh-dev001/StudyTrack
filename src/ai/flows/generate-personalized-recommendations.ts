@@ -10,22 +10,35 @@
 
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
-import type { UserProfileData } from '@/lib/profile-types'; // Assuming this has all necessary fields
+import type { UserProfileData } from '@/lib/profile-types'; 
+import { subjectDetailSchema } from '@/lib/profile-types'; // Import subjectDetailSchema
 
 // Define the input schema based on relevant fields from UserProfileData
 const PersonalizedRecommendationsInputSchema = z.object({
   targetExams: z.array(z.string()).optional().describe("User's target exams (e.g., NEET, UPSC)."),
   otherExamName: z.string().optional().describe("Specific exam name if 'Other' is selected."),
   examAttemptYear: z.string().optional().describe("Year the user plans to attempt the exam."),
-  dailyStudyHours: z.string().optional().describe("Average hours user can study per day (e.g., '2-4 hours')."),
-  preferredStudyTime: z.array(z.string()).optional().describe("Preferred times for studying (e.g., ['morning', 'night'])."),
-  weakSubjects: z.array(z.string()).optional().describe("Subjects the user finds challenging."),
-  strongSubjects: z.array(z.string()).optional().describe("Subjects the user is confident in."),
-  preferredLearningStyles: z.array(z.string()).optional().describe("Preferred learning methods (e.g., ['videos', 'notes'])."),
-  motivationType: z.string().optional().describe("What motivates the user (e.g., 'xp_badges', 'personal_goals')."),
   languageMedium: z.string().optional().describe("Language medium for the exam."),
   studyMode: z.string().optional().describe("Primary mode of study (e.g., 'self_study', 'coaching')."),
   examPhase: z.string().optional().describe("Current phase of exam preparation (e.g., 'prelims', 'mains')."),
+  previousAttempts: z.string().optional().describe("Number of previous attempts for the target exam."),
+  
+  dailyStudyHours: z.string().optional().describe("Average hours user can study per day (e.g., '2-4 hours')."),
+  preferredStudyTime: z.array(z.string()).optional().describe("Preferred times for studying (e.g., ['morning', 'night'])."),
+  
+  // `weakSubjects` and `strongSubjects` are kept for simpler inputs or backward compatibility
+  // but `subjectDetails` provides richer, per-subject information.
+  weakSubjects: z.array(z.string()).optional().describe("Subjects the user finds challenging (general)."),
+  strongSubjects: z.array(z.string()).optional().describe("Subjects the user is confident in (general)."),
+  subjectDetails: z.array(subjectDetailSchema).optional().describe("Detailed information for each subject, including preparation level and preferred learning methods."),
+
+  preferredLearningStyles: z.array(z.string()).optional().describe("General preferred learning methods (e.g., ['videos', 'notes']). AI should prioritize per-subject methods from `subjectDetails` if available."),
+  motivationType: z.string().optional().describe("What motivates the user (e.g., 'xp_badges', 'personal_goals')."),
+  
+  age: z.number().optional().nullable().describe("User's age."),
+  location: z.string().optional().describe("User's location (city/region)."),
+  distractionStruggles: z.string().optional().describe("User's main distraction struggles."),
+
 });
 export type PersonalizedRecommendationsInput = z.infer<typeof PersonalizedRecommendationsInputSchema>;
 
@@ -50,8 +63,9 @@ const PersonalizedRecommendationsOutputSchema = z.object({
     .describe("An array of 2-4 strategic milestone checkpoints (e.g., 'Mock Test - Week 4', 'Full Syllabus Revision 1 - Month 2')."),
   personalizedTips: z.object({
     timeManagement: z.array(z.string()).min(1).max(3).describe("1-3 actionable time management tips."),
-    subjectSpecificStudy: z.array(z.string()).min(1).max(3).describe("1-3 subject-specific study strategies, considering weak/strong subjects if provided."),
+    subjectSpecificStudy: z.array(z.string()).min(1).max(3).describe("1-3 subject-specific study strategies, considering `subjectDetails` (prep level, preferred methods) and general weak/strong subjects if provided."),
     motivationalNudges: z.array(z.string()).min(1).max(3).describe("1-3 motivational nudges tailored to the user's motivation type."),
+    focusAndDistraction: z.array(z.string()).min(1).max(3).describe("1-3 tips for managing focus and distractions, considering user's `distractionStruggles` if provided."),
   }).describe("A collection of personalized tips."),
   overallStrategyStatement: z.string().describe("A brief (2-3 sentences) overall strategic approach statement based on the user's profile and exam."),
 });
@@ -66,9 +80,16 @@ export async function generatePersonalizedRecommendations(
     examDisplay = input.targetExams.map(e => e === 'other' ? input.otherExamName : e).join(', ');
   }
 
+  // Transform subjectDetails for easier Handlebars templating if needed
+  const subjectDetailsFormatted = input.subjectDetails?.map(sd => ({
+    ...sd,
+    preferredLearningMethodsFormatted: sd.preferredLearningMethods.join(', ')
+  }));
+
   const flowInput = {
     ...input,
     examDisplay,
+    subjectDetailsFormatted, // Pass the formatted version or the original
   };
 
   return personalizedRecommendationsFlow(flowInput);
@@ -76,7 +97,11 @@ export async function generatePersonalizedRecommendations(
 
 const recommendationsPrompt = ai.definePrompt({
   name: 'personalizedRecommendationsPrompt',
-  input: { schema: PersonalizedRecommendationsInputSchema.extend({ examDisplay: z.string().optional() }) },
+  input: { schema: PersonalizedRecommendationsInputSchema.extend({ 
+      examDisplay: z.string().optional(),
+      subjectDetailsFormatted: z.array(subjectDetailSchema.extend({ preferredLearningMethodsFormatted: z.string() })).optional(),
+    }) 
+  },
   output: { schema: PersonalizedRecommendationsOutputSchema },
   prompt: `You are an expert AI Study Coach for competitive exam aspirants. Based on the following user profile, generate a personalized set of study recommendations.
 
@@ -85,31 +110,49 @@ User Profile:
 - Language Medium: {{{languageMedium}}}
 - Current Exam Phase: {{{examPhase}}}
 - Study Mode: {{{studyMode}}}
+- Previous Attempts: {{{previousAttempts}}}
 - Daily Study Hours Available: {{{dailyStudyHours}}}
 - Preferred Study Times: {{#if preferredStudyTime}}{{#each preferredStudyTime}}{{{this}}}{{#unless @last}}, {{/unless}}{{/each}}{{else}}Not specified{{/if}}
-- Strong Subjects: {{#if strongSubjects}}{{#each strongSubjects}}{{{this}}}{{#unless @last}}, {{/unless}}{{/each}}{{else}}Not specified{{/if}}
-- Weak Subjects: {{#if weakSubjects}}{{#each weakSubjects}}{{{this}}}{{#unless @last}}, {{/unless}}{{/each}}{{else}}Not specified{{/if}}
-- Preferred Learning Styles: {{#if preferredLearningStyles}}{{#each preferredLearningStyles}}{{{this}}}{{#unless @last}}, {{/unless}}{{/each}}{{else}}Not specified{{/if}}
+- Age: {{#if age}}{{{age}}}{{else}}Not specified{{/if}}
+- Location: {{#if location}}{{{location}}}{{else}}Not specified{{/if}}
+- General Strong Subjects: {{#if strongSubjects}}{{#each strongSubjects}}{{{this}}}{{#unless @last}}, {{/unless}}{{/each}}{{else}}Not specified{{/if}}
+- General Weak Subjects: {{#if weakSubjects}}{{#each weakSubjects}}{{{this}}}{{#unless @last}}, {{/unless}}{{/each}}{{else}}Not specified{{/if}}
+- General Preferred Learning Styles: {{#if preferredLearningStyles}}{{#each preferredLearningStyles}}{{{this}}}{{#unless @last}}, {{/unless}}{{/each}}{{else}}Not specified{{/if}}
 - Motivation Type: {{{motivationType}}}
+- Distraction Struggles: {{{distractionStruggles}}}
 
-Please provide the following, ensuring they are tailored to the user's specific exam type and preferences:
+{{#if subjectDetailsFormatted}}
+Detailed Subject Information:
+{{#each subjectDetailsFormatted}}
+  - Subject: **{{{this.subjectName}}}**
+    - Preparation Level: {{{this.preparationLevel}}}
+    - Target Score/Rank: {{#if this.targetScore}}{{{this.targetScore}}}{{else}}Not specified{{/if}}
+    - Preferred Learning Methods: {{{this.preferredLearningMethodsFormatted}}}
+{{/each}}
+{{else}}
+No detailed subject information provided.
+{{/if}}
 
-1.  **suggestedWeeklyTimetableFocus**: 3-7 bullet points for a typical week's focus. Be specific if subjects are known, otherwise general study blocks.
-2.  **suggestedMonthlyGoals**: 2-5 high-level goals for a month.
-3.  **studyCycleRecommendation**: A specific study-break cycle (e.g., "Pomodoro: 25 min study / 5 min break").
-4.  **shortTermGoals**: 2-4 actionable short-term goals (e.g., "Complete Unit X of Physics in 7 days"). Each goal should have a 'goal' and 'timeline' attribute.
-5.  **longTermGoals**: 1-3 broader long-term goals (e.g., "Finish Part A of {{{examDisplay}}} syllabus 2 months before exam"). Each goal should have a 'goal' and 'timeline'.
-6.  **milestoneSuggestions**: 2-4 strategic checkpoints (e.g., "Schedule first full-length mock test after 6 weeks", "Begin revision of all {{{strongSubjects}}} by end of Month 1").
+Please provide the following, ensuring they are tailored to the user's specific exam type, preferences, and detailed subject information if available:
+
+1.  **suggestedWeeklyTimetableFocus**: 3-7 bullet points. If subjectDetails are provided, use them to inform focus. Otherwise, use general strong/weak subjects.
+2.  **suggestedMonthlyGoals**: 2-5 high-level goals.
+3.  **studyCycleRecommendation**: A specific study-break cycle.
+4.  **shortTermGoals**: 2-4 actionable short-term goals with timelines.
+5.  **longTermGoals**: 1-3 broader long-term goals with timelines.
+6.  **milestoneSuggestions**: 2-4 strategic checkpoints.
 7.  **personalizedTips**:
     *   timeManagement: 1-3 actionable time management tips.
-    *   subjectSpecificStudy: 1-3 strategies, considering weak/strong subjects (e.g., "For {{{weakSubjects.[0]}}}, try using Feynman technique."). If no subjects, give general advice.
-    *   motivationalNudges: 1-3 nudges. If motivationType is 'xp_badges', suggest tracking progress. If 'calm_mode', suggest minimizing distractions.
-8.  **overallStrategyStatement**: A concise (2-3 sentences) strategic statement summarizing the approach.
+    *   subjectSpecificStudy: 1-3 strategies. **Prioritize using \`subjectDetails\`**. For subjects marked with lower preparation levels (e.g., 'beginner'), suggest foundational strategies. For subjects with higher levels, suggest advanced techniques. Tailor advice to preferred learning methods for each subject. If \`subjectDetails\` is unavailable, fall back to general \`weakSubjects\`/\`strongSubjects\`.
+    *   motivationalNudges: 1-3 nudges based on \`motivationType\`.
+    *   focusAndDistraction: 1-3 tips considering \`distractionStruggles\`.
+8.  **overallStrategyStatement**: A concise (2-3 sentences) strategic statement.
 
-Structure your entire output as a single JSON object that strictly adheres to the PersonalizedRecommendationsOutputSchema. Ensure 'fallback' is not present unless explicitly set by the flow logic for an error case.
-Ensure the advice is practical and actionable for the user preparing for {{{examDisplay}}}.
-Prioritize core subjects for the given exam. For example, for NEET, focus on Physics, Chemistry, Biology. For UPSC, general studies and optionals.
+Structure your entire output as a single JSON object that strictly adheres to PersonalizedRecommendationsOutputSchema.
+Ensure 'fallback' is not present unless explicitly set by the flow logic.
+Prioritize core subjects for {{{examDisplay}}}.
 If subject information is sparse, provide more general planning advice.
+If \`subjectDetails\` is available, use it as the primary source for subject-specific advice, overriding general \`weakSubjects\`, \`strongSubjects\`, and \`preferredLearningStyles\` where detailed per-subject info exists.
 `,
 });
 
@@ -119,7 +162,10 @@ const INITIAL_DELAY_MS = 1000;
 const personalizedRecommendationsFlow = ai.defineFlow(
   {
     name: 'personalizedRecommendationsFlow',
-    inputSchema: PersonalizedRecommendationsInputSchema.extend({ examDisplay: z.string().optional() }),
+    inputSchema: PersonalizedRecommendationsInputSchema.extend({ 
+      examDisplay: z.string().optional(),
+      subjectDetailsFormatted: z.array(subjectDetailSchema.extend({ preferredLearningMethodsFormatted: z.string() })).optional(),
+    }),
     outputSchema: PersonalizedRecommendationsOutputSchema,
   },
   async (input): Promise<PersonalizedRecommendationsOutput> => {
@@ -130,17 +176,14 @@ const personalizedRecommendationsFlow = ai.defineFlow(
       try {
         const { output } = await recommendationsPrompt(input);
         if (!output) {
-          // This case might indicate an issue with the prompt or model not returning expected structure,
-          // but not necessarily a 503. We'll treat it as a retriable error for now.
           throw new Error('AI model did not return a valid output structure.');
         }
-        return { ...output, fallback: false }; // Ensure fallback is explicitly false on success
+        return { ...output, fallback: false };
       } catch (error: any) {
         attempts++;
         console.error(`Attempt ${attempts} failed for personalizedRecommendationsFlow: ${error.message}`);
         if (attempts >= MAX_RETRIES) {
           console.error("Max retries reached. Returning fallback recommendations.");
-          // Construct and return fallback response
           return {
             fallback: true,
             suggestedWeeklyTimetableFocus: [
@@ -176,6 +219,10 @@ const personalizedRecommendationsFlow = ai.defineFlow(
               motivationalNudges: [
                 "Keep your long-term exam goals in mind to stay focused.",
                 "Acknowledge and celebrate small victories and progress made."
+              ],
+              focusAndDistraction: [
+                "Identify your common distractions and create a plan to minimize them.",
+                "Experiment with different study environments to find what helps you focus best."
               ]
             },
             overallStrategyStatement: "The AI coach is currently experiencing high demand and has provided a general plan. Please try again later for fully personalized recommendations. In the meantime, focus on consistent study habits, regular revision of material, and effective time management to make progress towards your exam goals."
@@ -198,7 +245,8 @@ const personalizedRecommendationsFlow = ai.defineFlow(
         personalizedTips: {
             timeManagement: ["Generic time tip"],
             subjectSpecificStudy: ["Generic subject tip"],
-            motivationalNudges: ["Generic nudge"]
+            motivationalNudges: ["Generic nudge"],
+            focusAndDistraction: ["Generic focus tip"]
         },
         overallStrategyStatement: "AI service is currently unavailable. Please try again later."
     };
