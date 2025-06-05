@@ -179,7 +179,7 @@ export default function SettingsPage() {
         title: 'Profile Updated',
         description: 'Your profile information has been successfully updated.',
       });
-      reset(data, { keepDirtyValues: false, keepValues: true }); // Reset form state but keep current values
+      reset(data, { keepDirtyValues: false, keepValues: true }); 
        
     } catch (error: any) {
       toast({
@@ -220,7 +220,7 @@ export default function SettingsPage() {
                   <FormItem><FormLabel htmlFor="email" className="text-sm sm:text-base">Email Address</FormLabel><FormControl><Input id="email" type="email" {...field} disabled className="text-sm sm:text-base"/></FormControl><FormDescription className="text-xs sm:text-sm">Email address cannot be changed here.</FormDescription><FormMessage /></FormItem>
               )} />
               <FormField control={control} name="age" render={({ field }) => (
-                  <FormItem><FormLabel htmlFor="age" className="text-sm sm:text-base">Age</FormLabel><FormControl><Input id="age" type="number" {...field} value={field.value === null ? '' : field.value} onChange={e => field.onChange(e.target.value === '' ? null : Number(e.target.value))} className="text-sm sm:text-base"/></FormControl><FormMessage /></FormItem>
+                  <FormItem><FormLabel htmlFor="age" className="text-sm sm:text-base">Age</FormLabel><FormControl><Input id="age" type="number" {...field} value={field.value === null ? '' : String(field.value)} onChange={e => field.onChange(e.target.value === '' ? null : Number(e.target.value))} className="text-sm sm:text-base"/></FormControl><FormMessage /></FormItem>
               )} />
               <FormField control={control} name="location" render={({ field }) => (
                 <FormItem><FormLabel htmlFor="location" className="text-sm sm:text-base">Location</FormLabel><FormControl><Input id="location" placeholder="City, Country" {...field} className="text-sm sm:text-base"/></FormControl><FormMessage /></FormItem>
@@ -231,19 +231,39 @@ export default function SettingsPage() {
           <Card>
             <CardHeader className="p-4 sm:p-6"><CardTitle className="text-lg sm:text-xl">Exam Focus</CardTitle></CardHeader>
             <CardContent className="space-y-4 sm:space-y-6 p-4 sm:p-6">
-              <FormField control={control} name="targetExams" render={() => (
+              <FormField
+                control={control}
+                name="targetExams"
+                render={({ field }) => (
                   <FormItem>
                     <FormLabel className="text-sm sm:text-base font-semibold">Target Exam(s)</FormLabel>
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-x-3 gap-y-2 sm:gap-x-4 sm:gap-y-3 pt-1 sm:pt-2">
-                      {(TARGET_EXAMS || []).map((exam) => (
-                        <FormField key={exam.value} control={control} name="targetExams" render={({ field }) => (
-                            <FormItem className="flex flex-row items-center space-x-2 space-y-0">
-                              <FormControl><Checkbox checked={field.value?.includes(exam.value)} onCheckedChange={(checked) => field.onChange(checked ? [...(field.value || []), exam.value] : (field.value || []).filter((v) => v !== exam.value))} /></FormControl>
-                              <FormLabel className="font-normal text-xs sm:text-sm">{exam.label}</FormLabel>
-                            </FormItem>)} />
+                      {(TARGET_EXAMS || []).map((examOption) => (
+                        <FormItem key={examOption.value} className="flex flex-row items-center space-x-2 space-y-0">
+                          <FormControl>
+                            <Checkbox
+                              checked={field.value?.includes(examOption.value)}
+                              onCheckedChange={(checked) => {
+                                const currentSelectedExams = field.value || [];
+                                const newSelectedExams = checked
+                                  ? [...currentSelectedExams, examOption.value]
+                                  : currentSelectedExams.filter(
+                                      (value) => value !== examOption.value
+                                    );
+                                field.onChange(newSelectedExams);
+                              }}
+                            />
+                          </FormControl>
+                          <FormLabel className="font-normal text-xs sm:text-sm">
+                            {examOption.label}
+                          </FormLabel>
+                        </FormItem>
                       ))}
-                    </div><FormMessage />
-                  </FormItem>)} />
+                    </div>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
               {watchedTargetExams?.includes('other') && (
                 <FormField control={control} name="otherExamName" render={({ field }) => (
                     <FormItem><FormLabel className="text-sm sm:text-base">Specify Other Exam</FormLabel><FormControl><Input placeholder="E.g., GRE, GMAT" {...field} className="text-sm sm:text-base"/></FormControl><FormMessage /></FormItem>
@@ -273,42 +293,105 @@ export default function SettingsPage() {
               <FormField control={control} name="dailyStudyHours" render={({ field }) => (
                 <FormItem><FormLabel className="text-sm sm:text-base font-semibold">Daily Study Hours</FormLabel><Select onValueChange={field.onChange} value={field.value || ''}><FormControl><SelectTrigger className="text-sm sm:text-base"><SelectValue placeholder="Select hours" /></SelectTrigger></FormControl><SelectContent>{(DAILY_STUDY_HOURS_OPTIONS || []).map(h => <SelectItem key={h.value} value={h.value} className="text-sm sm:text-base">{h.label}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>
               )} />
-              <FormField control={control} name="preferredStudyTime" render={() => (
+              <FormField
+                control={control}
+                name="preferredStudyTime"
+                render={({ field }) => (
                   <FormItem>
                     <FormLabel className="text-sm sm:text-base font-semibold">Preferred Study Time(s)</FormLabel>
-                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-3 gap-y-2 sm:gap-x-4 sm:gap-y-3 pt-1 sm:pt-2">
-                      {(PREFERRED_STUDY_TIMES || []).map((time) => (
-                        <FormField key={time.id} control={control} name="preferredStudyTime" render={({ field }) => (
-                            <FormItem className="flex flex-row items-center space-x-2 space-y-0">
-                              <FormControl><Checkbox checked={field.value?.includes(time.id)} onCheckedChange={(checked) => field.onChange(checked ? [...(field.value || []), time.id] : (field.value || []).filter((v) => v !== time.id))} /></FormControl>
-                              <FormLabel className="font-normal text-xs sm:text-sm">{time.label}</FormLabel>
-                            </FormItem>)} />
-                      ))}</div><FormMessage />
-                  </FormItem>)} />
-              <FormField control={control} name="weakSubjects" render={() => (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-3 gap-y-2 sm:gap-x-4 sm:gap-y-3 pt-1 sm:pt-2">
+                      {(PREFERRED_STUDY_TIMES || []).map((timeOption) => (
+                        <FormItem key={timeOption.id} className="flex flex-row items-center space-x-2 space-y-0">
+                          <FormControl>
+                            <Checkbox
+                              checked={field.value?.includes(timeOption.id)}
+                              onCheckedChange={(checked) => {
+                                const currentSelectedTimes = field.value || [];
+                                const newSelectedTimes = checked
+                                  ? [...currentSelectedTimes, timeOption.id]
+                                  : currentSelectedTimes.filter(
+                                      (value) => value !== timeOption.id
+                                    );
+                                field.onChange(newSelectedTimes);
+                              }}
+                            />
+                          </FormControl>
+                          <FormLabel className="font-normal text-xs sm:text-sm">
+                            {timeOption.label}
+                          </FormLabel>
+                        </FormItem>
+                      ))}
+                    </div>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={control}
+                name="weakSubjects"
+                render={({ field }) => (
                   <FormItem>
                     <FormLabel className="text-sm sm:text-base font-semibold">Weak Subject(s)</FormLabel>
                     <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-2 md:grid-cols-3 gap-x-3 gap-y-2 sm:gap-x-4 sm:gap-y-3 pt-1 sm:pt-2">
-                      {(SUBJECT_OPTIONS || []).map((subject) => (
-                        <FormField key={subject.id + "-weak"} control={control} name="weakSubjects" render={({ field }) => (
-                            <FormItem className="flex flex-row items-center space-x-2 space-y-0">
-                              <FormControl><Checkbox checked={field.value?.includes(subject.id)} onCheckedChange={(checked) => field.onChange(checked ? [...(field.value || []), subject.id] : (field.value || []).filter((v) => v !== subject.id))} /></FormControl>
-                              <FormLabel className="font-normal text-xs sm:text-sm">{subject.label}</FormLabel>
-                            </FormItem>)} />
-                      ))}</div><FormMessage />
-                  </FormItem>)} />
-              <FormField control={control} name="strongSubjects" render={() => (
+                      {(SUBJECT_OPTIONS || []).map((subjectOption) => (
+                         <FormItem key={subjectOption.id + "-weak"} className="flex flex-row items-center space-x-2 space-y-0">
+                          <FormControl>
+                            <Checkbox
+                              checked={field.value?.includes(subjectOption.id)}
+                              onCheckedChange={(checked) => {
+                                const currentSelectedSubjects = field.value || [];
+                                const newSelectedSubjects = checked
+                                  ? [...currentSelectedSubjects, subjectOption.id]
+                                  : currentSelectedSubjects.filter(
+                                      (value) => value !== subjectOption.id
+                                    );
+                                field.onChange(newSelectedSubjects);
+                              }}
+                            />
+                          </FormControl>
+                          <FormLabel className="font-normal text-xs sm:text-sm">
+                            {subjectOption.label}
+                          </FormLabel>
+                        </FormItem>
+                      ))}
+                    </div>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={control}
+                name="strongSubjects"
+                render={({ field }) => (
                   <FormItem>
                     <FormLabel className="text-sm sm:text-base font-semibold">Strong Subject(s)</FormLabel>
                     <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-2 md:grid-cols-3 gap-x-3 gap-y-2 sm:gap-x-4 sm:gap-y-3 pt-1 sm:pt-2">
-                      {(SUBJECT_OPTIONS || []).map((subject) => (
-                        <FormField key={subject.id + "-strong"} control={control} name="strongSubjects" render={({ field }) => (
-                            <FormItem className="flex flex-row items-center space-x-2 space-y-0">
-                              <FormControl><Checkbox checked={field.value?.includes(subject.id)} onCheckedChange={(checked) => field.onChange(checked ? [...(field.value || []), subject.id] : (field.value || []).filter((v) => v !== subject.id))} /></FormControl>
-                              <FormLabel className="font-normal text-xs sm:text-sm">{subject.label}</FormLabel>
-                            </FormItem>)} />
-                      ))}</div><FormMessage />
-                  </FormItem>)} />
+                      {(SUBJECT_OPTIONS || []).map((subjectOption) => (
+                        <FormItem key={subjectOption.id + "-strong"} className="flex flex-row items-center space-x-2 space-y-0">
+                          <FormControl>
+                            <Checkbox
+                              checked={field.value?.includes(subjectOption.id)}
+                              onCheckedChange={(checked) => {
+                                const currentSelectedSubjects = field.value || [];
+                                const newSelectedSubjects = checked
+                                  ? [...currentSelectedSubjects, subjectOption.id]
+                                  : currentSelectedSubjects.filter(
+                                      (value) => value !== subjectOption.id
+                                    );
+                                field.onChange(newSelectedSubjects);
+                              }}
+                            />
+                          </FormControl>
+                          <FormLabel className="font-normal text-xs sm:text-sm">
+                            {subjectOption.label}
+                          </FormLabel>
+                        </FormItem>
+                      ))}
+                    </div>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
               <FormField control={control} name="distractionStruggles" render={({ field }) => (
                 <FormItem><FormLabel htmlFor="distractionStruggles" className="text-sm sm:text-base">Distraction Struggles</FormLabel><FormControl><Textarea id="distractionStruggles" placeholder="Describe your main distractions..." {...field} className="text-sm sm:text-base min-h-[70px] sm:min-h-[80px]"/></FormControl><FormMessage /></FormItem>
               )} />
@@ -318,18 +401,39 @@ export default function SettingsPage() {
           <Card>
             <CardHeader className="p-4 sm:p-6"><CardTitle className="text-lg sm:text-xl">Learning & Motivation</CardTitle></CardHeader>
             <CardContent className="space-y-4 sm:space-y-6 p-4 sm:p-6">
-              <FormField control={control} name="preferredLearningStyles" render={() => (
+              <FormField
+                control={control}
+                name="preferredLearningStyles"
+                render={({ field }) => (
                   <FormItem>
                     <FormLabel className="text-sm sm:text-base font-semibold">Preferred Learning Style(s)</FormLabel>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-3 gap-y-2 sm:gap-x-4 sm:gap-y-3 pt-1 sm:pt-2">
-                      {(PREFERRED_LEARNING_STYLES || []).map((style) => (
-                         <FormField key={style.id} control={control} name="preferredLearningStyles" render={({ field }) => (
-                            <FormItem className="flex flex-row items-center space-x-2 space-y-0">
-                              <FormControl><Checkbox checked={field.value?.includes(style.id)} onCheckedChange={(checked) => field.onChange(checked ? [...(field.value || []), style.id] : (field.value || []).filter((v) => v !== style.id))} /></FormControl>
-                              <FormLabel className="font-normal text-xs sm:text-sm">{style.label}</FormLabel>
-                            </FormItem>)} />
-                      ))}</div><FormMessage />
-                  </FormItem>)} />
+                      {(PREFERRED_LEARNING_STYLES || []).map((styleOption) => (
+                        <FormItem key={styleOption.id} className="flex flex-row items-center space-x-2 space-y-0">
+                          <FormControl>
+                            <Checkbox
+                              checked={field.value?.includes(styleOption.id)}
+                              onCheckedChange={(checked) => {
+                                const currentSelectedStyles = field.value || [];
+                                const newSelectedStyles = checked
+                                  ? [...currentSelectedStyles, styleOption.id]
+                                  : currentSelectedStyles.filter(
+                                      (value) => value !== styleOption.id
+                                    );
+                                field.onChange(newSelectedStyles);
+                              }}
+                            />
+                          </FormControl>
+                          <FormLabel className="font-normal text-xs sm:text-sm">
+                            {styleOption.label}
+                          </FormLabel>
+                        </FormItem>
+                      ))}
+                    </div>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
               <FormField control={control} name="motivationType" render={({ field }) => (
                   <FormItem className="space-y-2 sm:space-y-3">
                     <FormLabel className="text-sm sm:text-base font-semibold">Primary Motivation</FormLabel>
@@ -359,3 +463,5 @@ export default function SettingsPage() {
     </div>
   );
 }
+
+    
