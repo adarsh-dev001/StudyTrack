@@ -87,7 +87,7 @@ export default function SmartQuizPage() {
   const { toast } = useToast();
   const quizAreaRef = useRef<HTMLDivElement>(null);
   const questionCardRef = useRef<HTMLDivElement>(null);
-  const resultsScrollRef = useRef<HTMLDivElement>(null); // Ref for ScrollArea
+  const resultsScrollRef = useRef<HTMLDivElement>(null); 
   const [showScrollToTop, setShowScrollToTop] = useState(false);
 
   const [isLoadingProfile, setIsLoadingProfile] = useState(true);
@@ -169,12 +169,11 @@ export default function SmartQuizPage() {
         scrollAreaElement.removeEventListener('scroll', handleScroll);
       }
     };
-  }, [quizState]); // Re-check when quizState changes, especially to 'submitted'
+  }, [quizState]);
 
   const scrollToResultsTop = () => {
     resultsScrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
   };
-
 
 
   const onSubmit: SubmitHandler<QuizFormData> = async (data) => {
@@ -537,17 +536,17 @@ export default function SmartQuizPage() {
             )}
 
             {quizState === 'submitted' && (
-            <Card className="shadow-lg border-green-500/50">
-                <CardHeader className="p-4 sm:p-6 bg-green-500/10 rounded-t-lg text-center">
+            <Card className="shadow-lg border-green-500/50 flex flex-col max-h-[85vh]">
+                <CardHeader className="p-4 sm:p-6 bg-green-500/10 rounded-t-lg text-center shrink-0">
                     <Award className="mx-auto h-10 w-10 sm:h-12 sm:w-12 text-green-600 mb-2" />
                     <CardTitle className="text-xl sm:text-2xl font-bold text-green-700 dark:text-green-300">🎉 Quiz Results! 🎉</CardTitle>
                     <CardDescription className="text-sm sm:text-md text-green-600 dark:text-green-400">
                         You scored {score} out of {quizData.questions.length} ({((score / quizData.questions.length) * 100).toFixed(0)}%)
                     </CardDescription>
                 </CardHeader>
-                <CardContent className="p-0 relative"> {/* Set padding to 0 here */}
-                 <ScrollArea ref={resultsScrollRef} className="max-h-[calc(100vh-400px)] sm:max-h-[calc(100vh-480px)]"> {/* Apply padding to ScrollArea's content div */}
-                    <div className="divide-y divide-border p-4 sm:p-6"> {/* This div now has the padding */}
+                <CardContent className="p-0 relative flex-grow overflow-hidden">
+                 <ScrollArea ref={resultsScrollRef} className="h-full"> 
+                    <div className="divide-y divide-border p-4 sm:p-6">
                     {quizData.questions.map((q, qIndex) => {
                         const userAnswer = userAnswers[qIndex];
                         const isCorrect = !userAnswer?.skipped && userAnswer?.selectedOption === q.correctAnswerIndex;
@@ -606,14 +605,14 @@ export default function SmartQuizPage() {
                         onClick={scrollToResultsTop}
                         variant="outline"
                         size="icon"
-                        className="absolute bottom-4 right-4 sm:bottom-6 sm:right-6 h-10 w-10 sm:h-12 sm:w-12 rounded-full shadow-lg bg-background hover:bg-muted"
+                        className="absolute bottom-4 right-4 sm:bottom-6 sm:right-6 h-10 w-10 sm:h-12 sm:w-12 rounded-full shadow-lg bg-background hover:bg-muted z-10"
                         aria-label="Scroll to top"
                     >
                         <ArrowUp className="h-5 w-5 sm:h-6 sm:w-6" />
                     </Button>
                   )}
                 </CardContent>
-                <CardFooter className="flex flex-col sm:flex-row justify-center items-center gap-2 sm:gap-4 p-4 sm:p-6 border-t">
+                <CardFooter className="flex flex-col sm:flex-row justify-center items-center gap-2 sm:gap-4 p-4 sm:p-6 border-t shrink-0">
                     <Button onClick={handleRetakeQuiz} variant="outline" className="w-full sm:w-auto text-sm sm:text-base">
                         Retake This Quiz
                     </Button>
@@ -628,4 +627,3 @@ export default function SmartQuizPage() {
     </div>
   );
 }
-
