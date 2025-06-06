@@ -59,12 +59,12 @@ Format your solution as follows:
 3.  **Explanation and Calculation (Multiple Steps as Needed)**:
     *   For each significant step, use a bold heading like "**Step 2: Recall the Formula** 📚" or "**Step 3: Plugging in the Values** ⚙️".
     *   Explain any formulas used *before* applying them. Use bullet points or short lines with emojis for clarity.
-        *   Example for A.P.: "📌 The formula for the nth term of an A.P. is: \`a_n = a + (n-1)d\`"
+        *   Example for A.P.: "📌 The formula for the nth term of an A.P. is: \\\`a_n = a + (n-1)d\\\`"
         *   Where:
-            *   `a_n` is the nth term
-            *   `a` is the first term
-            *   `n` is the term number
-            *   `d` is the common difference (the constant value each term increases by)
+            *   \\\`a_n\\\` is the nth term
+            *   \\\`a\\\` is the first term
+            *   \\\`n\\\` is the term number
+            *   \\\`d\\\` is the common difference (the constant value each term increases by)
     *   Present calculations in a visually friendly way using inline math (markdown backticks for code blocks if needed for complex equations) and emojis.
         *   Example: "🧮 Given a + 2d = 10 and d = 3. So, a + 2(3) = 10 ➡️ a + 6 = 10 ➡️ a = 4. Got it! ✅"
     *   Use emojis like ✅ (correct), 🎉 (progress/milestone), 💡 (tip/insight), 🤔 (thinking point), 📖 (reference/concept) appropriately to make it engaging.
@@ -81,13 +81,13 @@ General Guidelines for Your Response:
 -   **Tone**: Educational, cheerful, encouraging, and conversational. Avoid a dry, textbook style.
 -   **Clarity**: Explain concepts and steps as if you're talking to a student who needs help.
 -   **Step-by-Step**: NEVER just give the final answer. The process is key.
--   **Markdown**: Use markdown for bolding, italics, inline code/math (\`), and lists.
+-   **Markdown**: Use markdown for bolding, italics, inline code/math (\\\`), and lists.
 -   **Emojis**: Use them thoughtfully to add visual appeal and convey emotion.
--   **Personalization**: Adapt complexity based on \`preparationLevel\` and \`examType\` if provided. For a 'beginner', be more elaborate. For 'advanced', you can be more concise on basics.
+-   **Personalization**: Adapt complexity based on \\\`preparationLevel\\\` and \\\`examType\\\` if provided. For a 'beginner', be more elaborate. For 'advanced', you can be more concise on basics.
 
 Output a JSON object strictly conforming to the SolveAcademicDoubtOutputSchema.
-The \`explanation\` field should contain your entire formatted response as a single markdown string.
-If you are unsure or the question is outside academic scope, set a low \`confidenceScore\` and explain kindly within the \`explanation\` field (still try to be friendly, e.g., "Hmm, that's an interesting question! While I'm best at academic topics like math and science, for that one you might want to check...").
+The \\\`explanation\\\` field should contain your entire formatted response as a single markdown string.
+If you are unsure or the question is outside academic scope, set a low \\\`confidenceScore\\\` and explain kindly within the \\\`explanation\\\` field (still try to be friendly, e.g., "Hmm, that's an interesting question! While I'm best at academic topics like math and science, for that one you might want to check...").
 `,
 });
 
@@ -120,5 +120,3 @@ const solveAcademicDoubtFlow = ai.defineFlow(
   }
 );
 
-
-    
