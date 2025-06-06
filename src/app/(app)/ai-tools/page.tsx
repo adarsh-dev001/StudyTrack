@@ -15,12 +15,12 @@ import {
   BrainCircuit,
   ListTree,
   Sparkles,
-  MessageSquareQuestion, // Direct import
+  MessageSquareQuestion, // Ensured direct import
   Lock,
   HelpCircle,
   ArrowRight,
 } from "lucide-react";
-import type { LucideIcon } from "lucide-react";
+import type { LucideIcon } from "lucide-react"; // Keep this for type safety if needed elsewhere, or remove if only for map keys
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
@@ -61,7 +61,7 @@ const aiTools: AiTool[] = [
     id: "material-summarizer",
     title: "Study Material Summarizer",
     description: "Quickly grasp key concepts by summarizing your study materials.",
-    iconName: "Sparkles", // Updated to match direct import/key
+    iconName: "Sparkles", 
     iconColorClass: "text-amber-500",
     link: "/ai-tools/material-summarizer",
     status: "Active",
@@ -71,7 +71,7 @@ const aiTools: AiTool[] = [
     id: "doubt-solver",
     title: "AI Doubt Solver",
     description: "Get instant, context-aware explanations for your academic questions.",
-    iconName: "MessageSquareQuestion", // Updated to match direct import/key
+    iconName: "MessageSquareQuestion", 
     iconColorClass: "text-indigo-500",
     link: "/ai-tools/doubt-solver",
     status: "Active",
@@ -81,7 +81,7 @@ const aiTools: AiTool[] = [
     id: "productivity-analyzer",
     title: "Productivity Analysis AI",
     description: "Unlock AI-driven insights! Requires a 7-day activity streak to access.",
-    iconName: "Lock", // Updated to match direct import/key
+    iconName: "Lock", 
     iconColorClass: "text-purple-500",
     link: "/ai-tools/productivity-analyzer",
     status: "Unlockable",
@@ -113,7 +113,7 @@ export default function AiToolsPage() {
         {aiTools.map((tool) => {
           const IconComponent = iconMap[tool.iconName];
           if (!IconComponent) {
-            console.error(`[Client] Icon not found in map: ${tool.iconName}`);
+            console.error(`[Client] Icon not found in map: ${tool.iconName}`); // Changed from [Server] to [Client] as this page is "use client"
             return <div key={tool.id}>Error: Icon {tool.iconName} not found. Check iconMap.</div>;
           }
           return (
