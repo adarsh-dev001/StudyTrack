@@ -15,11 +15,22 @@ import type { LucideIcon } from "lucide-react";
 import { Badge } from "@/components/ui/badge"; 
 import { cn } from "@/lib/utils"; 
 
+// Define an icon map
+const iconMap: { [key: string]: LucideIcon } = {
+  ListTree,
+  SparklesIcon: Sparkles, // Renamed to avoid conflict with Sparkles component
+  MessageSquareQuestion,
+  LockIcon: Lock, // Renamed to avoid conflict
+  HelpCircle,
+  BrainCircuit,
+  ArrowRight,
+};
+
 interface AiTool {
   id: string;
   title: string;
   description: string;
-  icon: LucideIcon;
+  iconName: keyof typeof iconMap; // Use string keys from our map
   iconColorClass?: string; 
   link: string;
   status: "Active" | "Coming Soon" | "Unlockable";
@@ -31,7 +42,7 @@ const aiTools: AiTool[] = [
     id: "syllabus-suggester",
     title: "AI Syllabus Suggester",
     description: "Get personalized syllabus suggestions for your exams (NEET, UPSC, JEE, etc.).",
-    icon: ListTree,
+    iconName: "ListTree",
     iconColorClass: "text-sky-500",
     link: "/ai-tools/syllabus-suggester",
     status: "Active",
@@ -41,7 +52,7 @@ const aiTools: AiTool[] = [
     id: "material-summarizer",
     title: "Study Material Summarizer",
     description: "Quickly grasp key concepts by summarizing your study materials.",
-    icon: Sparkles,
+    iconName: "SparklesIcon",
     iconColorClass: "text-amber-500",
     link: "/ai-tools/material-summarizer",
     status: "Active",
@@ -51,7 +62,7 @@ const aiTools: AiTool[] = [
     id: "doubt-solver",
     title: "AI Doubt Solver",
     description: "Get instant, context-aware explanations for your academic questions.",
-    icon: MessageSquareQuestion,
+    iconName: "MessageSquareQuestion",
     iconColorClass: "text-indigo-500",
     link: "/ai-tools/doubt-solver",
     status: "Active",
@@ -61,7 +72,7 @@ const aiTools: AiTool[] = [
     id: "productivity-analyzer",
     title: "Productivity Analysis AI",
     description: "Unlock AI-driven insights! Requires a 7-day activity streak to access.",
-    icon: Lock, 
+    iconName: "LockIcon", 
     iconColorClass: "text-purple-500",
     link: "/ai-tools/productivity-analyzer",
     status: "Unlockable",
@@ -71,23 +82,12 @@ const aiTools: AiTool[] = [
     id: "smart-quiz",
     title: "SmartQuiz AI",
     description: "Generate custom quizzes on any topic, tailored to exam type and difficulty.",
-    icon: HelpCircle,
+    iconName: "HelpCircle",
     iconColorClass: "text-green-500",
     link: "/ai-tools/smart-quiz",
     status: "Active",
     actionText: "Create Quiz"
   },
-  // Example of a "Coming Soon" tool
-  // {
-  //   id: "writing-assistant",
-  //   title: "AI Writing Assistant",
-  //   description: "Get help drafting essays, summaries, and more. (Coming Soon!)",
-  //   icon: Edit, // Edit icon would need to be imported if this is uncommented
-  //   iconColorClass: "text-gray-500",
-  //   link: "#",
-  //   status: "Coming Soon",
-  //   actionText: "Notify Me"
-  // },
 ];
 
 export default function AiToolsPage() {
@@ -102,7 +102,11 @@ export default function AiToolsPage() {
 
       <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
         {aiTools.map((tool) => {
-          const IconComponent = tool.icon;
+          const IconComponent = iconMap[tool.iconName];
+          if (!IconComponent) {
+            console.error(`Icon not found in map: ${tool.iconName}`);
+            return <div key={tool.id}>Error: Icon {tool.iconName} not found</div>; // Fallback UI
+          }
           return (
             <Card 
               key={tool.id} 
