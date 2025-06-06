@@ -4,11 +4,11 @@ import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { 
   BrainCircuit, 
-  Sparkles as SparklesIconComponent,
-  ListTree as ListTreeIconComponent,
-  MessageSquareQuestion as MessageSquareQuestionIconComponent, // Ensured correct import and alias
-  HelpCircle as HelpCircleIconComponent,
-  Lock as LockIconComponent,
+  ListTree,
+  Sparkles, 
+  MessageSquareQuestion, // Directly import
+  Lock,     
+  HelpCircle, 
   ArrowRight 
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
@@ -16,21 +16,23 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils"; 
 
 // Define an icon map
+// Keys here MUST EXACTLY match iconName strings in aiTools array.
 const iconMap: { [key: string]: LucideIcon } = {
-  ListTree: ListTreeIconComponent,
-  SparklesIcon: SparklesIconComponent, 
-  MessageSquareQuestion: MessageSquareQuestionIconComponent, // Key is "MessageSquareQuestion"
-  LockIcon: LockIconComponent, 
-  HelpCircle: HelpCircleIconComponent,
-  ArrowRight,
-  BrainCircuit, // No alias needed if used directly
+  ListTree: ListTree,
+  SparklesIcon: Sparkles, // Assuming aiTools uses "SparklesIcon" for this
+  MessageSquareQuestion: MessageSquareQuestion, // Direct mapping for the problematic icon
+  LockIcon: Lock,         // Assuming aiTools uses "LockIcon" for this
+  HelpCircle: HelpCircle,
+  // Ensure all other icons used by iconName in aiTools are correctly mapped here
+  // For example, if BrainCircuit or ArrowRight are used via iconName, they need entries.
+  // However, they are used directly in JSX below, so they don't need to be in iconMap unless an AiTool uses their name string.
 };
 
 interface AiTool {
   id: string;
   title: string;
   description: string;
-  iconName: keyof typeof iconMap; // Use string keys from our map
+  iconName: keyof typeof iconMap; // iconName must be a key defined in iconMap
   iconColorClass?: string; 
   link: string;
   status: "Active" | "Coming Soon" | "Unlockable";
@@ -62,7 +64,7 @@ const aiTools: AiTool[] = [
     id: "doubt-solver",
     title: "AI Doubt Solver",
     description: "Get instant, context-aware explanations for your academic questions.",
-    iconName: "MessageSquareQuestion", // This name must match a key in iconMap
+    iconName: "MessageSquareQuestion", // This value must be a key in iconMap
     iconColorClass: "text-indigo-500",
     link: "/ai-tools/doubt-solver",
     status: "Active",
@@ -72,7 +74,7 @@ const aiTools: AiTool[] = [
     id: "productivity-analyzer",
     title: "Productivity Analysis AI",
     description: "Unlock AI-driven insights! Requires a 7-day activity streak to access.",
-    iconName: "LockIcon", 
+    iconName: "LockIcon",
     iconColorClass: "text-purple-500",
     link: "/ai-tools/productivity-analyzer",
     status: "Unlockable",
@@ -105,7 +107,7 @@ export default function AiToolsPage() {
           const IconComponent = iconMap[tool.iconName];
           if (!IconComponent) {
             console.error(`[Server] Icon not found in map: ${tool.iconName}`);
-            return <div key={tool.id}>Error: Icon {tool.iconName} not found (Client Fallback)</div>; 
+            return <div key={tool.id}>Error: Icon {tool.iconName} not found.</div>; 
           }
           return (
             <Card 
@@ -153,7 +155,7 @@ export default function AiToolsPage() {
 
        <Card className="mt-6 sm:mt-8 p-4 sm:p-6 rounded-xl border bg-card text-card-foreground shadow-lg">
           <CardHeader className="p-0 pb-3 sm:pb-4">
-            <CardTitle className="text-lg sm:text-xl font-semibold flex items-center"><SparklesIconComponent className="mr-2 h-5 w-5 text-accent" /> How AI Supercharges Your Prep</CardTitle>
+            <CardTitle className="text-lg sm:text-xl font-semibold flex items-center"><Sparkles className="mr-2 h-5 w-5 text-accent" /> How AI Supercharges Your Prep</CardTitle>
           </CardHeader>
           <CardContent className="p-0">
             <ul className="list-disc list-outside space-y-2 text-sm sm:text-base text-muted-foreground pl-5">
@@ -170,3 +172,4 @@ export default function AiToolsPage() {
   );
 }
 
+    
