@@ -2,7 +2,15 @@
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { BrainCircuit, Sparkles, ListTree, Brain, HelpCircle, Lock, Edit, ArrowRight, MessageSquareQuestion } from "lucide-react"; // Corrected import
+import { 
+  BrainCircuit, 
+  Sparkles, 
+  ListTree, 
+  MessageSquareQuestion, 
+  HelpCircle, 
+  Lock, 
+  ArrowRight 
+} from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { Badge } from "@/components/ui/badge"; 
 import { cn } from "@/lib/utils"; 
@@ -43,7 +51,7 @@ const aiTools: AiTool[] = [
     id: "doubt-solver",
     title: "AI Doubt Solver",
     description: "Get instant, context-aware explanations for your academic questions.",
-    icon: MessageSquareQuestion, // Icon is used here
+    icon: MessageSquareQuestion,
     iconColorClass: "text-indigo-500",
     link: "/ai-tools/doubt-solver",
     status: "Active",
@@ -74,7 +82,7 @@ const aiTools: AiTool[] = [
   //   id: "writing-assistant",
   //   title: "AI Writing Assistant",
   //   description: "Get help drafting essays, summaries, and more. (Coming Soon!)",
-  //   icon: Edit,
+  //   icon: Edit, // Edit icon would need to be imported if this is uncommented
   //   iconColorClass: "text-gray-500",
   //   link: "#",
   //   status: "Coming Soon",
