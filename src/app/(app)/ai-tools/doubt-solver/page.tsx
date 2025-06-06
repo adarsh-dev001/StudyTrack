@@ -10,7 +10,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Loader2, Wand2, MessageSquareQuestion, Brain, CheckCircle, Sparkles } from 'lucide-react';
+import { Loader2, Wand2, MessageSquare, Brain, CheckCircle, Sparkles } from 'lucide-react'; // Corrected import
 import { solveAcademicDoubt, type SolveAcademicDoubtInput, type SolveAcademicDoubtOutput } from '@/ai/flows/solve-academic-doubt-flow';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/auth-context';
@@ -194,7 +194,7 @@ export default function DoubtSolverPage() {
     <div className="w-full space-y-6">
       <div>
         <h1 className="text-2xl sm:text-3xl font-bold tracking-tight md:text-4xl flex items-center">
-          <MessageSquareQuestion className="mr-2 sm:mr-3 h-7 w-7 sm:h-8 sm:w-8 text-primary" /> AI Doubt Solver
+          <MessageSquare className="mr-2 sm:mr-3 h-7 w-7 sm:h-8 sm:w-8 text-primary" /> AI Doubt Solver {/* Corrected usage */}
         </h1>
         <p className="text-md sm:text-lg text-muted-foreground">
           Got a tricky question? Ask our AI assistant for a personalized explanation. 🧑‍🏫
