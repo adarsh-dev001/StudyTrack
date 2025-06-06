@@ -15,7 +15,7 @@ import { isToday, isYesterday } from 'date-fns';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
 import { DEFAULT_THEME_ID } from '@/lib/themes';
-import type { UserProfileData, StreakData } from '@/lib/profile-types'; // Updated import
+import type { UserProfileData, StreakData } from '@/lib/profile-types'; 
 
 
 const initialStreakData: StreakData = {
@@ -31,7 +31,7 @@ const initialUserProfileData: UserProfileData = {
   purchasedItemIds: [],
   activeThemeId: DEFAULT_THEME_ID,
   dailyChallengeStatus: {},
-  lastInteractionDates: [], // Ensure this is part of the initial data
+  lastInteractionDates: [], 
 };
 
 type BadgeType = 'streak' | 'pomodoro' | 'task' | 'topic';
@@ -54,6 +54,52 @@ const BADGE_DEFINITIONS: BadgeDefinition[] = [
   { id: 'pomodoro_10', name: 'Pomodoro Power', description: 'Completed 10 Pomodoro sessions.', icon: Clock, milestone: 10, type: 'pomodoro', colorClass: 'bg-red-500/10 border-red-500/30 text-red-700 dark:text-red-300' },
   { id: 'task_25', name: 'Task Titan', description: 'Completed 25 study tasks.', icon: Zap, milestone: 25, type: 'task', colorClass: 'bg-purple-500/10 border-purple-500/30 text-purple-700 dark:text-purple-300' },
 ];
+
+interface MemoizedBadgeDisplayProps {
+  badge: BadgeDefinition;
+  isEarned: boolean;
+  isCopied: boolean;
+  onShare: (badgeName: string) => void;
+}
+
+const MemoizedBadgeDisplay = React.memo(function MemoizedBadgeDisplay({
+  badge,
+  isEarned,
+  isCopied,
+  onShare,
+}: MemoizedBadgeDisplayProps) {
+  return (
+    <Card className={cn(
+        "p-3 sm:p-4 flex flex-col items-center text-center shadow-md", 
+        badge.colorClass,
+        !isEarned && "border-dashed opacity-70 hover:opacity-100 transition-opacity bg-opacity-5 dark:bg-opacity-5"
+      )}
+    >
+      <div className={cn(
+          "p-2 sm:p-3 rounded-full mb-1.5 sm:mb-2 inline-block shadow",
+          isEarned ? "bg-white/70 dark:bg-black/30" : "bg-white/50 dark:bg-black/20"
+        )}
+      >
+         <badge.icon className="h-8 w-8 sm:h-10 sm:w-10" />
+      </div>
+      <h3 className={cn("font-semibold mb-0.5", isEarned ? "text-md sm:text-lg" : "text-sm sm:text-md")}>{badge.name}</h3>
+      <p className={cn("text-xs mb-1", isEarned ? "opacity-90" : "opacity-80")}>{badge.description}</p>
+      
+      {isEarned ? (
+        <Button variant="outline" size="xs" onClick={() => onShare(badge.name)} className="mt-auto border-current hover:bg-current/20 w-full text-xs sm:text-sm">
+          {isCopied ? <Check className="mr-1.5 h-3.5 w-3.5" /> : <Copy className="mr-1.5 h-3.5 w-3.5" />}
+          {isCopied ? 'Copied!' : 'Share'}
+        </Button>
+      ) : (
+        <p className="text-xs font-medium mt-auto">
+            {badge.type === 'streak' && `Reach a ${badge.milestone}-day streak!`}
+            {badge.type === 'pomodoro' && `Complete ${badge.milestone} Pomodoros!`}
+            {badge.type === 'task' && `Complete ${badge.milestone} tasks!`}
+        </p>
+      )}
+    </Card>
+  );
+});
 
 
 export default function StreaksPage() {
@@ -119,10 +165,10 @@ export default function StreaksPage() {
           purchasedItemIds: Array.isArray(rawData.purchasedItemIds) ? rawData.purchasedItemIds : [],
           activeThemeId: typeof rawData.activeThemeId === 'string' ? rawData.activeThemeId : DEFAULT_THEME_ID,
           dailyChallengeStatus: typeof rawData.dailyChallengeStatus === 'object' ? rawData.dailyChallengeStatus : {},
-          lastInteractionDates: Array.isArray(rawData.lastInteractionDates) ? rawData.lastInteractionDates : [], // Initialize if missing
+          lastInteractionDates: Array.isArray(rawData.lastInteractionDates) ? rawData.lastInteractionDates : [], 
         });
       } else {
-        // Ensure lastInteractionDates is part of the initial setDoc
+        
         const profileToSet = { ...initialUserProfileData, lastInteractionDates: [] };
         setDoc(userProfileDocRef, profileToSet, { merge: true })
           .then(() => setUserProfile(profileToSet))
@@ -165,9 +211,9 @@ export default function StreaksPage() {
       let currentDbStreakData = streakDocSnap.exists() ? streakDocSnap.data() as StreakData : initialStreakData;
       let currentDbProfileData: UserProfileData = profileDocSnap.exists() 
         ? profileDocSnap.data() as UserProfileData 
-        : { ...initialUserProfileData, lastInteractionDates: [] }; // Ensure lastInteractionDates
+        : { ...initialUserProfileData, lastInteractionDates: [] }; 
       
-      // Ensure all potentially undefined arrays/objects are initialized
+      
       currentDbProfileData.earnedBadgeIds = currentDbProfileData.earnedBadgeIds || [];
       currentDbProfileData.purchasedItemIds = currentDbProfileData.purchasedItemIds || [];
       currentDbProfileData.dailyChallengeStatus = currentDbProfileData.dailyChallengeStatus || {};
@@ -213,16 +259,11 @@ export default function StreaksPage() {
       const xpFromCheckIn = 5;
       const updatedCoins = (currentDbProfileData.coins || 0) + coinsFromCheckIn;
       const updatedXp = (currentDbProfileData.xp || 0) + xpFromCheckIn;
-
-      // Preserve all existing fields from currentDbProfileData when updating
+      
       const profileUpdates: Partial<UserProfileData> = {
         earnedBadgeIds: updatedEarnedBadgeIds,
         coins: updatedCoins,
         xp: updatedXp,
-        // No need to explicitly include purchasedItemIds, activeThemeId, dailyChallengeStatus, lastInteractionDates
-        // if they are not changed here, as setDoc with merge:true will preserve them if they exist.
-        // However, if they are part of UserProfileData structure and might be missing from currentDbProfileData,
-        // it's safer to include them from currentDbProfileData or initialUserProfileData if not present.
       };
       
       await setDoc(userProfileDocRef, profileUpdates, { merge: true });
@@ -247,7 +288,7 @@ export default function StreaksPage() {
     }
   }, [currentUser?.uid, toast, streakData]);
 
-  const handleShareBadge = (badgeName: string) => {
+  const handleShareBadge = useCallback((badgeName: string) => {
     const shareText = `I just unlocked the "${badgeName}" badge on StudyTrack! 🚀 #StudyTrack #Achievement`;
     navigator.clipboard.writeText(shareText).then(() => {
         const badgeId = BADGE_DEFINITIONS.find(b => b.name === badgeName)?.id;
@@ -266,7 +307,7 @@ export default function StreaksPage() {
             description: `Sharing the "${badgeName}" badge is coming soon! For now, spread the word! ✨`,
         });
     });
-};
+  }, [toast, setCopiedBadgeId]);
 
 
   if (loading) {
@@ -378,17 +419,13 @@ export default function StreaksPage() {
           )}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
             {earnedBadges.map(badge => (
-              <Card key={badge.id} className={cn("p-3 sm:p-4 flex flex-col items-center text-center shadow-md", badge.colorClass)}>
-                <div className="p-2 sm:p-3 bg-white/70 dark:bg-black/30 rounded-full mb-1.5 sm:mb-2 inline-block shadow">
-                   <badge.icon className="h-8 w-8 sm:h-10 sm:w-10" />
-                </div>
-                <h3 className="font-semibold text-md sm:text-lg mb-0.5">{badge.name}</h3>
-                <p className="text-xs opacity-90 mb-1.5 sm:mb-2">{badge.description}</p>
-                <Button variant="outline" size="xs" onClick={() => handleShareBadge(badge.name)} className="mt-auto border-current hover:bg-current/20 w-full text-xs sm:text-sm">
-                  {copiedBadgeId === badge.id ? <Check className="mr-1.5 h-3.5 w-3.5" /> : <Copy className="mr-1.5 h-3.5 w-3.5" />}
-                  {copiedBadgeId === badge.id ? 'Copied!' : 'Share'}
-                </Button>
-              </Card>
+              <MemoizedBadgeDisplay
+                key={badge.id}
+                badge={badge}
+                isEarned={true}
+                isCopied={copiedBadgeId === badge.id}
+                onShare={handleShareBadge}
+              />
             ))}
           </div>
         </CardContent>
@@ -402,18 +439,13 @@ export default function StreaksPage() {
           </CardHeader>
           <CardContent className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 p-4 sm:p-6">
             {unearnedBadges.map(badge => (
-              <Card key={badge.id} className={cn("p-3 sm:p-4 flex flex-col items-center text-center border-dashed opacity-70 hover:opacity-100 transition-opacity", badge.colorClass, "bg-opacity-5 dark:bg-opacity-5")}>
-                 <div className="p-2 sm:p-3 bg-white/50 dark:bg-black/20 rounded-full mb-1.5 sm:mb-2 inline-block shadow-sm">
-                    <badge.icon className="h-8 w-8 sm:h-10 sm:w-10" />
-                 </div>
-                <h3 className="font-semibold text-sm sm:text-md mb-0.5">{badge.name}</h3>
-                <p className="text-xs opacity-80 mb-1">{badge.description}</p>
-                <p className="text-xs font-medium mt-auto">
-                    {badge.type === 'streak' && `Reach a ${badge.milestone}-day streak!`}
-                    {badge.type === 'pomodoro' && `Complete ${badge.milestone} Pomodoros!`}
-                    {badge.type === 'task' && `Complete ${badge.milestone} tasks!`}
-                </p>
-              </Card>
+              <MemoizedBadgeDisplay
+                key={badge.id}
+                badge={badge}
+                isEarned={false}
+                isCopied={false} // Unearned badges cannot be copied
+                onShare={() => {}} // No share action for unearned
+              />
             ))}
           </CardContent>
         </Card>

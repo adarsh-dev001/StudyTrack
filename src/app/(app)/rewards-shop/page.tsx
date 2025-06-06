@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/contexts/auth-context';
 import { db } from '@/lib/firebase';
 import { doc, getDoc, updateDoc, runTransaction, type Unsubscribe, onSnapshot, setDoc } from 'firebase/firestore';
@@ -56,6 +56,83 @@ interface UserShopProfile {
   activeThemeId?: string | null;
 }
 
+interface MemoizedRewardCardProps {
+  item: RewardItem;
+  userProfile: UserShopProfile;
+  actionItemId: string | null;
+  onApplyTheme: (themeId: string) => Promise<void>;
+  onGenericAction: (item: RewardItem) => Promise<void>;
+}
+
+const MemoizedRewardCard = React.memo(function MemoizedRewardCard({
+  item,
+  userProfile,
+  actionItemId,
+  onApplyTheme,
+  onGenericAction,
+}: MemoizedRewardCardProps) {
+  const isActiveTheme = item.category === 'Theme' && item.id === userProfile.activeThemeId;
+  const IconComponent = item.icon;
+  const isProcessing = actionItemId === item.id;
+
+  return (
+    <Card key={item.id} className={cn("shadow-lg flex flex-col transition-all duration-300 transform hover:-translate-y-1", item.colorClass, isActiveTheme && "ring-2 ring-primary shadow-primary/30")}>
+      <CardHeader className="flex flex-row items-start gap-3 sm:gap-4 space-y-0 pb-2 sm:pb-3 p-4 sm:p-5">
+        <div className={cn("p-2 sm:p-3 rounded-lg", item.colorClass ? 'bg-current/20 dark:bg-current/30' : 'bg-primary/10' )}>
+          <IconComponent className={cn("h-7 w-7 sm:h-8 sm:w-8", item.colorClass ? 'text-current' : 'text-primary')} />
+        </div>
+        <div className="flex-1">
+          <CardTitle className="font-headline text-lg sm:text-xl">{item.name}</CardTitle>
+          <Badge variant="secondary" className="mt-1 text-xs px-1.5 py-0.5 sm:px-2 sm:py-0.5">{item.category}</Badge>
+        </div>
+      </CardHeader>
+      <CardContent className="flex-grow p-4 sm:p-5 pt-0">
+        <CardDescription className={cn("text-xs sm:text-sm",item.colorClass ? 'text-current/80 dark:text-current/70' : 'text-muted-foreground')}>{item.description}</CardDescription>
+      </CardContent>
+      <CardFooter className="flex flex-col items-stretch gap-2 sm:gap-3 pt-3 sm:pt-4 border-t p-4 sm:p-5">
+        <div className="flex justify-between items-center">
+          <span className="text-xs sm:text-sm font-semibold text-green-600 dark:text-green-400">Free!</span>
+          {isActiveTheme && <Badge variant="default" className="text-xs px-1.5 py-0.5 sm:px-2 sm:py-0.5 bg-primary/80"><CheckCircle className="mr-1 h-3 w-3"/>Active Theme</Badge>}
+          {!isActiveTheme && item.category === 'Theme' && <Badge variant="outline" className="text-xs px-1.5 py-0.5 sm:px-2 sm:py-0.5">Available</Badge>}
+          {item.category !== 'Theme' && <Badge variant="outline" className="text-xs px-1.5 py-0.5 sm:px-2 sm:py-0.5"><CheckCircle className="mr-1 h-3 w-3"/>Available</Badge>}
+        </div>
+        
+        {item.category === 'Theme' ? (
+            <Button
+              onClick={() => onApplyTheme(item.id)}
+              disabled={isActiveTheme || isProcessing}
+              className="w-full text-xs sm:text-sm"
+              size="sm"
+              variant={isActiveTheme ? "secondary" : "default"}
+            >
+              {isProcessing ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : 
+               isActiveTheme ? 'Theme Active' : 'Apply Theme'}
+            </Button>
+        ) : item.category === 'Soundtrack' ? (
+           <Button
+              onClick={() => useToast().toast({ title: `${item.name} is available!`, description: "Select it in the Pomodoro timer settings."})}
+              className="w-full text-xs sm:text-sm"
+              size="sm"
+              variant="outline"
+          >
+              Available to Use
+          </Button>
+        ) : ( 
+           <Button
+              onClick={() => onGenericAction(item)}
+              disabled={isProcessing}
+              className="w-full text-xs sm:text-sm"
+              size="sm"
+              variant="outline"
+          >
+              {isProcessing ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : 'View Details (Available)'}
+          </Button>
+        )}
+      </CardFooter>
+    </Card>
+  );
+});
+
 export default function RewardsShopPage() {
   const { currentUser } = useAuth();
   const { toast } = useToast();
@@ -93,7 +170,7 @@ export default function RewardsShopPage() {
     return () => unsubscribe();
   }, [currentUser?.uid, toast]);
 
-  const handleGenericAction = async (item: RewardItem) => {
+  const handleGenericAction = useCallback(async (item: RewardItem) => {
     if (!currentUser?.uid || !db) {
       toast({ title: 'Error', description: 'You must be logged in.', variant: 'destructive' });
       return;
@@ -102,10 +179,10 @@ export default function RewardsShopPage() {
         title: `${item.name} is available!`,
         description: `You can now use this ${item.category.toLowerCase()}.`,
     });
-  };
+  }, [currentUser?.uid, toast]);
 
 
-  const handleApplyTheme = async (themeId: string) => {
+  const handleApplyTheme = useCallback(async (themeId: string) => {
     if (!currentUser?.uid || !db) return;
     if (themeId === userProfile.activeThemeId) {
         toast({ title: "Theme Info", description: "This theme is already active."});
@@ -138,9 +215,9 @@ export default function RewardsShopPage() {
     } finally {
         setActionItemId(null);
     }
-  };
+  }, [currentUser?.uid, toast, userProfile.activeThemeId, setActionItemId]);
 
-  const handleRevertToDefaultTheme = async () => {
+  const handleRevertToDefaultTheme = useCallback(async () => {
     if (!currentUser?.uid || !db) return;
     if (userProfile.activeThemeId === DEFAULT_THEME_ID || userProfile.activeThemeId === null) {
         toast({ title: "Theme Info", description: "Default theme is already active."});
@@ -160,7 +237,7 @@ export default function RewardsShopPage() {
     } finally {
         setActionItemId(null);
     }
-  };
+  }, [currentUser?.uid, toast, userProfile.activeThemeId, setActionItemId]);
   
   if (loadingProfile) {
     return (
@@ -227,68 +304,16 @@ export default function RewardsShopPage() {
             </Button>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-          {AVAILABLE_REWARDS.map((item) => {
-            const isActiveTheme = item.category === 'Theme' && item.id === userProfile.activeThemeId;
-            const IconComponent = item.icon;
-            const isProcessing = actionItemId === item.id;
-
-            return (
-              <Card key={item.id} className={cn("shadow-lg flex flex-col transition-all duration-300 transform hover:-translate-y-1", item.colorClass, isActiveTheme && "ring-2 ring-primary shadow-primary/30")}>
-                <CardHeader className="flex flex-row items-start gap-3 sm:gap-4 space-y-0 pb-2 sm:pb-3 p-4 sm:p-5">
-                  <div className={cn("p-2 sm:p-3 rounded-lg", item.colorClass ? 'bg-current/20 dark:bg-current/30' : 'bg-primary/10' )}>
-                    <IconComponent className={cn("h-7 w-7 sm:h-8 sm:w-8", item.colorClass ? 'text-current' : 'text-primary')} />
-                  </div>
-                  <div className="flex-1">
-                    <CardTitle className="font-headline text-lg sm:text-xl">{item.name}</CardTitle>
-                    <Badge variant="secondary" className="mt-1 text-xs px-1.5 py-0.5 sm:px-2 sm:py-0.5">{item.category}</Badge>
-                  </div>
-                </CardHeader>
-                <CardContent className="flex-grow p-4 sm:p-5 pt-0">
-                  <CardDescription className={cn("text-xs sm:text-sm",item.colorClass ? 'text-current/80 dark:text-current/70' : 'text-muted-foreground')}>{item.description}</CardDescription>
-                </CardContent>
-                <CardFooter className="flex flex-col items-stretch gap-2 sm:gap-3 pt-3 sm:pt-4 border-t p-4 sm:p-5">
-                  <div className="flex justify-between items-center">
-                    <span className="text-xs sm:text-sm font-semibold text-green-600 dark:text-green-400">Free!</span>
-                    {isActiveTheme && <Badge variant="default" className="text-xs px-1.5 py-0.5 sm:px-2 sm:py-0.5 bg-primary/80"><CheckCircle className="mr-1 h-3 w-3"/>Active Theme</Badge>}
-                    {!isActiveTheme && item.category === 'Theme' && <Badge variant="outline" className="text-xs px-1.5 py-0.5 sm:px-2 sm:py-0.5">Available</Badge>}
-                    {item.category !== 'Theme' && <Badge variant="outline" className="text-xs px-1.5 py-0.5 sm:px-2 sm:py-0.5"><CheckCircle className="mr-1 h-3 w-3"/>Available</Badge>}
-                  </div>
-                  
-                  {item.category === 'Theme' ? (
-                      <Button
-                        onClick={() => handleApplyTheme(item.id)}
-                        disabled={isActiveTheme || isProcessing}
-                        className="w-full text-xs sm:text-sm"
-                        size="sm"
-                        variant={isActiveTheme ? "secondary" : "default"}
-                      >
-                        {isProcessing ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : 
-                         isActiveTheme ? 'Theme Active' : 'Apply Theme'}
-                      </Button>
-                  ) : item.category === 'Soundtrack' ? (
-                     <Button
-                        onClick={() => toast({ title: `${item.name} is available!`, description: "Select it in the Pomodoro timer settings."})}
-                        className="w-full text-xs sm:text-sm"
-                        size="sm"
-                        variant="outline"
-                    >
-                        Available to Use
-                    </Button>
-                  ) : ( 
-                     <Button
-                        onClick={() => handleGenericAction(item)}
-                        disabled={isProcessing}
-                        className="w-full text-xs sm:text-sm"
-                        size="sm"
-                        variant="outline"
-                    >
-                        {isProcessing ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : 'View Details (Available)'}
-                    </Button>
-                  )}
-                </CardFooter>
-              </Card>
-            );
-          })}
+          {AVAILABLE_REWARDS.map((item) => (
+            <MemoizedRewardCard
+              key={item.id}
+              item={item}
+              userProfile={userProfile}
+              actionItemId={actionItemId}
+              onApplyTheme={handleApplyTheme}
+              onGenericAction={handleGenericAction}
+            />
+          ))}
         </div>
         </>
       )}
