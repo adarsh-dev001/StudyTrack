@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useState, Suspense } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { useForm, FormProvider, type SubmitHandler, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -13,8 +13,8 @@ import { useToast } from '@/hooks/use-toast';
 import { db, auth } from '@/lib/firebase';
 import { doc, setDoc } from 'firebase/firestore';
 import { updateProfile } from 'firebase/auth';
-import type { UserProfileData } from '@/lib/profile-types'; 
-import { subjectDetailSchema } from '@/lib/profile-types'; 
+import type { UserProfileData } from '@/lib/profile-types';
+import { subjectDetailSchema } from '@/lib/profile-types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { EXAM_SUBJECT_MAP } from '@/lib/constants';
 
@@ -42,8 +42,18 @@ const step2BaseSchema = z.object({
 });
 
 const step3BaseSchema = z.object({
-  subjectDetails: z.array(subjectDetailSchema).min(1, "Please provide details for at least one subject.").optional(),
+  subjectDetails: z.array(subjectDetailSchema)
+    .optional() // Make the array itself optional
+    .refine(
+      (details) => {
+        // If details are provided (not undefined and not empty), then each item must be valid.
+        // If details are undefined or empty, this refinement passes (as it's optional).
+        return !details || details.length === 0 || details.every(detail => subjectDetailSchema.safeParse(detail).success);
+      },
+      { message: "Please complete all required fields for each subject." }
+    ),
 });
+
 
 const step4BaseSchema = z.object({
   dailyStudyHours: z.string().min(1, "Select daily study hours."),
@@ -68,7 +78,17 @@ const fullOnboardingSchema = mergedBaseSchema.refine(data => {
 }, {
   message: "Please specify the exam name if 'Other' is selected.",
   path: ['otherExamName'],
+}).refine(data => {
+    // If targetExams are selected (not empty), then subjectDetails must be present and non-empty
+    if (data.targetExams && data.targetExams.length > 0 && (!data.subjectDetails || data.subjectDetails.length === 0)) {
+        return false;
+    }
+    return true;
+}, {
+    message: "Please provide details for the subjects related to your chosen exam(s).",
+    path: ['subjectDetails'],
 });
+
 
 export type OnboardingFormData = z.infer<typeof fullOnboardingSchema>;
 
@@ -76,9 +96,9 @@ export type OnboardingFormData = z.infer<typeof fullOnboardingSchema>;
 const getBaseSchemaForStep = (step: number) => {
   if (step === 1) return step1BaseSchema;
   if (step === 2) return step2BaseSchema;
-  if (step === 3) return step3BaseSchema; // Use step3BaseSchema for validation logic
+  if (step === 3) return step3BaseSchema;
   if (step === 4) return step4BaseSchema;
-  return fullOnboardingSchema; 
+  return fullOnboardingSchema;
 };
 
 const TOTAL_STEPS = 5;
@@ -109,14 +129,22 @@ function OnboardingStepSkeleton() {
   );
 }
 
-export default function OnboardingForm({ userId, onOnboardingSuccess }: { userId: string; onOnboardingSuccess: () => void; }) {
+interface OnboardingFormProps {
+  userId?: string; // Make userId optional as it might not be available immediately
+  onComplete: () => void; // Renamed for clarity, was onOnboardingSuccess
+}
+
+export default function OnboardingForm({ userId, onComplete }: OnboardingFormProps) {
   const [currentStep, setCurrentStep] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
+  const { currentUser } = useAuth(); // Get currentUser from AuthContext
+
+  const actualUserId = userId || currentUser?.uid; // Use passed userId or fallback to currentUser.uid
 
   const methods = useForm<OnboardingFormData>({
     resolver: zodResolver(fullOnboardingSchema),
-    mode: 'onTouched', // Validate on blur/touch
+    mode: 'onTouched',
     defaultValues: {
       fullName: '',
       age: null,
@@ -140,60 +168,57 @@ export default function OnboardingForm({ userId, onOnboardingSuccess }: { userId
   const { handleSubmit, trigger, getValues, control, setValue } = methods;
   const watchedTargetExams = useWatch({ control, name: 'targetExams' });
 
-  React.useEffect(() => {
-    if (watchedTargetExams && watchedTargetExams.length > 0) {
-      const primaryExam = watchedTargetExams[0]; 
-      const subjectsForExam = EXAM_SUBJECT_MAP[primaryExam] || EXAM_SUBJECT_MAP['other'];
-      
-      const currentSubjectDetailsArray = getValues('subjectDetails') || [];
-      
-      const newSubjectDetails = subjectsForExam.map(examSubject => {
-        const existingDetail = currentSubjectDetailsArray.find(sd => sd.subjectId === examSubject.id);
-        return existingDetail || {
-          subjectId: examSubject.id,
-          subjectName: examSubject.name,
-          preparationLevel: '',
-          targetScore: '',
-          preferredLearningMethods: [],
-        };
-      });
+  useEffect(() => {
+    const primaryExam = watchedTargetExams?.[0];
+    const subjectsForExam = primaryExam ? (EXAM_SUBJECT_MAP[primaryExam] || EXAM_SUBJECT_MAP['other']) : [];
+    const currentSubjectDetailsArray = getValues('subjectDetails') || [];
 
-      const currentSubjectIds = currentSubjectDetailsArray.map(sd => sd.subjectId).sort().join(',');
-      const newSubjectIds = newSubjectDetails.map(sd => sd.subjectId).sort().join(',');
+    const newSubjectDetails = subjectsForExam.map(examSubject => {
+      const existingDetail = currentSubjectDetailsArray.find(sd => sd.subjectId === examSubject.id);
+      return existingDetail || {
+        subjectId: examSubject.id,
+        subjectName: examSubject.name,
+        preparationLevel: '',
+        targetScore: '',
+        preferredLearningMethods: [],
+      };
+    });
 
-      if (currentSubjectIds !== newSubjectIds || currentSubjectDetailsArray.length !== newSubjectDetails.length) {
-        setValue('subjectDetails', newSubjectDetails, { shouldValidate: currentStep === 3, shouldDirty: true });
-      }
-    } else if (watchedTargetExams && watchedTargetExams.length === 0) {
-      // Clear subjectDetails if no exam is selected
-      if (getValues('subjectDetails')?.length > 0) {
-          setValue('subjectDetails', [], { shouldValidate: currentStep === 3, shouldDirty: true });
-      }
+    const currentSubjectIds = currentSubjectDetailsArray.map(sd => sd.subjectId).sort().join(',');
+    const newSubjectIds = newSubjectDetails.map(sd => sd.subjectId).sort().join(',');
+
+    if (currentSubjectIds !== newSubjectIds || currentSubjectDetailsArray.length !== newSubjectDetails.length) {
+      setValue('subjectDetails', newSubjectDetails, { shouldValidate: currentStep === 3, shouldDirty: true });
     }
   }, [watchedTargetExams, setValue, getValues, currentStep]);
 
 
   const handleNextStep = async () => {
-    if (currentStep === TOTAL_STEPS) { // If on the review step, next action is submit
+    if (currentStep === TOTAL_STEPS) {
         await handleSubmit(onSubmit)();
         return;
     }
-    // Get the Zod schema for the current step's fields
     const baseSchemaForCurrentStep = getBaseSchemaForStep(currentStep);
     const fieldsToValidate = Object.keys(baseSchemaForCurrentStep.shape) as Array<keyof OnboardingFormData>;
-    
+
     let isValid = await trigger(fieldsToValidate);
 
-    // Special handling for step 3 (subjectDetails) if it's optional but not empty
-    if (currentStep === 3 && baseSchemaForCurrentStep.shape.subjectDetails?.isOptional()) {
+    if (currentStep === 3) {
         const subjectDetailsValue = getValues('subjectDetails');
-        if (subjectDetailsValue && subjectDetailsValue.length > 0) {
-            // If subjectDetails is optional but has entries, validate it specifically
-            const subjectDetailsValid = await trigger(['subjectDetails']);
-            isValid = isValid && subjectDetailsValid;
+        const targetExamsValue = getValues('targetExams');
+        // Only validate subjectDetails if targetExams are selected
+        if (targetExamsValue && targetExamsValue.length > 0) {
+            if (!subjectDetailsValue || subjectDetailsValue.length === 0) {
+                methods.setError("subjectDetails", { type: "manual", message: "Please provide details for the subjects related to your chosen exam(s)." });
+                isValid = false;
+            } else {
+                // Validate each item within subjectDetails
+                const subjectDetailsValid = await trigger(['subjectDetails']);
+                isValid = isValid && subjectDetailsValid;
+            }
         } else {
-             // If subjectDetails is optional and empty, it's considered valid for this step's progression
-             // (assuming the main schema allows it to be optional)
+             // If no target exams, clear errors related to subjectDetails being empty
+            methods.clearErrors("subjectDetails");
         }
     }
 
@@ -217,36 +242,41 @@ export default function OnboardingForm({ userId, onOnboardingSuccess }: { userId
   };
 
   const onSubmit: SubmitHandler<OnboardingFormData> = async (data) => {
+    if (!actualUserId) {
+        toast({ title: "Error", description: "User ID not found. Please try logging in again.", variant: "destructive" });
+        setIsLoading(false);
+        return;
+    }
     setIsLoading(true);
-    const userProfileRef = doc(db, 'users', userId, 'userProfile', 'profile');
+    const userProfileRef = doc(db, 'users', actualUserId, 'userProfile', 'profile');
 
-    // Ensure data transformations (like for 'age') are done before saving
     let finalData = { ...data };
     if (!finalData.targetExams?.includes('other')) {
-      finalData.otherExamName = ''; // Clear otherExamName if 'Other' is not selected
+      finalData.otherExamName = '';
     }
-     if (finalData.age === null || finalData.age === 0 || isNaN(Number(finalData.age))) {
-        // If age is null, 0, or NaN, ensure it's stored as null or omitted.
-        // Firestore can handle nulls. If you want to omit, use `delete (finalData as any).age;`
-        finalData.age = null; 
+    if (finalData.age === null || finalData.age === 0 || isNaN(Number(finalData.age))) {
+        finalData.age = null;
     } else {
-        finalData.age = Number(finalData.age); // Ensure it's a number
+        finalData.age = Number(finalData.age);
     }
-    
-    // Ensure subjectDetails is an array, even if empty
     finalData.subjectDetails = finalData.subjectDetails || [];
 
     const profilePayload: Partial<UserProfileData> = {
       ...finalData,
-      onboardingCompleted: true, // Mark onboarding as completed
+      onboardingCompleted: true,
     };
 
     try {
-      await setDoc(userProfileRef, profilePayload, { merge: true }); // Use merge to update existing doc or create if not exists
-      if (auth.currentUser && data.fullName) { // Update Firebase Auth display name if provided
+      await setDoc(userProfileRef, profilePayload, { merge: true });
+      if (auth.currentUser && data.fullName && data.fullName !== auth.currentUser.displayName) {
         await updateProfile(auth.currentUser, { displayName: data.fullName });
       }
-      onOnboardingSuccess(); // Callback to notify parent component (e.g., to close modal)
+      onComplete();
+      toast({
+        title: 'Profile Setup Complete! 🎉',
+        description: "Your preferences have been saved. You're all set to explore StudyTrack!",
+        duration: 3000,
+      });
     } catch (error: any) {
       console.error('Error saving onboarding data:', error);
       toast({
@@ -273,7 +303,7 @@ export default function OnboardingForm({ userId, onOnboardingSuccess }: { userId
   };
 
   return (
-    <Card className="w-full max-w-2xl shadow-2xl"> {/* Removed my-4 sm:my-8 */}
+    <Card className="w-full max-w-2xl shadow-2xl border-0">
       <CardHeader className="text-center p-4 sm:p-6">
         <Sparkles className="mx-auto h-8 w-8 sm:h-10 sm:w-10 text-primary mb-1 sm:mb-2" />
         <CardTitle className="text-xl sm:text-2xl md:text-3xl font-bold">
@@ -286,9 +316,8 @@ export default function OnboardingForm({ userId, onOnboardingSuccess }: { userId
       <CardContent className="p-4 sm:p-6">
         <Progress value={progressValue} className="mb-6 sm:mb-8 h-2.5 sm:h-3" />
         <FormProvider {...methods}>
-          {/* Removed Framer Motion AnimatePresence and motion.div for simplicity and to ensure scrolling */}
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-5 sm:space-y-6">
-            <div>
+            <div> {/* This div is important for layout if Framer Motion was removed */}
               <Suspense fallback={<OnboardingStepSkeleton />}>
                 {renderStepContent()}
               </Suspense>
@@ -305,12 +334,12 @@ export default function OnboardingForm({ userId, onOnboardingSuccess }: { userId
             Next <ChevronRight className="ml-1.5 h-4 w-4"/>
           </Button>
         ) : (
-          <Button onClick={handleSubmit(onSubmit)} disabled={isLoading} className="w-full sm:w-auto text-sm sm:text-base bg-green-600 hover:bg-green-700">
+          <Button onClick={handleSubmit(onSubmit)} disabled={isLoading} className="w-full sm:w-auto text-sm:text-base bg-green-600 hover:bg-green-700">
             {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Confirm & Finish Setup'}
           </Button>
         )}
       </CardFooter>
     </Card>
   );
-}
+
     
