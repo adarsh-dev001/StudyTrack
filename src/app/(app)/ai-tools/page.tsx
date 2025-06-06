@@ -12,25 +12,26 @@ import {
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import {
-  BrainCircuit,
-  ListTree,
-  Sparkles,
-  MessageSquareQuestion,
-  Lock,
-  HelpCircle,
-  ArrowRight,
+  BrainCircuit, // For header
+  ListTree,       // For map value
+  Sparkles,       // For map value (mapped from SparklesIcon key)
+  MessageSquareQuestion, // For map value (mapped from MessageSquareQuestion key)
+  Lock,           // For map value (mapped from LockIcon key)
+  HelpCircle,     // For map value
+  ArrowRight,     // For card footer
 } from "lucide-react";
-import type { LucideIcon } from "lucide-react"; // For explicit typing if preferred, but inference works
+import type { LucideIcon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
-// Define an icon map
-// Keys here MUST EXACTLY match iconName strings in aiTools array AND the imported component name.
+// Define an icon map based on user's working example structure
+// Keys here MUST EXACTLY match iconName strings in aiTools array.
+// Values are the imported Lucide components.
 const iconMap: { [key: string]: LucideIcon } = {
   ListTree: ListTree,
-  Sparkles: Sparkles, // Changed key from SparklesIcon to Sparkles
-  MessageSquareQuestion: MessageSquareQuestion,
-  Lock: Lock,         // Changed key from LockIcon to Lock
+  SparklesIcon: Sparkles, // Key is "SparklesIcon", value is the imported `Sparkles` component
+  MessageSquareQuestion: MessageSquareQuestion, // Key is "MessageSquareQuestion", value is the imported `MessageSquareQuestion` component
+  LockIcon: Lock,         // Key is "LockIcon", value is the imported `Lock` component
   HelpCircle: HelpCircle,
 };
 
@@ -60,7 +61,7 @@ const aiTools: AiTool[] = [
     id: "material-summarizer",
     title: "Study Material Summarizer",
     description: "Quickly grasp key concepts by summarizing your study materials.",
-    iconName: "Sparkles", // Changed from SparklesIcon to Sparkles
+    iconName: "SparklesIcon", // Matches key "SparklesIcon" in iconMap
     iconColorClass: "text-amber-500",
     link: "/ai-tools/material-summarizer",
     status: "Active",
@@ -70,7 +71,7 @@ const aiTools: AiTool[] = [
     id: "doubt-solver",
     title: "AI Doubt Solver",
     description: "Get instant, context-aware explanations for your academic questions.",
-    iconName: "MessageSquareQuestion", // Matches key in iconMap
+    iconName: "MessageSquareQuestion", // Matches key "MessageSquareQuestion" in iconMap
     iconColorClass: "text-indigo-500",
     link: "/ai-tools/doubt-solver",
     status: "Active",
@@ -80,7 +81,7 @@ const aiTools: AiTool[] = [
     id: "productivity-analyzer",
     title: "Productivity Analysis AI",
     description: "Unlock AI-driven insights! Requires a 7-day activity streak to access.",
-    iconName: "Lock", // Changed from LockIcon to Lock
+    iconName: "LockIcon", // Matches key "LockIcon" in iconMap
     iconColorClass: "text-purple-500",
     link: "/ai-tools/productivity-analyzer",
     status: "Unlockable",
@@ -112,8 +113,9 @@ export default function AiToolsPage() {
         {aiTools.map((tool) => {
           const IconComponent = iconMap[tool.iconName];
           if (!IconComponent) {
+            // This console.error will appear in the client's browser console if an icon is not found
             console.error(`[Client] Icon not found in map: ${tool.iconName}`);
-            return <div key={tool.id}>Error: Icon {tool.iconName} not found.</div>;
+            return <div key={tool.id}>Error: Icon {tool.iconName} not found. Check iconMap.</div>;
           }
           return (
             <Card
@@ -177,5 +179,3 @@ export default function AiToolsPage() {
     </div>
   );
 }
-
-    
