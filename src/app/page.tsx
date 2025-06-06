@@ -1,20 +1,18 @@
 
-'use client';
+// Removed 'use client';
 
 import React, { Suspense } from 'react';
 import { Header } from '@/components/landing/header';
 import { Footer } from '@/components/landing/footer';
 import { Skeleton } from '@/components/ui/skeleton';
-import { motion } from 'framer-motion';
 
-// Lazy load sections
-const HeroSection = React.lazy(() => import('@/components/landing/hero-section'));
-const FeaturesSection = React.lazy(() => import('@/components/landing/features-section'));
-const KeyFeaturesSummary = React.lazy(() => import('@/components/landing/key-features-summary'));
-const TestimonialsSection = React.lazy(() => import('@/components/landing/testimonials-section'));
-const FinalCtaSection = React.lazy(() => import('@/components/landing/final-cta-section'));
-const BlogPreviewSection = React.lazy(() => import('@/components/landing/blog-preview-section'));
-
+// Direct imports for sections instead of React.lazy
+import HeroSection from '@/components/landing/hero-section';
+import FeaturesSection from '@/components/landing/features-section';
+import KeyFeaturesSummary from '@/components/landing/key-features-summary';
+import TestimonialsSection from '@/components/landing/testimonials-section';
+import FinalCtaSection from '@/components/landing/final-cta-section';
+import BlogPreviewSection from '@/components/landing/blog-preview-section'; // This is the Server Component
 
 function LandingPageFallback() {
   return (
@@ -38,25 +36,23 @@ function LandingPageFallback() {
   );
 }
 
+// HomePage is now a Server Component
 export default function HomePage() {
   return (
     <div className="flex min-h-screen flex-col bg-background text-foreground">
       <Header />
-      <motion.main 
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: 0.5 }}
-        className="flex-1"
-      >
+      {/* Removed motion.main wrapper. Framer Motion animations should be within individual Client Components if needed. */}
+      <main className="flex-1">
+        {/* Suspense can still be used if BlogPreviewSection or other server components do async work */}
         <Suspense fallback={<LandingPageFallback />}>
           <HeroSection />
           <FeaturesSection />
-          <BlogPreviewSection />
+          <BlogPreviewSection /> {/* This Server Component can now fetch data correctly */}
           <KeyFeaturesSummary />
           <TestimonialsSection />
           <FinalCtaSection />
         </Suspense>
-      </motion.main>
+      </main>
       <Footer />
     </div>
   );
