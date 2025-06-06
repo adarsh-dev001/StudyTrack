@@ -1,4 +1,6 @@
 
+"use client";
+
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
@@ -6,7 +8,7 @@ import {
   BrainCircuit, 
   ListTree,
   Sparkles, 
-  MessageSquareQuestion, // Directly import
+  MessageSquareQuestion,
   Lock,     
   HelpCircle, 
   ArrowRight 
@@ -19,13 +21,10 @@ import { cn } from "@/lib/utils";
 // Keys here MUST EXACTLY match iconName strings in aiTools array.
 const iconMap: { [key: string]: LucideIcon } = {
   ListTree: ListTree,
-  SparklesIcon: Sparkles, // Assuming aiTools uses "SparklesIcon" for this
-  MessageSquareQuestion: MessageSquareQuestion, // Direct mapping for the problematic icon
-  LockIcon: Lock,         // Assuming aiTools uses "LockIcon" for this
+  SparklesIcon: Sparkles, // Key is "SparklesIcon", value is imported Sparkles component
+  MessageSquareQuestion: MessageSquareQuestion,
+  LockIcon: Lock,         // Key is "LockIcon", value is imported Lock component
   HelpCircle: HelpCircle,
-  // Ensure all other icons used by iconName in aiTools are correctly mapped here
-  // For example, if BrainCircuit or ArrowRight are used via iconName, they need entries.
-  // However, they are used directly in JSX below, so they don't need to be in iconMap unless an AiTool uses their name string.
 };
 
 interface AiTool {
@@ -64,7 +63,7 @@ const aiTools: AiTool[] = [
     id: "doubt-solver",
     title: "AI Doubt Solver",
     description: "Get instant, context-aware explanations for your academic questions.",
-    iconName: "MessageSquareQuestion", // This value must be a key in iconMap
+    iconName: "MessageSquareQuestion", 
     iconColorClass: "text-indigo-500",
     link: "/ai-tools/doubt-solver",
     status: "Active",
@@ -106,7 +105,7 @@ export default function AiToolsPage() {
         {aiTools.map((tool) => {
           const IconComponent = iconMap[tool.iconName];
           if (!IconComponent) {
-            console.error(`[Server] Icon not found in map: ${tool.iconName}`);
+            console.error(`[Client] Icon not found in map: ${tool.iconName}`); // Changed to Client as it's now a client component
             return <div key={tool.id}>Error: Icon {tool.iconName} not found.</div>; 
           }
           return (
@@ -171,5 +170,3 @@ export default function AiToolsPage() {
     </div>
   );
 }
-
-    
