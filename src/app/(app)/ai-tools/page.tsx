@@ -12,15 +12,15 @@ import {
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import {
-  BrainCircuit, // For header
-  ListTree,       // For map value
+  BrainCircuit,
+  ListTree, // For map value
   Sparkles,       // For map value (mapped from SparklesIcon key)
-  MessageSquareQuestion, // For map value (mapped from MessageSquareQuestion key)
+  MessageSquareQuestion, // For map value (mapped from MessageSquare key)
   Lock,           // For map value (mapped from LockIcon key)
   HelpCircle,     // For map value
   ArrowRight,     // For card footer
 } from "lucide-react";
-import type { LucideIcon } from "lucide-react";
+import type { LucideIcon } from "lucide-react"; // Keep this for type safety if needed elsewhere
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
@@ -29,9 +29,9 @@ import { cn } from "@/lib/utils";
 // Values are the imported Lucide components.
 const iconMap: { [key: string]: LucideIcon } = {
   ListTree: ListTree,
-  SparklesIcon: Sparkles, // Key is "SparklesIcon", value is the imported `Sparkles` component
-  MessageSquareQuestion: MessageSquareQuestion, // Key is "MessageSquareQuestion", value is the imported `MessageSquareQuestion` component
-  LockIcon: Lock,         // Key is "LockIcon", value is the imported `Lock` component
+  SparklesIcon: Sparkles, 
+  MessageSquare: MessageSquareQuestion, // Key is "MessageSquare", value is imported MessageSquareQuestion
+  LockIcon: Lock,         
   HelpCircle: HelpCircle,
 };
 
@@ -51,7 +51,7 @@ const aiTools: AiTool[] = [
     id: "syllabus-suggester",
     title: "AI Syllabus Suggester",
     description: "Get personalized syllabus suggestions for your exams (NEET, UPSC, JEE, etc.).",
-    iconName: "ListTree", // Matches key in iconMap
+    iconName: "ListTree", 
     iconColorClass: "text-sky-500",
     link: "/ai-tools/syllabus-suggester",
     status: "Active",
@@ -61,7 +61,7 @@ const aiTools: AiTool[] = [
     id: "material-summarizer",
     title: "Study Material Summarizer",
     description: "Quickly grasp key concepts by summarizing your study materials.",
-    iconName: "SparklesIcon", // Matches key "SparklesIcon" in iconMap
+    iconName: "SparklesIcon", 
     iconColorClass: "text-amber-500",
     link: "/ai-tools/material-summarizer",
     status: "Active",
@@ -71,7 +71,7 @@ const aiTools: AiTool[] = [
     id: "doubt-solver",
     title: "AI Doubt Solver",
     description: "Get instant, context-aware explanations for your academic questions.",
-    iconName: "MessageSquareQuestion", // Matches key "MessageSquareQuestion" in iconMap
+    iconName: "MessageSquare", // ✅ Matches iconMap key
     iconColorClass: "text-indigo-500",
     link: "/ai-tools/doubt-solver",
     status: "Active",
@@ -81,7 +81,7 @@ const aiTools: AiTool[] = [
     id: "productivity-analyzer",
     title: "Productivity Analysis AI",
     description: "Unlock AI-driven insights! Requires a 7-day activity streak to access.",
-    iconName: "LockIcon", // Matches key "LockIcon" in iconMap
+    iconName: "LockIcon", 
     iconColorClass: "text-purple-500",
     link: "/ai-tools/productivity-analyzer",
     status: "Unlockable",
@@ -91,7 +91,7 @@ const aiTools: AiTool[] = [
     id: "smart-quiz",
     title: "SmartQuiz AI",
     description: "Generate custom quizzes on any topic, tailored to exam type and difficulty.",
-    iconName: "HelpCircle", // Matches key in iconMap
+    iconName: "HelpCircle", 
     iconColorClass: "text-green-500",
     link: "/ai-tools/smart-quiz",
     status: "Active",
