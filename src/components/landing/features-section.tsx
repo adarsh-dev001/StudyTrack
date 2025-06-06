@@ -1,6 +1,7 @@
 
 'use client';
 
+import React from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -112,7 +113,7 @@ const itemVariants = {
   visible: { opacity: 1, y: 0, transition: { duration: 0.7, ease: "easeOut" } },
 };
 
-export default function FeaturesSection() {
+function FeaturesSectionComponent() {
   return (
     <section id="features" className="w-full py-12 md:py-20 lg:py-28 bg-background">
       <div className="container mx-auto px-4 md:px-6">
@@ -205,3 +206,5 @@ export default function FeaturesSection() {
     </section>
   );
 }
+
+export default React.memo(FeaturesSectionComponent);

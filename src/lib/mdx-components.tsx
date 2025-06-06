@@ -3,9 +3,11 @@ import type React from 'react';
 import { type ClassValue, clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
 import HighlightBox from '@/components/blog/HighlightBox'; // New import
+import { cn as utilCn } from '@/lib/utils'; // Import utilCn
 
+// Ensure cn is defined and exported, or use utilCn directly
 export function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs));
+  return utilCn(...inputs);
 }
 
 // Custom components to pass to MDX

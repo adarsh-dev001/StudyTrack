@@ -1,6 +1,7 @@
 
 'use client';
 
+import React from 'react';
 import { motion } from 'framer-motion';
 import { BrainCircuit, Gamepad2, HelpCircle, Flame, BarChart3, Edit3, Users, Target } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
@@ -37,7 +38,7 @@ const itemVariants = {
   visible: { opacity: 1, y: 0, scale: 1, transition: { duration: 0.5, ease: "easeOut" } },
 };
 
-export default function KeyFeaturesSummary() {
+function KeyFeaturesSummaryComponent() {
   return (
     <section className="w-full py-16 md:py-24 lg:py-32 bg-background">
       <div className="container mx-auto px-4 md:px-6">
@@ -81,3 +82,5 @@ export default function KeyFeaturesSummary() {
     </section>
   );
 }
+
+export default React.memo(KeyFeaturesSummaryComponent);

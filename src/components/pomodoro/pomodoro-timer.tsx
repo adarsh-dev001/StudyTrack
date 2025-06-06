@@ -31,7 +31,7 @@ const modeDurations: Record<Mode, number> = {
   longBreak: LONG_BREAK_DURATION,
 };
 
-export function PomodoroTimer() {
+function PomodoroTimerComponent() {
   const { currentUser } = useAuth();
   const { toast } = useToast();
   const [mode, setMode] = useState<Mode>('pomodoro');
@@ -289,3 +289,4 @@ export function PomodoroTimer() {
   );
 }
 
+export const PomodoroTimer = React.memo(PomodoroTimerComponent);

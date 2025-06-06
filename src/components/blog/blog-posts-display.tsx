@@ -1,6 +1,7 @@
 
 'use client';
 
+import React from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useState } from 'react';
@@ -17,7 +18,7 @@ interface BlogPostsDisplayClientProps {
   categories: string[];
 }
 
-export default function BlogPostsDisplayClient({ posts, categories }: BlogPostsDisplayClientProps) {
+function BlogPostsDisplayClientComponent({ posts, categories }: BlogPostsDisplayClientProps) {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
 
   const filteredPosts = selectedCategory
@@ -98,3 +99,5 @@ export default function BlogPostsDisplayClient({ posts, categories }: BlogPostsD
     </>
   );
 }
+
+export default React.memo(BlogPostsDisplayClientComponent);

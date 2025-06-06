@@ -20,7 +20,7 @@ interface FocusAudioPlayerProps {
   className?: string;
 }
 
-const FocusAudioPlayer: React.FC<FocusAudioPlayerProps> = ({
+const FocusAudioPlayerComponent: React.FC<FocusAudioPlayerProps> = ({
   src,
   loop = true,
   volume = 0.7,
@@ -77,7 +77,7 @@ const FocusAudioPlayer: React.FC<FocusAudioPlayerProps> = ({
         audioElement.pause(); // If src is null or empty, ensure it's paused
       }
     }
-  }, [src]); // This effect now only depends on `src`
+  }, [src, actualIsPlaying]); // Added actualIsPlaying to dependencies
 
   // Effect to handle play/pause based on actualIsPlaying state
   useEffect(() => {
@@ -157,4 +157,4 @@ const FocusAudioPlayer: React.FC<FocusAudioPlayerProps> = ({
   return <audio ref={audioRef} playsInline preload="auto" aria-hidden="true" />;
 };
 
-export default FocusAudioPlayer;
+export default React.memo(FocusAudioPlayerComponent);

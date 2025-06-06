@@ -1,6 +1,7 @@
 
 'use client';
 
+import React from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
@@ -23,7 +24,7 @@ const itemVariants = {
   visible: { opacity: 1, y: 0, transition: { duration: 0.6, ease: "easeOut" } },
 };
 
-export default function HeroSection() {
+function HeroSectionComponent() {
   return (
     <section className="w-full py-16 md:py-24 lg:py-32 xl:py-40 bg-gradient-to-br from-primary/10 via-background to-background">
       <motion.div 
@@ -89,3 +90,5 @@ export default function HeroSection() {
     </section>
   );
 }
+
+export default React.memo(HeroSectionComponent);

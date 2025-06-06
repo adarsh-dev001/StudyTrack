@@ -27,7 +27,7 @@ interface BlogPreviewSectionProps {
 }
 
 // This component will now be client-side to handle the state for posts
-export default function BlogPreviewSectionClient({ recentPosts }: BlogPreviewSectionProps) {
+const BlogPreviewSectionClientComponent = ({ recentPosts }: BlogPreviewSectionProps) => {
   return (
     <motion.section 
       id="blog-preview" 
@@ -121,6 +121,8 @@ export default function BlogPreviewSectionClient({ recentPosts }: BlogPreviewSec
     </motion.section>
   );
 }
+
+export const BlogPreviewSectionClient = React.memo(BlogPreviewSectionClientComponent);
 
 
 // Wrapper server component to fetch data

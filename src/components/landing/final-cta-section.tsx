@@ -1,6 +1,7 @@
 
 'use client';
 
+import React from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Rocket, CheckCircle, ArrowRight } from 'lucide-react';
@@ -23,7 +24,7 @@ const ctaList = [
   "Smart AI Tools for Efficient Study",
 ];
 
-export default function FinalCtaSection() {
+function FinalCtaSectionComponent() {
   return (
     <section id="final-cta" className="w-full py-16 md:py-24 lg:py-32 bg-gradient-to-b from-background via-primary/5 to-primary/10">
       <motion.div 
@@ -97,6 +98,8 @@ export default function FinalCtaSection() {
     </section>
   );
 }
+
+export default React.memo(FinalCtaSectionComponent);
 
 // Note: Renamed from cta-section.tsx for clarity, or if you prefer, update the content of cta-section.tsx
 // If renaming, ensure imports are updated in src/app/page.tsx

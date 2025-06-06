@@ -35,7 +35,7 @@ interface MonthViewProps {
 const MAX_DOTS_SHOWN_MOBILE = 2;
 const MAX_DOTS_SHOWN_DESKTOP = 4;
 
-export default function MonthView({
+function MonthViewComponent({
   selectedDate,
   onDateChange,
   onViewChange,
@@ -200,3 +200,4 @@ export default function MonthView({
     </Card>
   );
 }
+export default React.memo(MonthViewComponent);

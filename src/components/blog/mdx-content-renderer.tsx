@@ -1,6 +1,7 @@
 
 'use client';
 
+import React from 'react';
 import { MDXRemote, type MDXRemoteSerializeResult } from 'next-mdx-remote';
 import { components } from '@/lib/mdx-components'; // Import custom components
 import { useState, useEffect } from 'react';
@@ -10,7 +11,7 @@ interface MdxContentRendererProps {
   source: MDXRemoteSerializeResult;
 }
 
-export default function MdxContentRenderer({ source }: MdxContentRendererProps) {
+function MdxContentRendererComponent({ source }: MdxContentRendererProps) {
   const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
@@ -31,3 +32,5 @@ export default function MdxContentRenderer({ source }: MdxContentRendererProps) 
 
   return <MDXRemote {...source} components={components} />;
 }
+
+export default React.memo(MdxContentRendererComponent);

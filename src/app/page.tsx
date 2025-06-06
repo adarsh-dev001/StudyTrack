@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { Suspense } from 'react';
@@ -12,7 +13,7 @@ const FeaturesSection = React.lazy(() => import('@/components/landing/features-s
 const KeyFeaturesSummary = React.lazy(() => import('@/components/landing/key-features-summary'));
 const TestimonialsSection = React.lazy(() => import('@/components/landing/testimonials-section'));
 const FinalCtaSection = React.lazy(() => import('@/components/landing/final-cta-section'));
-// Removed unused: const BlogPreviewSection = React.lazy(() => import('@/components/landing/blog-preview-section'));
+const BlogPreviewSection = React.lazy(() => import('@/components/landing/blog-preview-section'));
 
 
 function LandingPageFallback() {
@@ -50,7 +51,7 @@ export default function HomePage() {
         <Suspense fallback={<LandingPageFallback />}>
           <HeroSection />
           <FeaturesSection />
-          {/* If BlogPreviewSection is needed, it should be re-added here */}
+          <BlogPreviewSection />
           <KeyFeaturesSummary />
           <TestimonialsSection />
           <FinalCtaSection />

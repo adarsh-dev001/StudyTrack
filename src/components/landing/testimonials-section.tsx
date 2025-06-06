@@ -1,6 +1,7 @@
 
 'use client';
 
+import React from 'react';
 import { motion } from 'framer-motion';
 import Image from 'next/image';
 import { Star, Quote } from 'lucide-react';
@@ -43,7 +44,7 @@ const itemVariants = {
   visible: { opacity: 1, y: 0, scale: 1, transition: { duration: 0.6, ease: "easeOut" } },
 };
 
-export default function TestimonialsSection() {
+function TestimonialsSectionComponent() {
   return (
     <section className="w-full py-16 md:py-24 lg:py-32 bg-secondary/30">
       <div className="container mx-auto px-4 md:px-6">
@@ -118,3 +119,5 @@ export default function TestimonialsSection() {
     </section>
   );
 }
+
+export default React.memo(TestimonialsSectionComponent);
