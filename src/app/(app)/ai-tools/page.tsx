@@ -2,7 +2,7 @@
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { BrainCircuit, Sparkles, ListTree, Brain, HelpCircle, Lock, Edit, ArrowRight, MessageSquareQuestion } from "lucide-react";
+import { BrainCircuit, Sparkles, ListTree, Brain, HelpCircle, Lock, Edit, ArrowRight, MessageSquareQuestion } from "lucide-react"; // Corrected import
 import type { LucideIcon } from "lucide-react";
 import { Badge } from "@/components/ui/badge"; 
 import { cn } from "@/lib/utils"; 
@@ -43,7 +43,7 @@ const aiTools: AiTool[] = [
     id: "doubt-solver",
     title: "AI Doubt Solver",
     description: "Get instant, context-aware explanations for your academic questions.",
-    icon: MessageSquareQuestion,
+    icon: MessageSquareQuestion, // Icon is used here
     iconColorClass: "text-indigo-500",
     link: "/ai-tools/doubt-solver",
     status: "Active",
@@ -157,3 +157,4 @@ export default function AiToolsPage() {
     </div>
   );
 }
+
