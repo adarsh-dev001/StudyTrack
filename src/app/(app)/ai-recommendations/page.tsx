@@ -164,7 +164,8 @@ export default function AiRecommendationsPage() {
       setRecommendations(recs);
     } catch (err: any) {
       console.error("Recommendation generation failed:", err);
-      setError("Could not generate recommendations. Please try refreshing. If the issue persists, the AI might be under heavy load.");
+      const AImessage = (err instanceof Error && err.message) ? err.message : "An unexpected error occurred with the AI service.";
+      setError(`Failed to generate recommendations. ${AImessage} Please try refreshing. If the issue persists, the AI might be under heavy load or experiencing temporary issues.`);
     } finally {
       setIsLoadingRecommendations(false);
     }
@@ -230,7 +231,7 @@ export default function AiRecommendationsPage() {
             <Brain className="mr-2 sm:mr-3 h-7 w-7 sm:h-8 sm:w-8 text-primary" /> AI Coach Recommendations
         </h1>
         {profile && profile.onboardingCompleted && (
-            <Button onClick={() => fetchRecommendations(profile)} disabled={isLoadingRecommendations} size="sm">
+            <Button onClick={() => profile && fetchRecommendations(profile)} disabled={isLoadingRecommendations} size="sm">
                 {isLoadingRecommendations ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Wand2 className="mr-2 h-4 w-4" />}
                 Refresh Recommendations
             </Button>
@@ -412,3 +413,4 @@ export default function AiRecommendationsPage() {
     </div>
   );
 }
+
