@@ -2,15 +2,16 @@
 'use client';
 
 import Link from 'next/link';
+import React from 'react'; // Added React import
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger, SheetClose } from '@/components/ui/sheet';
 import { Menu, BookOpenText, Rocket, LogIn, Sun, Moon } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from '@/lib/utils';
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 
-export function Header() {
+function HeaderComponent() {
   const navLinks = [
     { href: '/#features', label: 'Features' },
     { href: '/blog', label: 'Blog' },
@@ -237,3 +238,4 @@ export function Header() {
     </header>
   );
 }
+export const Header = React.memo(HeaderComponent);

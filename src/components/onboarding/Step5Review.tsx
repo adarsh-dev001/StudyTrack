@@ -5,7 +5,7 @@ import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import type { OnboardingFormData } from './onboarding-form';
-import { TARGET_EXAMS, EXAM_ATTEMPT_YEARS, LANGUAGE_MEDIUMS, STUDY_MODES, EXAM_PHASES, PREVIOUS_ATTEMPTS_OPTIONS, DAILY_STUDY_HOURS_OPTIONS, PREFERRED_STUDY_TIMES, PREFERRED_LEARNING_METHODS_PER_SUBJECT, MOTIVATION_TYPES, EXAM_SUBJECT_MAP, PREPARATION_LEVELS } from '@/lib/constants'; // Added PREPARATION_LEVELS
+import { TARGET_EXAMS, EXAM_ATTEMPT_YEARS, LANGUAGE_MEDIUMS, STUDY_MODES, EXAM_PHASES, PREVIOUS_ATTEMPTS_OPTIONS, DAILY_STUDY_HOURS_OPTIONS, PREFERRED_STUDY_TIMES, PREFERRED_LEARNING_METHODS_PER_SUBJECT, MOTIVATION_TYPES, EXAM_SUBJECT_MAP, PREPARATION_LEVELS, PREFERRED_LEARNING_STYLES, SUBJECT_OPTIONS } from '@/lib/constants'; // Added PREPARATION_LEVELS and others
 import { Separator } from '@/components/ui/separator';
 
 interface Step5ReviewProps {
@@ -18,12 +18,12 @@ const findLabel = (options: { value: string, label: string }[] | { id: string, l
   return item ? item.label : value;
 };
 
-const findMultipleLabels = (options: { id: string, label: string }[], values: string[] | undefined) => {
+const findMultipleLabels = (options: { id: string, label: string }[] | { value: string, label: string }[], values: string[] | undefined) => {
   if (!values || values.length === 0) return 'Not specified';
   return values.map(val => findLabel(options, val)).join(', ');
 };
 
-export default function Step5Review({ formData }: Step5ReviewProps) {
+function Step5ReviewComponent({ formData }: Step5ReviewProps) {
   const getTargetExamLabels = () => {
     if (!formData.targetExams || formData.targetExams.length === 0) return 'Not specified';
     return formData.targetExams.map(examValue => {
@@ -101,6 +101,9 @@ export default function Step5Review({ formData }: Step5ReviewProps) {
         <ReviewSection title="Study Habits & Preferences">
           <ReviewItem label="Daily Study Hours" value={findLabel(DAILY_STUDY_HOURS_OPTIONS, formData.dailyStudyHours)} />
           <ReviewItem label="Preferred Study Time(s)" value={findMultipleLabels(PREFERRED_STUDY_TIMES, formData.preferredStudyTime)} />
+          <ReviewItem label="Weak Subjects" value={findMultipleLabels(SUBJECT_OPTIONS, formData.weakSubjects)} />
+          <ReviewItem label="Strong Subjects" value={findMultipleLabels(SUBJECT_OPTIONS, formData.strongSubjects)} />
+          <ReviewItem label="General Learning Styles" value={findMultipleLabels(PREFERRED_LEARNING_STYLES, formData.preferredLearningStyles)} />
           <ReviewItem label="Distraction Struggles" value={formData.distractionStruggles} />
           <ReviewItem label="Motivation Type" value={findLabel(MOTIVATION_TYPES, formData.motivationType)} />
           <ReviewItem label="Public Profile" value={formData.socialVisibilityPublic ? 'Yes' : 'No'} />
@@ -136,3 +139,5 @@ const ReviewItem: React.FC<ReviewItemProps> = ({ label, value, textSize = "text-
     </div>
   );
 };
+
+export default React.memo(Step5ReviewComponent);

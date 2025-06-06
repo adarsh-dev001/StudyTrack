@@ -16,6 +16,42 @@ import { motion } from 'framer-motion';
 
 const MAX_TASKS_TO_SHOW = 4;
 
+interface TaskDisplayItemProps {
+  task: Task;
+}
+
+const TaskDisplayItem = React.memo(function TaskDisplayItem({ task }: TaskDisplayItemProps) {
+  const subjectInfo = getSubjectInfo(task.subject);
+  const priorityInfo = getPriorityBadgeInfo(task.priority);
+  const isDeadlinePast = task.deadline && isPast(parseISO(task.deadline));
+
+  return (
+    <div
+      className={cn(
+        "p-2.5 rounded-md border flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5",
+        subjectInfo.color?.replace('bg-', 'border-') // Use border color from subject
+      )}
+    >
+      <div className="flex-grow overflow-hidden">
+        <p className="text-sm font-medium truncate" title={task.title}>{task.title}</p>
+        <div className="text-xs text-muted-foreground flex items-center gap-1.5">
+          <Badge variant="outline" size="sm" className={cn("px-1.5 py-0 text-[10px]", subjectInfo.textColor, subjectInfo.color?.replace('bg-', 'border-'))}>
+            {subjectInfo.name}
+          </Badge>
+          {task.deadline && (
+            <span className={cn("flex items-center", isDeadlinePast && "text-red-500 font-semibold")}>
+              <Clock className="mr-1 h-3 w-3" /> {format(parseISO(task.deadline), 'MMM d')}
+            </span>
+          )}
+        </div>
+      </div>
+      <Badge variant={priorityInfo.variant} size="sm" className={cn("text-xs self-start sm:self-center", priorityInfo.className)}>
+        {priorityInfo.text}
+      </Badge>
+    </div>
+  );
+});
+
 export default function TaskOverviewWidget() {
   const [pendingTasks, setPendingTasks] = useState<Task[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -52,7 +88,7 @@ export default function TaskOverviewWidget() {
       <Card className="shadow-lg">
         <CardHeader>
           <CardTitle className="text-lg sm:text-xl font-semibold flex items-center">
-            <ListChecks className="mr-2 h-5 w-5 text-primary" /> Upcoming Tasks
+            <ListChecks className="mr-2 h-5 w-5 text-primary" /> Urgent Tasks
           </CardTitle>
         </CardHeader>
         <CardContent className="h-[200px] flex items-center justify-center">
@@ -79,37 +115,9 @@ export default function TaskOverviewWidget() {
           {pendingTasks.length > 0 ? (
             <ScrollArea className="h-[220px] sm:h-[250px]">
               <div className="space-y-2 px-4 pb-4">
-                {pendingTasks.map(task => {
-                  const subjectInfo = getSubjectInfo(task.subject);
-                  const priorityInfo = getPriorityBadgeInfo(task.priority);
-                  const isDeadlinePast = task.deadline && isPast(parseISO(task.deadline));
-                  return (
-                    <div
-                      key={task.id}
-                      className={cn(
-                        "p-2.5 rounded-md border flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5",
-                        subjectInfo.color?.replace('bg-', 'border-') // Use border color from subject
-                      )}
-                    >
-                      <div className="flex-grow overflow-hidden">
-                        <p className="text-sm font-medium truncate" title={task.title}>{task.title}</p>
-                        <div className="text-xs text-muted-foreground flex items-center gap-1.5">
-                          <Badge variant="outline" size="sm" className={cn("px-1.5 py-0 text-[10px]", subjectInfo.textColor, subjectInfo.color?.replace('bg-', 'border-'))}>
-                            {subjectInfo.name}
-                          </Badge>
-                          {task.deadline && (
-                            <span className={cn("flex items-center", isDeadlinePast && "text-red-500 font-semibold")}>
-                              <Clock className="mr-1 h-3 w-3" /> {format(parseISO(task.deadline), 'MMM d')}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                      <Badge variant={priorityInfo.variant} size="sm" className={cn("text-xs self-start sm:self-center", priorityInfo.className)}>
-                        {priorityInfo.text}
-                      </Badge>
-                    </div>
-                  );
-                })}
+                {pendingTasks.map(task => (
+                  <TaskDisplayItem key={task.id} task={task} />
+                ))}
               </div>
             </ScrollArea>
           ) : (

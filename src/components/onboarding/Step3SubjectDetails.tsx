@@ -17,7 +17,7 @@ interface Step3SubjectDetailsProps {
   selectedExam: string | undefined; 
 }
 
-export default function Step3SubjectDetails({ selectedExam }: Step3SubjectDetailsProps) {
+function Step3SubjectDetailsComponent({ selectedExam }: Step3SubjectDetailsProps) {
   const { control, getValues, setValue, formState: { errors } } = useFormContext<OnboardingFormData>();
   
   const subjectsForSelectedExam = React.useMemo(() => {
@@ -145,3 +145,5 @@ export default function Step3SubjectDetails({ selectedExam }: Step3SubjectDetail
     </div>
   );
 }
+
+export default React.memo(Step3SubjectDetailsComponent);

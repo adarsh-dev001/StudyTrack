@@ -2,6 +2,7 @@
 "use client"
 
 import type { ChangeEvent } from "react";
+import React from 'react';
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -26,7 +27,7 @@ interface NewTaskDialogContentProps {
   isDayView?: boolean; 
 }
 
-export default function NewTaskDialogContent({ newTask, onInputChange, onSelectChange, isDayView = false }: NewTaskDialogContentProps) {
+function NewTaskDialogContentComponent({ newTask, onInputChange, onSelectChange, isDayView = false }: NewTaskDialogContentProps) {
   return (
     <div className="grid gap-4 py-4 max-h-[65vh] overflow-y-auto pr-3">
       <div className="grid gap-2">
@@ -154,3 +155,5 @@ export default function NewTaskDialogContent({ newTask, onInputChange, onSelectC
     </div>
   );
 }
+
+export default React.memo(NewTaskDialogContentComponent);

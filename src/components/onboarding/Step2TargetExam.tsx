@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/input';
 import { TARGET_EXAMS, EXAM_ATTEMPT_YEARS } from '@/lib/constants';
 import type { OnboardingFormData } from './onboarding-form';
 
-export default function Step2TargetExam() {
+function Step2TargetExamComponent() {
   const { control, watch } = useFormContext<OnboardingFormData>();
   const selectedExams = watch('targetExams') || [];
 
@@ -24,7 +24,7 @@ export default function Step2TargetExam() {
             <FormLabel className="text-sm sm:text-base font-semibold">Target Exam(s) <span className="text-destructive">*</span></FormLabel>
             <FormDescription className="text-xs sm:text-sm">Select the competitive exam(s) you are preparing for. You can select multiple.</FormDescription>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-3 gap-y-2 sm:gap-x-4 sm:gap-y-3 pt-1 sm:pt-2">
-              {TARGET_EXAMS.map((exam) => (
+              {(TARGET_EXAMS || []).map((exam) => (
                 <FormItem key={exam.value} className="flex flex-row items-center space-x-2 space-y-0">
                   <FormControl>
                     <Checkbox
@@ -75,7 +75,7 @@ export default function Step2TargetExam() {
                 </SelectTrigger>
               </FormControl>
               <SelectContent>
-                {EXAM_ATTEMPT_YEARS().map(year => (
+                {(EXAM_ATTEMPT_YEARS() || []).map(year => (
                   <SelectItem key={year.value} value={year.value} className="text-sm sm:text-base">{year.label}</SelectItem>
                 ))}
               </SelectContent>
@@ -87,3 +87,5 @@ export default function Step2TargetExam() {
     </div>
   );
 }
+
+export default React.memo(Step2TargetExamComponent);

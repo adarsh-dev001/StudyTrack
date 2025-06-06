@@ -24,17 +24,19 @@ interface MetricDisplayProps {
   isLoading: boolean;
 }
 
-const MetricItem: React.FC<MetricDisplayProps> = ({ icon: Icon, value, label, colorClass, iconColorClass, isLoading }) => (
-  <div className={`flex-1 p-3 sm:p-4 rounded-lg flex flex-col items-center justify-center text-center ${colorClass}`}>
-    <Icon className={`h-6 w-6 sm:h-7 sm:w-7 mb-1 sm:mb-1.5 ${iconColorClass}`} />
-    {isLoading ? (
-      <Loader2 className="h-5 w-5 sm:h-6 sm:w-6 animate-spin" />
-    ) : (
-      <div className="text-xl sm:text-2xl font-bold">{value}</div>
-    )}
-    <div className="text-xs sm:text-sm font-medium opacity-90">{label}</div>
-  </div>
-);
+const MetricItem = React.memo(function MetricItem({ icon: Icon, value, label, colorClass, iconColorClass, isLoading }: MetricDisplayProps) {
+  return (
+    <div className={`flex-1 p-3 sm:p-4 rounded-lg flex flex-col items-center justify-center text-center ${colorClass}`}>
+      <Icon className={`h-6 w-6 sm:h-7 sm:w-7 mb-1 sm:mb-1.5 ${iconColorClass}`} />
+      {isLoading ? (
+        <Loader2 className="h-5 w-5 sm:h-6 sm:w-6 animate-spin" />
+      ) : (
+        <div className="text-xl sm:text-2xl font-bold">{value}</div>
+      )}
+      <div className="text-xs sm:text-sm font-medium opacity-90">{label}</div>
+    </div>
+  );
+});
 
 export default function DashboardMetricsCard({ streakData, loadingStreak }: DashboardMetricsCardProps) {
   const { currentUser } = useAuth();

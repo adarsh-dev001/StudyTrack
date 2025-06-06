@@ -11,7 +11,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { DAILY_STUDY_HOURS_OPTIONS, PREFERRED_STUDY_TIMES, MOTIVATION_TYPES, SUBJECT_OPTIONS, PREFERRED_LEARNING_STYLES } from '@/lib/constants';
 import type { OnboardingFormData } from './onboarding-form';
 
-export default function Step4StudyPreferences() {
+function Step4StudyPreferencesComponent() {
   const { control } = useFormContext<OnboardingFormData>();
 
   return (
@@ -134,7 +134,7 @@ export default function Step4StudyPreferences() {
         name="preferredLearningStyles"
         render={({ field }) => (
           <FormItem>
-            <FormLabel className="text-sm sm:text-base font-semibold">General Preferred Learning Style(s)</FormLabel>
+            <FormLabel className="text-sm sm:text-base font-semibold">General Preferred Learning Style(s) <span className="text-destructive">*</span></FormLabel>
             <FormDescription className="text-xs sm:text-sm">How do you prefer to learn overall? (You can specify per subject too).</FormDescription>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-3 gap-y-2 sm:gap-x-4 sm:gap-y-3 pt-1 sm:pt-2">
               {(PREFERRED_LEARNING_STYLES || []).map((styleOption) => (
@@ -231,3 +231,4 @@ export default function Step4StudyPreferences() {
   );
 }
 
+export default React.memo(Step4StudyPreferencesComponent);

@@ -1,7 +1,9 @@
+
 import Link from 'next/link';
+import React from 'react'; // Added React import
 import { BookOpenText } from 'lucide-react';
 
-export function Footer() {
+function FooterComponent() {
   const currentYear = new Date().getFullYear();
   return (
     <footer className="border-t border-border/40 bg-background">
@@ -25,3 +27,5 @@ export function Footer() {
     </footer>
   );
 }
+
+export const Footer = React.memo(FooterComponent);

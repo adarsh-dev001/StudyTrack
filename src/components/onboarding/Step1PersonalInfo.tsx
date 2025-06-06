@@ -10,7 +10,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { LANGUAGE_MEDIUMS, STUDY_MODES, EXAM_PHASES, PREVIOUS_ATTEMPTS_OPTIONS } from '@/lib/constants';
 import type { OnboardingFormData } from './onboarding-form'; // Adjust path if necessary
 
-export default function Step1PersonalInfo() {
+function Step1PersonalInfoComponent() {
   const { control } = useFormContext<OnboardingFormData>();
 
   return (
@@ -165,3 +165,5 @@ export default function Step1PersonalInfo() {
     </div>
   );
 }
+
+export default React.memo(Step1PersonalInfoComponent);

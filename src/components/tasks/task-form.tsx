@@ -1,6 +1,7 @@
 
 'use client';
 
+import React from 'react';
 import type { SubmitHandler } from 'react-hook-form';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -32,7 +33,7 @@ interface TaskFormProps {
   isEditMode?: boolean;
 }
 
-export function TaskForm({ onSubmitTask, initialData, isEditMode = false }: TaskFormProps) {
+function TaskFormComponent({ onSubmitTask, initialData, isEditMode = false }: TaskFormProps) {
   const form = useForm<TaskFormData>({
     resolver: zodResolver(taskFormSchema),
     defaultValues: initialData || {
@@ -165,3 +166,5 @@ export function TaskForm({ onSubmitTask, initialData, isEditMode = false }: Task
     </Form>
   );
 }
+
+export const TaskForm = React.memo(TaskFormComponent);

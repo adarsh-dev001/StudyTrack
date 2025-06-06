@@ -1,6 +1,7 @@
 
 'use client';
 
+import React from 'react'; // Added React import for React.memo
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Trash2, Edit3 } from 'lucide-react';
@@ -29,14 +30,14 @@ interface TaskItemProps {
   canEarnCoins?: boolean;
 }
 
-export function TaskItem({ task, onToggleComplete, onDelete, onEdit, canEarnCoins }: TaskItemProps) {
+export const TaskItem = React.memo(function TaskItem({ task, onToggleComplete, onDelete, onEdit, canEarnCoins }: TaskItemProps) {
   const subjectInfo = getSubjectInfo(task.subject);
   const priorityInfo = getPriorityBadgeInfo(task.priority);
   const isDeadlinePast = task.deadline && !task.completed && isPast(parseISO(task.deadline));
 
   return (
     <div className={cn(
-      "flex flex-col sm:flex-row items-start sm:items-center justify-between p-3 my-1 rounded-lg border shadow-sm hover:shadow-md transition-shadow duration-150", // Reduced my-2 to my-1
+      "flex flex-col sm:flex-row items-start sm:items-center justify-between p-3 my-1 rounded-lg border shadow-sm hover:shadow-md transition-shadow duration-150",
       task.completed ? "bg-muted/50 opacity-70" : subjectInfo.color,
       task.completed && "border-gray-300 dark:border-gray-600"
     )}>
@@ -102,4 +103,4 @@ export function TaskItem({ task, onToggleComplete, onDelete, onEdit, canEarnCoin
       </div>
     </div>
   );
-}
+});

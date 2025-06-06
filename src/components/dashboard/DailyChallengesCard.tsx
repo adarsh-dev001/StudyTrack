@@ -90,6 +90,64 @@ const ALL_CHALLENGE_DEFINITIONS: ChallengeDefinition[] = [
   },
 ];
 
+interface ChallengeDisplayItemProps {
+  challenge: ActiveChallenge;
+  onCompleteChallenge: (challengeId: string) => Promise<void>;
+  isCompleting: boolean;
+}
+
+const ChallengeDisplayItem = React.memo(function ChallengeDisplayItem({
+  challenge,
+  onCompleteChallenge,
+  isCompleting,
+}: ChallengeDisplayItemProps) {
+  const IconComponent = challenge.icon;
+  return (
+    <div className="p-3 sm:p-4 border rounded-lg bg-card/40 shadow-sm space-y-2 sm:space-y-3">
+      <div className="flex items-start gap-2 sm:gap-3">
+        <div className="bg-primary/10 p-1.5 sm:p-2 rounded-md mt-0.5 sm:mt-1">
+          <IconComponent className="h-5 w-5 sm:h-6 sm:w-6 text-primary" />
+        </div>
+        <div>
+          <h4 className="font-semibold text-sm sm:text-md text-foreground">{challenge.title}</h4>
+          <p className="text-xs text-muted-foreground">{challenge.description}</p>
+        </div>
+      </div>
+      
+      <div className="space-y-1 sm:space-y-1.5">
+        <div className="flex justify-between items-center text-xs mb-0.5 sm:mb-1">
+          <span className="text-muted-foreground">Progress:</span>
+          <span className="font-medium text-foreground">{challenge.isCompletedToday ? challenge.goalValue : challenge.currentProgress} / {challenge.goalValue}</span>
+        </div>
+        <Progress value={((challenge.isCompletedToday ? challenge.goalValue : challenge.currentProgress) / challenge.goalValue) * 100} className="h-2 sm:h-2.5" />
+      </div>
+
+      <div className="flex flex-col xs:flex-row xs:items-center xs:justify-between gap-1.5 sm:gap-2 pt-1.5 sm:pt-2">
+          <div className="text-xs sm:text-sm">
+              <span className="font-semibold text-green-600 dark:text-green-400">+{challenge.rewardXP} XP</span>
+              <span className="text-muted-foreground mx-1">|</span>
+              <span className="font-semibold text-yellow-500 dark:text-yellow-400">+{challenge.rewardCoins} 🪙</span>
+          </div>
+          <Button
+              onClick={() => onCompleteChallenge(challenge.id)}
+              disabled={challenge.isCompletedToday || isCompleting}
+              size="sm"
+              variant={challenge.isCompletedToday ? "secondary" : "default"}
+              className="w-full xs:w-auto text-xs sm:text-sm h-8 sm:h-9"
+          >
+              {isCompleting ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> :
+               challenge.isCompletedToday ? (
+                  <><CheckCircle className="mr-1.5 h-3.5 w-3.5" /> Claimed Today!</>
+              ) : (
+                  <><Award className="mr-1.5 h-3.5 w-3.5" /> Complete Challenge</>
+              )}
+          </Button>
+      </div>
+    </div>
+  );
+});
+
+
 export default function DailyChallengesCard() {
   const { currentUser } = useAuth();
   const { toast } = useToast();
@@ -99,7 +157,6 @@ export default function DailyChallengesCard() {
 
   const selectChallengesForToday = useCallback(() => {
     const dayOfYear = Math.floor((new Date().getTime() - new Date(new Date().getFullYear(), 0, 0).getTime()) / (1000 * 60 * 60 * 24));
-    // Select 2 or 3 challenges based on the day of the year
     const numChallengesToSelect = ALL_CHALLENGE_DEFINITIONS.length >= 2 ? 2 : ALL_CHALLENGE_DEFINITIONS.length;
     const selectedIndexes = new Set<number>();
     
@@ -108,7 +165,6 @@ export default function DailyChallengesCard() {
     for (let i = 0; i < numChallengesToSelect; i++) {
       selectedIndexes.add((dayOfYear + i) % ALL_CHALLENGE_DEFINITIONS.length);
     }
-    // Ensure we have exactly numChallengesToSelect if possible, avoiding duplicates from modulo
     let attempt = 0;
     while(selectedIndexes.size < numChallengesToSelect && attempt < ALL_CHALLENGE_DEFINITIONS.length) {
         selectedIndexes.add((dayOfYear + numChallengesToSelect + attempt) % ALL_CHALLENGE_DEFINITIONS.length);
@@ -163,7 +219,7 @@ export default function DailyChallengesCard() {
   }, [currentUser?.uid, toast, selectChallengesForToday]);
 
 
-  const handleCompleteChallenge = async (challengeId: string) => {
+  const handleCompleteChallenge = useCallback(async (challengeId: string) => {
     if (!currentUser?.uid || !db) {
       toast({ title: 'Login Required', description: 'Please log in to complete challenges.', variant: 'destructive' });
       return;
@@ -192,10 +248,9 @@ export default function DailyChallengesCard() {
 
         const existingStatus = (currentChallengeStatus as any)[challengeId];
         if (existingStatus && existingStatus.completedOn instanceof Timestamp && isToday(existingStatus.completedOn.toDate())) {
-            // This state should ideally be caught by the UI, but as a safeguard:
             setActiveChallenges(prev => prev.map(c => c.id === challengeId ? {...c, isCompletedToday: true, currentProgress: c.goalValue } : c));
             toast({ title: 'Already Done!', description: 'You already completed this challenge today.', variant: 'default' });
-            setCompletingChallengeId(null); // Reset loading state
+            setCompletingChallengeId(null);
             return; 
         }
 
@@ -213,8 +268,8 @@ export default function DailyChallengesCard() {
             earnedBadgeIds: currentEarnedBadgeIds,
             purchasedItemIds: currentPurchasedItemIds,
             activeThemeId: currentActiveThemeId,
-            onboardingCompleted: currentData?.onboardingCompleted || false, // Preserve onboarding status
-            lastInteractionDates: currentLastInteractionDates, // Preserve interaction dates
+            onboardingCompleted: currentData?.onboardingCompleted || false, 
+            lastInteractionDates: currentLastInteractionDates, 
         };
 
         if (profileDoc.exists()) {
@@ -249,7 +304,7 @@ export default function DailyChallengesCard() {
     } finally {
       setCompletingChallengeId(null);
     }
-  };
+  }, [currentUser?.uid, db, toast, activeChallenges]); // Added activeChallenges and db to dependencies
 
   if (loadingChallenges) {
     return (
@@ -302,51 +357,14 @@ export default function DailyChallengesCard() {
       </CardHeader>
       <CardContent className="space-y-4 sm:space-y-6 p-4 sm:p-6">
         {activeChallenges.map(challenge => (
-          <div key={challenge.id} className="p-3 sm:p-4 border rounded-lg bg-card/40 shadow-sm space-y-2 sm:space-y-3">
-            <div className="flex items-start gap-2 sm:gap-3">
-              <div className="bg-primary/10 p-1.5 sm:p-2 rounded-md mt-0.5 sm:mt-1">
-                <challenge.icon className="h-5 w-5 sm:h-6 sm:w-6 text-primary" />
-              </div>
-              <div>
-                <h4 className="font-semibold text-sm sm:text-md text-foreground">{challenge.title}</h4>
-                <p className="text-xs text-muted-foreground">{challenge.description}</p>
-              </div>
-            </div>
-            
-            <div className="space-y-1 sm:space-y-1.5">
-              <div className="flex justify-between items-center text-xs mb-0.5 sm:mb-1">
-                <span className="text-muted-foreground">Progress:</span>
-                <span className="font-medium text-foreground">{challenge.isCompletedToday ? challenge.goalValue : challenge.currentProgress} / {challenge.goalValue}</span>
-              </div>
-              <Progress value={((challenge.isCompletedToday ? challenge.goalValue : challenge.currentProgress) / challenge.goalValue) * 100} className="h-2 sm:h-2.5" />
-            </div>
-
-            <div className="flex flex-col xs:flex-row xs:items-center xs:justify-between gap-1.5 sm:gap-2 pt-1.5 sm:pt-2">
-                <div className="text-xs sm:text-sm">
-                    <span className="font-semibold text-green-600 dark:text-green-400">+{challenge.rewardXP} XP</span>
-                    <span className="text-muted-foreground mx-1">|</span>
-                    <span className="font-semibold text-yellow-500 dark:text-yellow-400">+{challenge.rewardCoins} 🪙</span>
-                </div>
-                <Button
-                    onClick={() => handleCompleteChallenge(challenge.id)}
-                    disabled={challenge.isCompletedToday || completingChallengeId === challenge.id}
-                    size="sm"
-                    variant={challenge.isCompletedToday ? "secondary" : "default"}
-                    className="w-full xs:w-auto text-xs sm:text-sm h-8 sm:h-9"
-                >
-                    {completingChallengeId === challenge.id ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> :
-                     challenge.isCompletedToday ? (
-                        <><CheckCircle className="mr-1.5 h-3.5 w-3.5" /> Claimed Today!</>
-                    ) : (
-                        <><Award className="mr-1.5 h-3.5 w-3.5" /> Complete Challenge</>
-                    )}
-                </Button>
-            </div>
-          </div>
+          <ChallengeDisplayItem
+            key={challenge.id}
+            challenge={challenge}
+            onCompleteChallenge={handleCompleteChallenge}
+            isCompleting={completingChallengeId === challenge.id}
+          />
         ))}
       </CardContent>
     </Card>
   );
 }
-
-    

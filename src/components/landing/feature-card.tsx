@@ -1,3 +1,5 @@
+
+import React from 'react';
 import type { LucideIcon } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
@@ -7,7 +9,7 @@ interface FeatureCardProps {
   description: string;
 }
 
-export function FeatureCard({ icon: Icon, title, description }: FeatureCardProps) {
+export const FeatureCard = React.memo(function FeatureCard({ icon: Icon, title, description }: FeatureCardProps) {
   return (
     <Card className="h-full shadow-lg hover:shadow-xl transition-shadow duration-300_transform hover:-translate-y-1">
       <CardHeader className="flex flex-row items-center gap-4 pb-2">
@@ -21,4 +23,4 @@ export function FeatureCard({ icon: Icon, title, description }: FeatureCardProps
       </CardContent>
     </Card>
   );
-}
+});

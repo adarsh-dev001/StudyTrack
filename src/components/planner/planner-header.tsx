@@ -2,6 +2,7 @@
 "use client"
 
 import type { Dispatch, SetStateAction } from "react";
+import React from 'react';
 import { Button } from "@/components/ui/button"
 import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
@@ -37,7 +38,7 @@ interface PlannerHeaderProps {
   allSubjectsValue: string;
 }
 
-export function PlannerHeader({
+export const PlannerHeader = React.memo(function PlannerHeaderComponent({
   currentView,
   onViewChange,
   selectedDate,
@@ -102,4 +103,4 @@ export function PlannerHeader({
       </div>
     </div>
   )
-}
+});
