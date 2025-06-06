@@ -126,6 +126,15 @@ export const SUBJECT_OPTIONS = [
   { id: 'other', label: 'Other Subject' }
 ];
 
+export const PREFERRED_LEARNING_STYLES = [
+  { id: 'visual', label: 'Visual (Diagrams, Videos)' },
+  { id: 'auditory', label: 'Auditory (Lectures, Discussions)' },
+  { id: 'reading_writing', label: 'Reading/Writing (Notes, Textbooks)' },
+  { id: 'kinesthetic', label: 'Kinesthetic (Practice, Hands-on)' },
+  { id: 'solitary', label: 'Solitary (Studying Alone)' },
+  { id: 'social', label: 'Social (Group Study)' },
+];
+
 
 export const MOTIVATION_TYPES = [
   { value: 'xp_badges', label: 'Earning XP & Badges' },
