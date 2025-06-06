@@ -8,28 +8,29 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { Label } from "@/components/ui/label";
-import { Progress } from "@/components/ui/progress";
-import { Badge } from '@/components/ui/badge';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Loader2, Sparkles, Brain, HelpCircle, CheckCircle, XCircle, Lightbulb, Award, Percent, SkipForward, ChevronsRight, Wand2, ChevronLeft } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { Loader2, Sparkles, Brain, HelpCircle, Award, Wand2 } from 'lucide-react';
 import { generateQuiz } from '@/ai/flows/generate-quiz-flow';
-import type { GenerateQuizInput, GenerateQuizOutput, QuizQuestion } from '@/ai/schemas/quiz-tool-schemas';
+import type { GenerateQuizInput, GenerateQuizOutput } from '@/ai/schemas/quiz-tool-schemas';
 import { GenerateQuizInputSchema } from '@/ai/schemas/quiz-tool-schemas';
 import { useToast } from '@/hooks/use-toast';
-import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/auth-context';
 import { recordPlatformInteraction } from '@/lib/activity-utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { db } from '@/lib/firebase'; 
-import { doc, getDoc, onSnapshot, Unsubscribe } from 'firebase/firestore'; 
-import type { UserProfileData } from '@/lib/profile-types'; 
+import { db } from '@/lib/firebase';
+import { doc, getDoc, onSnapshot, Unsubscribe } from 'firebase/firestore';
+import type { UserProfileData } from '@/lib/profile-types';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import OnboardingForm from '@/components/onboarding/onboarding-form';
 import { Skeleton } from '@/components/ui/skeleton';
+
+// Lazy load state-specific display components
+const QuizInProgressDisplay = React.lazy(() => import('@/components/ai-tools/smart-quiz/QuizInProgressDisplay'));
+const QuizResultsDisplay = React.lazy(() => import('@/components/ai-tools/smart-quiz/QuizResultsDisplay'));
+const QuizInProgressDisplayFallback = React.lazy(() => import('@/components/ai-tools/smart-quiz/QuizInProgressDisplayFallback'));
+const QuizResultsDisplayFallback = React.lazy(() => import('@/components/ai-tools/smart-quiz/QuizResultsDisplayFallback'));
 
 
 const quizFormSchema = GenerateQuizInputSchema;
@@ -86,7 +87,6 @@ export default function SmartQuizPage() {
 
   const { toast } = useToast();
   const quizAreaRef = useRef<HTMLDivElement>(null);
-  const questionCardRef = useRef<HTMLDivElement>(null);
 
   const [isLoadingProfile, setIsLoadingProfile] = useState(true);
   const [userProfile, setUserProfile] = useState<UserProfileData | null>(null);
@@ -101,7 +101,7 @@ export default function SmartQuizPage() {
       numQuestions: 5,
     },
   });
-  
+
   useEffect(() => {
     let unsubscribeProfile: Unsubscribe | undefined;
     if (currentUser?.uid) {
@@ -125,7 +125,7 @@ export default function SmartQuizPage() {
           }
         } else {
           setUserProfile(null);
-          setShowOnboardingModal(true); 
+          setShowOnboardingModal(true);
         }
         setIsLoadingProfile(false);
       }, (err) => {
@@ -188,8 +188,8 @@ export default function SmartQuizPage() {
       [questionIndex]: { ...prev[questionIndex], selectedOption: optionIndex, skipped: false },
     }));
   };
-  
-  const handleSkipQuestion = () => { // Only used during quiz taking
+
+  const handleSkipQuestion = () => {
     if (!quizData || quizState !== 'inProgress') return;
     setUserAnswers(prev => ({
         ...prev,
@@ -220,14 +220,14 @@ export default function SmartQuizPage() {
       } else {
         handleSubmitQuiz();
       }
-    } else if (quizState === 'submitted') { // Review mode
+    } else if (quizState === 'submitted') {
       if (currentQuestionIndex < quizData.questions.length - 1) {
         setCurrentQuestionIndex(prev => prev + 1);
       }
     }
   };
 
-  const handlePreviousQuestion = () => { // Only for review mode
+  const handlePreviousQuestion = () => {
     if (!quizData || quizState !== 'submitted') return;
     if (currentQuestionIndex > 0) {
       setCurrentQuestionIndex(prev => prev - 1);
@@ -244,7 +244,7 @@ export default function SmartQuizPage() {
     });
     setScore(correctAnswers);
     setQuizState('submitted');
-    setCurrentQuestionIndex(0); // Reset to first question for review
+    setCurrentQuestionIndex(0);
 
     if (currentUser?.uid) {
       await recordPlatformInteraction(currentUser.uid);
@@ -267,9 +267,9 @@ export default function SmartQuizPage() {
     setScore(0);
     setQuizState('inProgress');
   };
-  
+
   const handleCreateNewQuiz = () => {
-    form.reset(); 
+    form.reset();
     form.setValue('examType', 'general');
     setQuizData(null);
     setUserAnswers({});
@@ -278,7 +278,6 @@ export default function SmartQuizPage() {
     setQuizState('idle');
   };
 
-  const currentQuestionData = quizData?.questions[currentQuestionIndex];
   const isLastQuestionDuringQuiz = quizData && quizState === 'inProgress' ? currentQuestionIndex === quizData.questions.length - 1 : false;
 
   if (isLoadingProfile) {
@@ -367,9 +366,9 @@ export default function SmartQuizPage() {
                                 aria-label="Difficulty level"
                             >
                                 {difficultyLevels.map(level => (
-                                <ToggleGroupItem 
-                                    key={level.value} 
-                                    value={level.value} 
+                                <ToggleGroupItem
+                                    key={level.value}
+                                    value={level.value}
                                     aria-label={level.label}
                                     className="h-10 sm:h-11 text-xs sm:text-sm px-2"
                                 >
@@ -418,10 +417,10 @@ export default function SmartQuizPage() {
                 />
               </CardContent>
               <CardFooter className="p-4 sm:p-6">
-                <Button 
-                    type="submit" 
-                    disabled={form.formState.isSubmitting} 
-                    size="lg" 
+                <Button
+                    type="submit"
+                    disabled={form.formState.isSubmitting}
+                    size="lg"
                     className="w-full sm:w-auto text-base py-3 bg-gradient-to-r from-primary to-accent hover:from-primary/90 hover:to-accent/90 text-primary-foreground rounded-lg shadow-md hover:shadow-lg transition-all duration-300 ease-in-out transform hover:scale-105"
                 >
                     <Wand2 className="mr-2 h-5 w-5" />
@@ -443,168 +442,36 @@ export default function SmartQuizPage() {
 
       {quizData && (quizState === 'inProgress' || quizState === 'submitted') && (
         <div ref={quizAreaRef} className="space-y-4 sm:space-y-6">
-            
-            {quizState === 'inProgress' && currentQuestionData && (
-            <>
-                <Card className="shadow-md border-primary/40">
-                    <CardHeader className="p-3 sm:p-4 bg-primary/5 rounded-t-lg">
-                        <div className="flex justify-between items-center mb-1 sm:mb-2">
-                            <CardTitle className="text-md sm:text-lg font-semibold text-primary truncate" title={quizData.quizTitle}>
-                                {quizData.quizTitle}
-                            </CardTitle>
-                            <Badge variant="outline" className="text-xs sm:text-sm">Question {currentQuestionIndex + 1} of {quizData.questions.length}</Badge>
-                        </div>
-                        <Progress value={((currentQuestionIndex + 1) / quizData.questions.length) * 100} className="h-2 sm:h-2.5" />
-                    </CardHeader>
-                </Card>
-                 <AnimatePresence mode="wait">
-                    <motion.div
-                        key={currentQuestionIndex}
-                        ref={questionCardRef}
-                        initial={{ opacity: 0, x: 50 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        exit={{ opacity: 0, x: -50 }}
-                        transition={{ duration: 0.3, ease: "easeInOut" }}
-                        className="w-full"
-                    >
-                        <Card className="shadow-lg">
-                            <CardContent className="p-4 sm:p-6">
-                                <p className="font-semibold mb-3 sm:mb-4 text-base sm:text-lg text-foreground">
-                                    {currentQuestionData.questionText}
-                                </p>
-                                <RadioGroup
-                                    value={userAnswers[currentQuestionIndex]?.selectedOption?.toString()}
-                                    onValueChange={(value) => handleOptionSelect(currentQuestionIndex, parseInt(value))}
-                                    className="space-y-2 sm:space-y-3"
-                                >
-                                    {currentQuestionData.options.map((option, optIndex) => (
-                                    <div 
-                                        key={optIndex} 
-                                        className={cn(
-                                            "flex items-center space-x-2 p-2.5 sm:p-3 rounded-md border transition-all hover:bg-accent/50",
-                                            userAnswers[currentQuestionIndex]?.selectedOption === optIndex && "bg-primary/10 border-primary/70 ring-1 ring-primary/70"
-                                        )}
-                                    >
-                                        <RadioGroupItem
-                                            value={optIndex.toString()}
-                                            id={`q${currentQuestionIndex}-opt${optIndex}`}
-                                            className="h-4 w-4 sm:h-5 sm:w-5"
-                                        />
-                                        <Label
-                                        htmlFor={`q${currentQuestionIndex}-opt${optIndex}`}
-                                        className="font-normal text-sm sm:text-base leading-snug cursor-pointer flex-1"
-                                        >
-                                        {option}
-                                        </Label>
-                                    </div>
-                                    ))}
-                                </RadioGroup>
-                            </CardContent>
-                            <CardFooter className="flex flex-col sm:flex-row justify-between gap-2 sm:gap-3 p-4 sm:p-6 border-t">
-                                <Button 
-                                    onClick={handleSkipQuestion} 
-                                    variant="outline"
-                                    className="w-full sm:w-auto text-xs sm:text-sm"
-                                    size="sm"
-                                >
-                                    <SkipForward className="mr-1.5 h-4 w-4" /> Skip Question
-                                </Button>
-                                <Button 
-                                    onClick={handleNextQuestion} 
-                                    className="w-full sm:w-auto text-xs sm:text-sm"
-                                    size="sm"
-                                    disabled={userAnswers[currentQuestionIndex]?.selectedOption === undefined && userAnswers[currentQuestionIndex]?.skipped !== true}
-                                >
-                                    {isLastQuestionDuringQuiz ? 'Finish & See Results' : 'Next Question'} <ChevronsRight className="ml-1.5 h-4 w-4" />
-                                </Button>
-                            </CardFooter>
-                        </Card>
-                    </motion.div>
-                </AnimatePresence>
-            </>
+            {quizState === 'inProgress' && currentQuestionIndex < quizData.questions.length && (
+              <Suspense fallback={<QuizInProgressDisplayFallback />}>
+                <QuizInProgressDisplay
+                  quizData={quizData}
+                  currentQuestionIndex={currentQuestionIndex}
+                  userAnswers={userAnswers}
+                  handleOptionSelect={handleOptionSelect}
+                  handleSkipQuestion={handleSkipQuestion}
+                  handleNextQuestion={handleNextQuestion}
+                  isLastQuestionDuringQuiz={isLastQuestionDuringQuiz}
+                />
+              </Suspense>
             )}
 
-           {quizState === 'submitted' && currentQuestionData && (
-            <Card className="shadow-lg border-green-500/50 flex flex-col">
-                <CardHeader className="p-4 sm:p-6 bg-green-500/10 rounded-t-lg text-center shrink-0">
-                    <Award className="mx-auto h-10 w-10 sm:h-12 sm:w-12 text-green-600 mb-2" />
-                    <CardTitle className="text-xl sm:text-2xl font-bold text-green-700 dark:text-green-300">🎉 Quiz Results! 🎉</CardTitle>
-                    <CardDescription className="text-sm sm:text-md text-green-600 dark:text-green-400">
-                        You scored {score} out of {quizData.questions.length} ({((score / quizData.questions.length) * 100).toFixed(0)}%)
-                        <br/> Reviewing Question {currentQuestionIndex + 1} / {quizData.questions.length}
-                    </CardDescription>
-                </CardHeader>
-                <CardContent className="p-4 sm:p-6">
-                    <div className="py-3 sm:py-4">
-                        <p className="font-semibold mb-2 sm:mb-3 text-base sm:text-lg text-foreground">
-                        <span className="text-primary mr-1.5">{currentQuestionIndex + 1}.</span>{currentQuestionData.questionText}
-                        </p>
-                        <div className="space-y-1.5 sm:space-y-2 mb-2 sm:mb-3">
-                        {currentQuestionData.options.map((option, optIndex) => {
-                            const isCorrectOption = optIndex === currentQuestionData.correctAnswerIndex;
-                            const isUserSelectedOption = userAnswers[currentQuestionIndex]?.selectedOption === optIndex;
-                            const wasSkipped = userAnswers[currentQuestionIndex]?.skipped === true;
-
-                            return (
-                            <div key={optIndex} className={cn(
-                                "flex items-start space-x-2 p-2 sm:p-2.5 rounded-md border text-xs sm:text-sm",
-                                isCorrectOption && "bg-green-100 dark:bg-green-900/60 border-green-400 dark:border-green-600 font-medium text-green-800 dark:text-green-300",
-                                isUserSelectedOption && !isCorrectOption && !wasSkipped && "bg-red-100 dark:bg-red-900/60 border-red-400 dark:border-red-600 text-red-800 dark:text-red-300",
-                                !isUserSelectedOption && !isCorrectOption && "border-muted-foreground/30"
-                            )}>
-                                {isCorrectOption && <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400 shrink-0 mt-px" />}
-                                {isUserSelectedOption && !isCorrectOption && !wasSkipped && <XCircle className="h-4 w-4 text-red-600 dark:text-red-400 shrink-0 mt-px" />}
-                                {!isUserSelectedOption && !isCorrectOption && <div className="h-4 w-4 shrink-0"></div>}
-                                
-                                <span className="flex-1">{option}</span>
-                                {isUserSelectedOption && !wasSkipped && <Badge variant="outline" className="text-[10px] px-1.5 py-0.5 ml-auto self-center">{isCorrectOption ? "Your Answer (Correct)" : "Your Answer (Incorrect)"}</Badge>}
-                                {isCorrectOption && (userAnswers[currentQuestionIndex]?.selectedOption !== optIndex || wasSkipped) && <Badge variant="outline" className="text-[10px] px-1.5 py-0.5 ml-auto self-center">Correct Answer</Badge>}
-                            </div>
-                            );
-                        })}
-                        </div>
-                        {userAnswers[currentQuestionIndex]?.skipped === true && (
-                            <div className="mt-1 mb-2 p-2 rounded-md text-xs sm:text-sm border bg-amber-50 dark:bg-amber-900/50 border-amber-300 dark:border-amber-700 text-amber-800 dark:text-amber-300">
-                                <div className="flex items-center font-semibold">
-                                    <SkipForward className="mr-1.5 h-4 w-4" /> You skipped this question.
-                                </div>
-                            </div>
-                        )}
-                        <div className={cn(
-                            "mt-3 p-2 sm:p-3 rounded-md text-xs sm:text-sm border",
-                             "bg-muted/50 dark:bg-muted/30 border-border"
-                        )}>
-                            <div className="flex items-center font-semibold mb-1">
-                                <Lightbulb className="mr-1.5 h-4 w-4 sm:h-5 sm:w-5 text-yellow-500 dark:text-yellow-400 shrink-0" />
-                                Explanation:
-                            </div>
-                            <p className="opacity-90 text-current">{currentQuestionData.explanation}</p>
-                        </div>
-                    </div>
-                </CardContent>
-                <CardFooter className="flex flex-col sm:flex-row justify-between items-center gap-2 sm:gap-4 p-4 sm:p-6 border-t shrink-0">
-                    <div className="flex gap-2 w-full sm:w-auto">
-                        <Button onClick={handlePreviousQuestion} variant="outline" className="flex-1 sm:flex-auto text-sm sm:text-base" disabled={currentQuestionIndex === 0}>
-                           <ChevronLeft className="mr-1.5 h-4 w-4"/> Previous
-                        </Button>
-                        <Button onClick={handleNextQuestion} variant="outline" className="flex-1 sm:flex-auto text-sm sm:text-base" disabled={currentQuestionIndex === quizData.questions.length - 1}>
-                            Next <ChevronsRight className="ml-1.5 h-4 w-4"/>
-                        </Button>
-                    </div>
-                    <div className="flex gap-2 w-full sm:w-auto mt-2 sm:mt-0">
-                        <Button onClick={handleRetakeQuiz} variant="secondary" className="flex-1 sm:flex-auto text-sm sm:text-base">
-                            Retake This Quiz
-                        </Button>
-                        <Button onClick={handleCreateNewQuiz} className="flex-1 sm:flex-auto text-sm sm:text-base">
-                            <Sparkles className="mr-2 h-4 w-4"/> Create New Quiz
-                        </Button>
-                    </div>
-                </CardFooter>
-            </Card>
+           {quizState === 'submitted' && currentQuestionIndex < quizData.questions.length && (
+            <Suspense fallback={<QuizResultsDisplayFallback />}>
+              <QuizResultsDisplay
+                quizData={quizData}
+                score={score}
+                currentQuestionIndex={currentQuestionIndex}
+                userAnswers={userAnswers}
+                handlePreviousQuestion={handlePreviousQuestion}
+                handleNextQuestion={handleNextQuestion}
+                handleRetakeQuiz={handleRetakeQuiz}
+                handleCreateNewQuiz={handleCreateNewQuiz}
+              />
+            </Suspense>
             )}
         </div>
       )}
     </div>
   );
 }
-
