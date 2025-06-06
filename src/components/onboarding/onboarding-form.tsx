@@ -43,9 +43,7 @@ const step2BaseSchema = z.object({
 });
 
 const step3BaseSchema = z.object({
-  subjectDetails: z.array(subjectDetailSchema)
-    .optional()
-    // This refine might need to be on the full schema if it depends on targetExams
+  subjectDetails: z.array(subjectDetailSchema).optional(),
 });
 
 
@@ -71,18 +69,16 @@ const fullOnboardingSchema = mergedBaseSchema.refine(data => {
   message: "Please specify the exam name if 'Other' is selected.",
   path: ['otherExamName'],
 }).refine(data => {
-    // If targetExams are selected, subjectDetails must not be empty and must be valid
     if (data.targetExams && data.targetExams.length > 0) {
       if (!data.subjectDetails || data.subjectDetails.length === 0) {
-        return false; // No subject details provided when exams are selected
+        return false; 
       }
-      // Check if every subject detail provided is valid according to its own schema
       return data.subjectDetails.every(detail => subjectDetailSchema.safeParse(detail).success);
     }
-    return true; // If no target exams, subjectDetails are optional
+    return true; 
 }, {
     message: "Please complete all required fields for each subject relevant to your chosen exam(s).",
-    path: ['subjectDetails'], // This path might need adjustment depending on how RHF shows array errors
+    path: ['subjectDetails'], 
 });
 
 
@@ -91,9 +87,9 @@ export type OnboardingFormData = z.infer<typeof fullOnboardingSchema>;
 const getBaseSchemaForStep = (step: number) => {
   if (step === 1) return step1BaseSchema;
   if (step === 2) return step2BaseSchema;
-  if (step === 3) return step3BaseSchema;
+  if (step === 3) return step3BaseSchema; // subjectDetails validation is trickier with partial
   if (step === 4) return step4BaseSchema;
-  return fullOnboardingSchema; // For the review step, or fallback
+  return fullOnboardingSchema; 
 };
 
 const TOTAL_STEPS = 5;
@@ -125,21 +121,21 @@ function OnboardingStepSkeleton() {
 }
 
 interface OnboardingFormProps {
-  userId?: string; // Allow userId to be passed directly for flexibility
-  onComplete: () => void; // Renamed for clarity
+  userId?: string; 
+  onComplete: () => void; 
 }
 
 export default function OnboardingForm({ userId, onComplete }: OnboardingFormProps) {
   const [currentStep, setCurrentStep] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
-  const { currentUser } = useAuth(); // Get currentUser from context
+  const { currentUser } = useAuth(); 
 
-  const actualUserId = userId || currentUser?.uid; // Use passed userId or fallback to context
+  const actualUserId = userId || currentUser?.uid; 
 
   const methods = useForm<OnboardingFormData>({
-    resolver: zodResolver(fullOnboardingSchema), // Use the full schema for final validation
-    mode: 'onTouched', // Validate on blur/touch
+    resolver: zodResolver(fullOnboardingSchema), 
+    mode: 'onTouched', 
     defaultValues: {
       fullName: '',
       age: null,
@@ -151,7 +147,7 @@ export default function OnboardingForm({ userId, onComplete }: OnboardingFormPro
       targetExams: [],
       otherExamName: '',
       examAttemptYear: '',
-      subjectDetails: [], // Initialize as empty array
+      subjectDetails: [], 
       dailyStudyHours: '',
       preferredStudyTime: [],
       distractionStruggles: '',
@@ -163,25 +159,22 @@ export default function OnboardingForm({ userId, onComplete }: OnboardingFormPro
   const { handleSubmit, trigger, getValues, control, setValue, formState: { errors } } = methods;
   const watchedTargetExams = useWatch({ control, name: 'targetExams' });
 
-  // Effect to dynamically update subjectDetails based on selected exams
   useEffect(() => {
-    const primaryExam = watchedTargetExams?.[0]; // Consider the first selected exam for simplicity
+    const primaryExam = watchedTargetExams?.[0]; 
     const subjectsForExam = primaryExam ? (EXAM_SUBJECT_MAP[primaryExam] || EXAM_SUBJECT_MAP['other']) : [];
     const currentSubjectDetailsArray = getValues('subjectDetails') || [];
 
-    // Create new subject details based on the selected exam, preserving existing data if possible
     const newSubjectDetails = subjectsForExam.map(examSubject => {
       const existingDetail = currentSubjectDetailsArray.find(sd => sd.subjectId === examSubject.id);
       return existingDetail || {
         subjectId: examSubject.id,
         subjectName: examSubject.name,
-        preparationLevel: '', // Default values
+        preparationLevel: '', 
         targetScore: '',
         preferredLearningMethods: [],
       };
     });
 
-    // Only update if the structure of subject IDs has actually changed
     const currentSubjectIds = currentSubjectDetailsArray.map(sd => sd.subjectId).sort().join(',');
     const newSubjectIds = newSubjectDetails.map(sd => sd.subjectId).sort().join(',');
 
@@ -193,7 +186,6 @@ export default function OnboardingForm({ userId, onComplete }: OnboardingFormPro
 
   const handleNextStep = async () => {
     if (currentStep === TOTAL_STEPS) {
-        // On the review step, clicking "Next" (which is "Confirm & Finish") should trigger the full form submission
         await handleSubmit(onSubmit)();
         return;
     }
@@ -202,26 +194,21 @@ export default function OnboardingForm({ userId, onComplete }: OnboardingFormPro
     
     let isValid = await trigger(fieldsToValidate);
 
-    // Special handling for step 3 (Subject Details) if exams are selected
     if (currentStep === 3) {
         const subjectDetailsValue = getValues('subjectDetails');
         const targetExamsValue = getValues('targetExams');
         if (targetExamsValue && targetExamsValue.length > 0) {
-            // If exams are selected, subjectDetails array itself must not be empty and each item must be valid
             if (!subjectDetailsValue || subjectDetailsValue.length === 0) {
                 methods.setError("subjectDetails", { type: "manual", message: "Please provide details for the subjects related to your chosen exam(s)." });
                 isValid = false;
             } else {
-                // Validate each item in subjectDetails
                 const subjectDetailsValid = await trigger(['subjectDetails']);
                 isValid = isValid && subjectDetailsValid;
             }
         } else {
-            // If no exams are selected, subjectDetails are optional, so clear any errors
             methods.clearErrors("subjectDetails");
         }
     }
-
 
     if (isValid) {
       if (currentStep < TOTAL_STEPS) {
@@ -242,41 +229,36 @@ export default function OnboardingForm({ userId, onComplete }: OnboardingFormPro
   };
 
   const onSubmit: SubmitHandler<OnboardingFormData> = async (data) => {
-    if (!actualUserId) { // Use actualUserId here
+    if (!actualUserId) { 
         toast({ title: "Error", description: "User ID not found. Please try logging in again.", variant: "destructive" });
-        setIsLoading(false); // Ensure loading state is reset
+        setIsLoading(false); 
         return;
     }
     setIsLoading(true);
     const userProfileRef = doc(db, 'users', actualUserId, 'userProfile', 'profile');
 
-    // Prepare data for Firestore
     let finalData = { ...data };
-    // Clear otherExamName if 'other' is not selected
     if (!finalData.targetExams?.includes('other')) {
       finalData.otherExamName = '';
     }
-    // Ensure age is correctly formatted (null if empty/0/NaN, otherwise number)
     if (finalData.age === null || finalData.age === 0 || isNaN(Number(finalData.age))) {
-        finalData.age = null; // Firestore handles null well for optional fields
+        finalData.age = null; 
     } else {
         finalData.age = Number(finalData.age);
     }
-    // Ensure subjectDetails is an array, even if empty (if no exams were selected)
     finalData.subjectDetails = finalData.subjectDetails || [];
 
     const profilePayload: Partial<UserProfileData> = {
       ...finalData,
-      onboardingCompleted: true, // Mark onboarding as completed
+      onboardingCompleted: true, 
     };
 
     try {
       await setDoc(userProfileRef, profilePayload, { merge: true });
-      // Update Firebase Auth display name if it has changed and a user is logged in via Firebase Auth
       if (auth.currentUser && data.fullName && data.fullName !== auth.currentUser.displayName) {
         await updateProfile(auth.currentUser, { displayName: data.fullName });
       }
-      onComplete(); // Call the success callback
+      onComplete(); 
       toast({
         title: 'Profile Setup Complete! 🎉',
         description: "Your preferences have been saved. You're all set to explore StudyTrack!",
@@ -321,12 +303,8 @@ export default function OnboardingForm({ userId, onComplete }: OnboardingFormPro
       <CardContent className="p-4 sm:p-6">
         <Progress value={progressValue} className="mb-6 sm:mb-8 h-2.5 sm:h-3" />
         <FormProvider {...methods}>
-          {/* 
-            The onSubmit on the <form> tag is for the final submission (step 5).
-            Step navigation is handled by handleNextStep/handlePrevStep.
-          */}
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-5 sm:space-y-6">
-            <div> {/* This div is important for Framer Motion or direct rendering */}
+          <form onSubmit={handleSubmit(onSubmit)}>
+            <div className="space-y-5 sm:space-y-6"> {/* Moved space-y here */}
               <Suspense fallback={<OnboardingStepSkeleton />}>
                 {renderStepContent()}
               </Suspense>
