@@ -128,7 +128,7 @@ interface OnboardingFormProps {
   onComplete: () => void; 
 }
 
-export default function OnboardingForm({ userId, onComplete }: OnboardingFormProps) {
+function OnboardingFormComponent({ userId, onComplete }: OnboardingFormProps) {
   const [currentStep, setCurrentStep] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
@@ -335,3 +335,7 @@ export default function OnboardingForm({ userId, onComplete }: OnboardingFormPro
     </Card>
   );
 }
+
+export default React.memo(OnboardingFormComponent);
+
+    
