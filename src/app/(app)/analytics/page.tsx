@@ -1,12 +1,12 @@
 
 'use client';
 
-import React, { Suspense } from 'react'; // Added Suspense
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import React, { Suspense } from 'react'; 
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { BarChart3, Info, Loader2 } from "lucide-react"; 
-import ChartCardSkeleton from '@/components/analytics/ChartCardSkeleton'; // Import skeleton
+import ChartCardSkeleton from '@/components/analytics/ChartCardSkeleton';
 
 // Lazy load chart components
 const WeeklyStudyHoursChart = React.lazy(() => import('@/components/analytics/WeeklyStudyHoursChart'));
@@ -67,3 +67,4 @@ export default function AnalyticsPage() {
     </div>
   );
 }
+
