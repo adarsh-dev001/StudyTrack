@@ -40,7 +40,6 @@ function DayViewFallback() {
     <div className="flex-grow overflow-hidden p-4 border rounded-lg shadow flex flex-col items-center justify-center min-h-[400px] bg-card">
       <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
       <p className="text-muted-foreground">Loading Day View...</p>
-      {/* Simplified skeleton for brevity */}
     </div>
   );
 }
@@ -50,7 +49,6 @@ function MonthViewFallback() {
     <div className="flex-grow overflow-hidden p-4 border rounded-lg shadow flex flex-col items-center justify-center min-h-[400px] bg-card">
       <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
       <p className="text-muted-foreground">Loading Month View...</p>
-      {/* Simplified skeleton for brevity */}
     </div>
   );
 }
@@ -83,7 +81,6 @@ export default function StudyPlannerPage() {
   const [userProfile, setUserProfile] = useState<UserProfileData | null>(null);
   const [isLoadingProfile, setIsLoadingProfile] = useState(true);
   const [showOnboardingModal, setShowOnboardingModal] = useState(false);
-  const [onboardingCompletedForPage, setOnboardingCompletedForPage] = useState(false);
 
   useEffect(() => {
     let unsubscribeProfile: Unsubscribe | undefined;
@@ -94,7 +91,6 @@ export default function StudyPlannerPage() {
         if (profileSnap.exists()) {
           const userProfileData = profileSnap.data() as UserProfileData;
           setUserProfile(userProfileData);
-          setOnboardingCompletedForPage(userProfileData.onboardingCompleted || false);
           if (!userProfileData.onboardingCompleted) {
             setShowOnboardingModal(true);
           } else {
@@ -102,19 +98,15 @@ export default function StudyPlannerPage() {
           }
         } else {
           setUserProfile(null);
-          setOnboardingCompletedForPage(false);
-          setShowOnboardingModal(true); // Profile doesn't exist, trigger onboarding
+          setShowOnboardingModal(true); 
         }
         setIsLoadingProfile(false);
       }, (err) => {
         console.error("Error fetching profile for Study Planner:", err);
         setIsLoadingProfile(false);
-        setOnboardingCompletedForPage(false);
-        // Potentially show an error toast or allow access with default settings
       });
     } else {
       setIsLoadingProfile(false);
-      setOnboardingCompletedForPage(false); // Assume not completed if no user
     }
     return () => {
       if (unsubscribeProfile) unsubscribeProfile();
@@ -123,9 +115,6 @@ export default function StudyPlannerPage() {
 
   const handleOnboardingSuccess = () => {
     setShowOnboardingModal(false);
-    setOnboardingCompletedForPage(true); // Manually update page state, snapshot will catch up
-    // User profile data will be re-fetched by onSnapshot eventually,
-    // or you can explicitly re-fetch/update the local 'userProfile' state here if needed.
   };
 
   const handleDateChange = (date: Date | undefined) => {
@@ -147,9 +136,9 @@ export default function StudyPlannerPage() {
     return (
       <Dialog open={showOnboardingModal} onOpenChange={(isOpen) => {
         if (!currentUser) return;
-        if (!isOpen && !onboardingCompletedForPage) {
-           // User tried to close before completing. We might allow this or show a toast.
-           // For now, we allow closing, the planner will appear in a disabled/prompt state.
+        if (!isOpen && userProfile && !userProfile.onboardingCompleted) {
+           setShowOnboardingModal(true); 
+           return;
         }
         setShowOnboardingModal(isOpen);
       }}>
@@ -157,13 +146,13 @@ export default function StudyPlannerPage() {
           <DialogHeader className="p-4 sm:p-6 border-b text-center shrink-0">
             <DialogTitle className="text-xl sm:text-2xl">Complete Your Profile</DialogTitle>
             <DialogDescription className="text-xs sm:text-sm">
-              Please set up your academic profile to personalize your Study Planner and AI features.
+              Please provide your details to personalize your StudyTrack experience and unlock AI features.
             </DialogDescription>
           </DialogHeader>
           <ScrollArea className="flex-grow min-h-0">
             <div className="p-4 sm:p-6">
               <Suspense fallback={<OnboardingFormFallback />}>
-                <OnboardingForm userId={currentUser.uid} onOnboardingSuccess={handleOnboardingSuccess} />
+                <OnboardingForm userId={currentUser.uid} onComplete={handleOnboardingSuccess} />
               </Suspense>
             </div>
           </ScrollArea>
@@ -184,7 +173,7 @@ export default function StudyPlannerPage() {
         allSubjectsValue={ALL_SUBJECTS_FILTER_VALUE}
       />
       <div className="flex-grow overflow-hidden">
-        {(!currentUser || !onboardingCompletedForPage) && !showOnboardingModal && (
+        {(!currentUser || (userProfile && !userProfile.onboardingCompleted)) && !showOnboardingModal && (
              <div className="flex flex-col items-center justify-center min-h-[calc(100vh-300px)] text-center p-6">
                 <p className="text-lg text-muted-foreground">
                     {currentUser ? "Please complete your profile setup to use the Study Planner effectively." : "Please log in to use the Study Planner."}
@@ -192,7 +181,7 @@ export default function StudyPlannerPage() {
                 {!currentUser && <Button onClick={() => { if (typeof window !== 'undefined') window.location.href = '/login'; }} className="mt-4">Log In</Button>}
              </div>
         )}
-        {currentUser && onboardingCompletedForPage && currentView === 'week' && (
+        {currentUser && userProfile?.onboardingCompleted && currentView === 'week' && (
           <Suspense fallback={<PlannerViewFallback />}>
             <PlannerView
               selectedDate={selectedDate}
@@ -202,7 +191,7 @@ export default function StudyPlannerPage() {
             />
           </Suspense>
         )}
-        {currentUser && onboardingCompletedForPage && currentView === 'day' && (
+        {currentUser && userProfile?.onboardingCompleted && currentView === 'day' && (
            <Suspense fallback={<DayViewFallback />}>
             <DayView
               selectedDate={selectedDate}
@@ -210,7 +199,7 @@ export default function StudyPlannerPage() {
             />
           </Suspense>
         )}
-        {currentUser && onboardingCompletedForPage && currentView === 'month' && (
+        {currentUser && userProfile?.onboardingCompleted && currentView === 'month' && (
           <Suspense fallback={<MonthViewFallback />}>
             <MonthView
                 selectedDate={selectedDate}

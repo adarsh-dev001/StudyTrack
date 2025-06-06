@@ -65,8 +65,8 @@ export default function ProductivityAnalyzerPage() {
   const [isLoading, setIsLoading] = useState(false);
   
   const [isLoadingProfile, setIsLoadingProfile] = useState(true);
+  const [userProfile, setUserProfile] = useState<UserProfileData | null>(null); // Added to store full profile
   const [showOnboardingModal, setShowOnboardingModal] = useState(false);
-  const [onboardingCompleted, setOnboardingCompletedState] = useState(false); // Local state for onboarding
   
   const [unlockState, setUnlockState] = useState<UnlockStatus | null>(null);
   const [isLoadingUnlockStatus, setIsLoadingUnlockStatus] = useState(true); 
@@ -81,14 +81,14 @@ export default function ProductivityAnalyzerPage() {
       unsubscribeProfile = onSnapshot(profileDocRef, (profileSnap) => {
         if (profileSnap.exists()) {
           const data = profileSnap.data() as UserProfileData;
-          setOnboardingCompletedState(data.onboardingCompleted || false);
+          setUserProfile(data); // Store full profile
           if (!data.onboardingCompleted) {
             setShowOnboardingModal(true);
           } else {
             setShowOnboardingModal(false);
           }
         } else {
-          setOnboardingCompletedState(false);
+          setUserProfile(null);
           setShowOnboardingModal(true); 
         }
         setIsLoadingProfile(false);
@@ -99,7 +99,6 @@ export default function ProductivityAnalyzerPage() {
       });
     } else {
       setIsLoadingProfile(false);
-      setOnboardingCompletedState(false);
     }
     return () => {
       if (unsubscribeProfile) unsubscribeProfile();
@@ -108,12 +107,11 @@ export default function ProductivityAnalyzerPage() {
 
   const handleOnboardingSuccess = () => {
     setShowOnboardingModal(false);
-    setOnboardingCompletedState(true); // Update local state
   };
 
 
   useEffect(() => {
-    if (!onboardingCompleted || !currentUser?.uid) {
+    if (!userProfile?.onboardingCompleted || !currentUser?.uid) { // Check userProfile state
       setIsLoadingUnlockStatus(false); 
       return;
     }
@@ -131,7 +129,7 @@ export default function ProductivityAnalyzerPage() {
       }
       setIsLoadingUnlockStatus(false);
     });
-  }, [currentUser?.uid, toast, hasShownUnlockToast, unlockState, onboardingCompleted]); 
+  }, [currentUser?.uid, toast, hasShownUnlockToast, unlockState, userProfile?.onboardingCompleted]); 
 
   const form = useForm<ProductivityAnalyzerFormData>({
     resolver: zodResolver(productivityAnalyzerFormSchema),
@@ -199,22 +197,23 @@ export default function ProductivityAnalyzerPage() {
   if (showOnboardingModal && currentUser) {
      return (
       <Dialog open={showOnboardingModal} onOpenChange={(isOpen) => {
-          if (!isOpen) { // If user tries to close modal without completing, consider what to do.
-            // For now, we allow closing, but they won't access the feature.
-            setShowOnboardingModal(false); 
+          if (!currentUser) return;
+          if (!isOpen && userProfile && !userProfile.onboardingCompleted) {
+             setShowOnboardingModal(true); return;
           }
-      }}>
+          setShowOnboardingModal(isOpen);
+        }}>
         <DialogContent className="max-w-2xl w-[95vw] max-h-[90vh] flex flex-col p-0">
           <DialogHeader className="p-4 sm:p-6 border-b text-center shrink-0">
-            <DialogTitle className="text-xl sm:text-2xl">Complete Profile for Productivity AI</DialogTitle>
+            <DialogTitle className="text-xl sm:text-2xl">Complete Your Profile</DialogTitle>
             <DialogDescription className="text-xs sm:text-sm">
-              Please complete your profile to unlock and use the Productivity Analysis AI.
+               Please provide your details to personalize your StudyTrack experience and unlock AI features.
             </DialogDescription>
           </DialogHeader>
            <ScrollArea className="flex-grow min-h-0">
             <div className="p-4 sm:p-6">
              <Suspense fallback={<OnboardingFormFallback />}>
-                <OnboardingForm userId={currentUser.uid} onOnboardingSuccess={handleOnboardingSuccess} />
+                <OnboardingForm userId={currentUser.uid} onComplete={handleOnboardingSuccess} />
              </Suspense>
             </div>
           </ScrollArea>
@@ -223,11 +222,10 @@ export default function ProductivityAnalyzerPage() {
     );
   }
   
-  if (!onboardingCompleted && !isLoadingProfile) { // Gate if onboarding is not complete AFTER profile check
+  if (!userProfile?.onboardingCompleted && !isLoadingProfile && currentUser) { 
      return (
         <div className="flex flex-col items-center justify-center min-h-[calc(100vh-200px)] text-center p-6">
-            <p className="text-muted-foreground">Please complete your profile first by clicking on another AI tool.</p>
-            {/* This message is a fallback if somehow the modal didn't show or was dismissed. */}
+            <p className="text-muted-foreground">Please complete your profile to access the Productivity Analyzer.</p>
         </div>
      );
   }

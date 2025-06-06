@@ -91,7 +91,7 @@ export default function SmartQuizPage() {
   const [showScrollToTop, setShowScrollToTop] = useState(false);
 
   const [isLoadingProfile, setIsLoadingProfile] = useState(true);
-  // No need for userProfile state if only onboardingCompleted is used from it
+  const [userProfile, setUserProfile] = useState<UserProfileData | null>(null);
   const [showOnboardingModal, setShowOnboardingModal] = useState(false);
 
   const form = useForm<QuizFormData>({
@@ -112,6 +112,7 @@ export default function SmartQuizPage() {
       unsubscribeProfile = onSnapshot(profileDocRef, (profileSnap) => {
         if (profileSnap.exists()) {
           const data = profileSnap.data() as UserProfileData;
+          setUserProfile(data);
           if (!data.onboardingCompleted) {
             setShowOnboardingModal(true);
           } else {
@@ -125,6 +126,7 @@ export default function SmartQuizPage() {
             }
           }
         } else {
+          setUserProfile(null);
           setShowOnboardingModal(true); 
         }
         setIsLoadingProfile(false);
@@ -302,18 +304,24 @@ export default function SmartQuizPage() {
 
   if (showOnboardingModal && currentUser) {
     return (
-       <Dialog open={showOnboardingModal} onOpenChange={setShowOnboardingModal}>
+       <Dialog open={showOnboardingModal} onOpenChange={(isOpen) => {
+          if (!currentUser) return;
+          if (!isOpen && userProfile && !userProfile.onboardingCompleted) {
+             setShowOnboardingModal(true); return;
+          }
+          setShowOnboardingModal(isOpen);
+        }}>
         <DialogContent className="max-w-2xl w-[95vw] max-h-[90vh] flex flex-col p-0">
           <DialogHeader className="p-4 sm:p-6 border-b text-center shrink-0">
-            <DialogTitle className="text-xl sm:text-2xl">Complete Profile for SmartQuiz AI</DialogTitle>
+            <DialogTitle className="text-xl sm:text-2xl">Complete Your Profile</DialogTitle>
             <DialogDescription className="text-xs sm:text-sm">
-              To generate personalized quizzes, please complete your profile.
+              Please provide your details to personalize your StudyTrack experience and unlock AI features.
             </DialogDescription>
           </DialogHeader>
            <ScrollArea className="flex-grow min-h-0">
             <div className="p-4 sm:p-6">
              <Suspense fallback={<OnboardingFormFallback />}>
-                <OnboardingForm userId={currentUser.uid} onOnboardingSuccess={handleOnboardingSuccess} />
+                <OnboardingForm userId={currentUser.uid} onComplete={handleOnboardingSuccess} />
              </Suspense>
             </div>
           </ScrollArea>

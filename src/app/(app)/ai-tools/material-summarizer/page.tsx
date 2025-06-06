@@ -111,7 +111,6 @@ export default function MaterialSummarizerPage() {
 
   const handleOnboardingSuccess = () => {
     setShowOnboardingModal(false);
-    // Profile will update via onSnapshot, no explicit re-fetch needed here for `userFullProfile`
   };
 
   const form = useForm<SummarizerFormData>({
@@ -208,18 +207,24 @@ export default function MaterialSummarizerPage() {
 
   if (showOnboardingModal && currentUser) {
     return (
-      <Dialog open={showOnboardingModal} onOpenChange={setShowOnboardingModal}>
+      <Dialog open={showOnboardingModal} onOpenChange={(isOpen) => {
+          if (!currentUser) return;
+          if (!isOpen && userFullProfile && !userFullProfile.onboardingCompleted) {
+             setShowOnboardingModal(true); return;
+          }
+          setShowOnboardingModal(isOpen);
+        }}>
         <DialogContent className="max-w-2xl w-[95vw] max-h-[90vh] flex flex-col p-0">
           <DialogHeader className="p-4 sm:p-6 border-b text-center shrink-0">
-            <DialogTitle className="text-xl sm:text-2xl">Complete Profile for AI Study Assistant</DialogTitle>
+            <DialogTitle className="text-xl sm:text-2xl">Complete Your Profile</DialogTitle>
             <DialogDescription className="text-xs sm:text-sm">
-              Please complete your profile to get personalized summaries and quizzes.
+              Please provide your details to personalize your StudyTrack experience and unlock AI features.
             </DialogDescription>
           </DialogHeader>
            <ScrollArea className="flex-grow min-h-0">
             <div className="p-4 sm:p-6">
              <Suspense fallback={<OnboardingFormFallback />}>
-                <OnboardingForm userId={currentUser.uid} onOnboardingSuccess={handleOnboardingSuccess} />
+                <OnboardingForm userId={currentUser.uid} onComplete={handleOnboardingSuccess} />
              </Suspense>
             </div>
           </ScrollArea>

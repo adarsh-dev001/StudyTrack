@@ -105,7 +105,7 @@ export default function SyllabusSuggesterPage() {
   const syllabusResultRef = useRef<HTMLDivElement>(null); 
   
   const [isLoadingProfile, setIsLoadingProfile] = useState(true);
-  // No need for userProfile state if only onboardingCompleted is used
+  const [userProfile, setUserProfile] = useState<UserProfileData | null>(null);
   const [showOnboardingModal, setShowOnboardingModal] = useState(false);
 
   const form = useForm<SyllabusFormData>({
@@ -131,11 +131,11 @@ export default function SyllabusSuggesterPage() {
         unsubscribeProfile = onSnapshot(profileDocRef, (profileSnap) => {
             if (profileSnap.exists()) {
                 const data = profileSnap.data() as UserProfileData;
+                setUserProfile(data);
                 if (!data.onboardingCompleted) {
                   setShowOnboardingModal(true);
                 } else {
                   setShowOnboardingModal(false);
-                  // Pre-fill form if profile is complete and form hasn't been touched
                   if (!form.formState.isDirty) {
                      form.reset({
                         examType: data.targetExams && data.targetExams.length > 0 
@@ -153,6 +153,7 @@ export default function SyllabusSuggesterPage() {
                   }
                 }
             } else {
+              setUserProfile(null);
               setShowOnboardingModal(true);
             }
             setIsLoadingProfile(false);
@@ -171,7 +172,6 @@ export default function SyllabusSuggesterPage() {
 
   const handleOnboardingSuccess = () => {
     setShowOnboardingModal(false);
-    // Profile will update via onSnapshot, triggering pre-fill logic if form isn't dirty
   };
 
 
@@ -188,7 +188,7 @@ export default function SyllabusSuggesterPage() {
 
     const inputForAI: SuggestStudyTopicsInput = {
       ...data,
-      userName: currentUser?.displayName || undefined,
+      userName: userProfile?.fullName || currentUser?.displayName || undefined,
       targetDate: format(data.targetDate, 'yyyy-MM-dd'),
     };
 
@@ -225,18 +225,24 @@ export default function SyllabusSuggesterPage() {
 
   if (showOnboardingModal && currentUser) {
     return (
-      <Dialog open={showOnboardingModal} onOpenChange={setShowOnboardingModal}>
+      <Dialog open={showOnboardingModal} onOpenChange={(isOpen) => {
+          if (!currentUser) return;
+          if (!isOpen && userProfile && !userProfile.onboardingCompleted) {
+             setShowOnboardingModal(true); return;
+          }
+          setShowOnboardingModal(isOpen);
+        }}>
         <DialogContent className="max-w-2xl w-[95vw] max-h-[90vh] flex flex-col p-0">
           <DialogHeader className="p-4 sm:p-6 border-b text-center shrink-0">
-            <DialogTitle className="text-xl sm:text-2xl">Complete Profile for AI Syllabus Suggester</DialogTitle>
+            <DialogTitle className="text-xl sm:text-2xl">Complete Your Profile</DialogTitle>
             <DialogDescription className="text-xs sm:text-sm">
-              To get personalized syllabus suggestions, please complete your profile.
+              Please provide your details to personalize your StudyTrack experience and unlock AI features.
             </DialogDescription>
           </DialogHeader>
            <ScrollArea className="flex-grow min-h-0">
             <div className="p-4 sm:p-6">
              <Suspense fallback={<OnboardingFormFallback />}>
-                <OnboardingForm userId={currentUser.uid} onOnboardingSuccess={handleOnboardingSuccess} />
+                <OnboardingForm userId={currentUser.uid} onComplete={handleOnboardingSuccess} />
              </Suspense>
             </div>
           </ScrollArea>
@@ -289,7 +295,7 @@ export default function SyllabusSuggesterPage() {
                             placeholder="Specify other exam type"
                             onChange={(e) => field.onChange(e.target.value)}
                             className="mt-2 text-sm sm:text-base"
-                            value={form.watch('examType') === 'Other' ? field.value : ''} 
+                            value={field.value === 'Other' || predefinedExams.find(ex => ex.value === field.value)?.label === 'Other (Specify)' ? (field.value === 'Other' ? '' : field.value) : (predefinedExams.find(ex=>ex.value === field.value) ? field.value : '')} 
                         />
                     )}
                     <FormDescription className="text-xs sm:text-sm">

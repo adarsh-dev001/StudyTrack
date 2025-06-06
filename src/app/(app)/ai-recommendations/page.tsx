@@ -51,10 +51,13 @@ export default function AiRecommendationsPage() {
         setError("Could not load your profile.");
         setIsLoadingProfile(false);
       });
+    } else {
+        setIsLoadingProfile(false); // Not logged in, no profile to load
+        setShowOnboardingModal(false); // Don't show modal if not logged in
     }
 
     return () => unsubscribeProfile?.();
-  }, [currentUser]);
+  }, [currentUser?.uid]); // Added currentUser.uid to dependency array
 
   async function fetchRecommendations(userProfile: UserProfileData) {
     setIsLoadingRecommendations(true);
@@ -91,21 +94,40 @@ export default function AiRecommendationsPage() {
   return (
     <>
       {/* Your AI Page content here */}
+       {isLoadingProfile && <p>Loading profile...</p>}
+       {!isLoadingProfile && !profile && currentUser && <p>Please complete onboarding to view recommendations.</p>}
+       {error && <p className="text-destructive">{error}</p>}
+       {recommendations && (
+        <div>
+          {/* Render your recommendations here */}
+          <h2>Your Personalized Recommendations:</h2>
+          <pre>{JSON.stringify(recommendations, null, 2)}</pre>
+        </div>
+       )}
 
-      <Dialog open={showOnboardingModal}>
-        <DialogContent className="max-h-[90vh] p-0 sm:p-0 overflow-hidden">
-          <DialogHeader className="p-6 pb-2">
-            <DialogTitle>Complete Your Onboarding</DialogTitle>
-            <DialogDescription>
-              We need your details to personalize your AI experience.
+      <Dialog open={showOnboardingModal} onOpenChange={(isOpen) => {
+          if (!currentUser) return; // Prevent state changes if no user
+          if (!isOpen && profile && !profile.onboardingCompleted) {
+             // If user tries to close modal before completing onboarding, keep it open or show a message
+             // For now, let's keep it open:
+             setShowOnboardingModal(true);
+             return;
+          }
+          setShowOnboardingModal(isOpen);
+        }}>
+        <DialogContent className="max-w-2xl w-[95vw] max-h-[90vh] flex flex-col p-0">
+          <DialogHeader className="p-4 sm:p-6 border-b text-center shrink-0">
+            <DialogTitle className="text-xl sm:text-2xl">Complete Your Profile</DialogTitle>
+            <DialogDescription className="text-xs sm:text-sm">
+              Please provide your details to personalize your StudyTrack experience and unlock AI features.
             </DialogDescription>
           </DialogHeader>
-
-          {/* Scrollable area */}
-          <ScrollArea className="h-[70vh] px-6 pb-6">
-            <Suspense fallback={<OnboardingFormFallback />}>
-              <OnboardingForm onComplete={() => setShowOnboardingModal(false)} />
-            </Suspense>
+          <ScrollArea className="flex-grow min-h-0">
+            <div className="p-4 sm:p-6">
+              <Suspense fallback={<OnboardingFormFallback />}>
+                <OnboardingForm onComplete={() => setShowOnboardingModal(false)} userId={currentUser?.uid} />
+              </Suspense>
+            </div>
           </ScrollArea>
         </DialogContent>
       </Dialog>

@@ -85,7 +85,7 @@ export default function DoubtSolverPage() {
               form.setValue('subjectContext', data.subjectDetails[0].subjectName);
             } else if (data.targetExams && data.targetExams.length > 0) {
               const primaryExam = data.targetExams[0] === 'other' && data.otherExamName ? data.otherExamName : data.targetExams[0];
-              form.setValue('subjectContext', primaryExam);
+              // form.setValue('subjectContext', primaryExam); // Removed, as it might not be a subject
             }
           }
         } else {
@@ -108,7 +108,6 @@ export default function DoubtSolverPage() {
 
   const handleOnboardingSuccess = () => {
     setShowOnboardingModal(false);
-    // Profile state will update via onSnapshot, and then fields might be pre-filled
   };
 
 
@@ -158,18 +157,24 @@ export default function DoubtSolverPage() {
 
   if (showOnboardingModal && currentUser) {
     return (
-      <Dialog open={showOnboardingModal} onOpenChange={setShowOnboardingModal}>
+      <Dialog open={showOnboardingModal} onOpenChange={(isOpen) => {
+          if (!currentUser) return;
+          if (!isOpen && userProfile && !userProfile.onboardingCompleted) {
+             setShowOnboardingModal(true); return;
+          }
+          setShowOnboardingModal(isOpen);
+        }}>
         <DialogContent className="max-w-2xl w-[95vw] max-h-[90vh] flex flex-col p-0">
           <DialogHeader className="p-4 sm:p-6 border-b text-center shrink-0">
-            <DialogTitle className="text-xl sm:text-2xl">Complete Profile for AI Doubt Solver</DialogTitle>
+            <DialogTitle className="text-xl sm:text-2xl">Complete Your Profile</DialogTitle>
             <DialogDescription className="text-xs sm:text-sm">
-              Please complete your profile to get personalized help from the AI Doubt Solver.
+              Please provide your details to personalize your StudyTrack experience and unlock AI features.
             </DialogDescription>
           </DialogHeader>
           <ScrollArea className="flex-grow min-h-0">
             <div className="p-4 sm:p-6">
              <Suspense fallback={<OnboardingFormFallback />}>
-                <OnboardingForm userId={currentUser.uid} onOnboardingSuccess={handleOnboardingSuccess} />
+                <OnboardingForm userId={currentUser.uid} onComplete={handleOnboardingSuccess} />
              </Suspense>
             </div>
           </ScrollArea>
