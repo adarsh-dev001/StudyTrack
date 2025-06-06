@@ -61,6 +61,7 @@ export default function RootLayout({
         <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
         <link rel="apple-touch-icon" sizes="144x144" href="/icons/icon-144x144.png" />
         <link rel="apple-touch-icon" sizes="180x180" href="/icons/icon-180x180.png" />
+        <link rel="preconnect" href="https://placehold.co" />
         
         {/* Removed direct Google Font links, next/font handles this */}
       </head>
@@ -79,4 +80,3 @@ export default function RootLayout({
     </html>
   );
 }
-

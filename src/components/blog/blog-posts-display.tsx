@@ -56,16 +56,18 @@ export default function BlogPostsDisplayClient({ posts, categories }: BlogPostsD
         </p>
       ) : (
         <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
-          {filteredPosts.map((post) => (
+          {filteredPosts.map((post, index) => (
             <Card key={post.slug} className="flex flex-col overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-300">
               <Link href={`/blog/${post.slug}`} className="block aspect-[16/9] relative w-full overflow-hidden">
                 <Image 
                   src={post.featuredImage || "https://placehold.co/600x338.png"}
                   alt={post.title}
-                  layout="fill"
-                  objectFit="cover"
+                  fill
+                  style={{ objectFit: 'cover' }}
+                  sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
                   className="hover:scale-105 transition-transform duration-300"
                   data-ai-hint="article highlight"
+                  priority={index < 3} // Prioritize the first 3 images
                 />
               </Link>
               <CardHeader>
