@@ -87,7 +87,7 @@ export default function SmartQuizPage() {
   const { toast } = useToast();
   const quizAreaRef = useRef<HTMLDivElement>(null);
   const questionCardRef = useRef<HTMLDivElement>(null);
-  const resultsScrollRef = useRef<HTMLDivElement>(null);
+  const resultsScrollRef = useRef<HTMLDivElement>(null); // Ref for ScrollArea
   const [showScrollToTop, setShowScrollToTop] = useState(false);
 
   const [isLoadingProfile, setIsLoadingProfile] = useState(true);
@@ -169,7 +169,7 @@ export default function SmartQuizPage() {
         scrollAreaElement.removeEventListener('scroll', handleScroll);
       }
     };
-  }, [quizState]);
+  }, [quizState]); // Re-check when quizState changes, especially to 'submitted'
 
   const scrollToResultsTop = () => {
     resultsScrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
@@ -545,9 +545,9 @@ export default function SmartQuizPage() {
                         You scored {score} out of {quizData.questions.length} ({((score / quizData.questions.length) * 100).toFixed(0)}%)
                     </CardDescription>
                 </CardHeader>
-                <CardContent className="p-0 relative">
-                 <ScrollArea ref={resultsScrollRef} className="max-h-[calc(100vh-400px)] sm:max-h-[calc(100vh-480px)]">
-                    <div className="divide-y divide-border">
+                <CardContent className="p-0 relative"> {/* Set padding to 0 here */}
+                 <ScrollArea ref={resultsScrollRef} className="max-h-[calc(100vh-400px)] sm:max-h-[calc(100vh-480px)]"> {/* Apply padding to ScrollArea's content div */}
+                    <div className="divide-y divide-border p-4 sm:p-6"> {/* This div now has the padding */}
                     {quizData.questions.map((q, qIndex) => {
                         const userAnswer = userAnswers[qIndex];
                         const isCorrect = !userAnswer?.skipped && userAnswer?.selectedOption === q.correctAnswerIndex;
@@ -555,7 +555,7 @@ export default function SmartQuizPage() {
                         const userSelectedThisOption = (optIndex: number) => userAnswer?.selectedOption === optIndex;
 
                         return (
-                        <div key={qIndex} className="p-4 sm:p-6 hover:bg-muted/20 transition-colors">
+                        <div key={qIndex} className="py-3 sm:py-4 hover:bg-muted/20 transition-colors first:pt-0 last:pb-0">
                             <p className="font-semibold mb-2 sm:mb-3 text-sm sm:text-base text-foreground">
                             <span className="text-primary mr-1.5">{qIndex + 1}.</span>{q.questionText}
                             </p>
