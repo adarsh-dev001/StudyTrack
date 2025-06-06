@@ -4,11 +4,11 @@ import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { 
   BrainCircuit, 
-  Sparkles as SparklesIconComponent, // Aliased import
+  Sparkles as SparklesIconComponent,
   ListTree as ListTreeIconComponent,
-  MessageSquareQuestion as MessageSquareQuestionIconComponent, // Aliased import
+  MessageSquareQuestion as MessageSquareQuestionIconComponent, // Ensured correct import and alias
   HelpCircle as HelpCircleIconComponent,
-  Lock as LockIconComponent, // Aliased import
+  Lock as LockIconComponent,
   ArrowRight 
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
@@ -19,10 +19,11 @@ import { cn } from "@/lib/utils";
 const iconMap: { [key: string]: LucideIcon } = {
   ListTree: ListTreeIconComponent,
   SparklesIcon: SparklesIconComponent, 
-  MessageSquareQuestion: MessageSquareQuestionIconComponent, // Corrected key to match usage
+  MessageSquareQuestion: MessageSquareQuestionIconComponent, // Key is "MessageSquareQuestion"
   LockIcon: LockIconComponent, 
   HelpCircle: HelpCircleIconComponent,
-  ArrowRight, // ArrowRight can stay as is if not conflicting
+  ArrowRight,
+  BrainCircuit, // No alias needed if used directly
 };
 
 interface AiTool {
@@ -103,7 +104,7 @@ export default function AiToolsPage() {
         {aiTools.map((tool) => {
           const IconComponent = iconMap[tool.iconName];
           if (!IconComponent) {
-            console.error(`[Server] Icon not found in map: ${tool.iconName}`); // Log on server, useful for debugging
+            console.error(`[Server] Icon not found in map: ${tool.iconName}`);
             return <div key={tool.id}>Error: Icon {tool.iconName} not found (Client Fallback)</div>; 
           }
           return (
