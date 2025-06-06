@@ -4,11 +4,11 @@ import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { 
   BrainCircuit, 
-  Sparkles, 
-  ListTree, 
-  MessageSquareQuestion, 
-  HelpCircle, 
-  Lock, 
+  Sparkles as SparklesIconComponent, // Aliased import
+  ListTree as ListTreeIconComponent,
+  MessageSquareQuestion as MessageSquareQuestionIconComponent, // Aliased import
+  HelpCircle as HelpCircleIconComponent,
+  Lock as LockIconComponent, // Aliased import
   ArrowRight 
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
@@ -17,13 +17,12 @@ import { cn } from "@/lib/utils";
 
 // Define an icon map
 const iconMap: { [key: string]: LucideIcon } = {
-  ListTree,
-  SparklesIcon: Sparkles, // Renamed to avoid conflict with Sparkles component
-  MessageSquareQuestion,
-  LockIcon: Lock, // Renamed to avoid conflict
-  HelpCircle,
-  BrainCircuit,
-  ArrowRight,
+  ListTree: ListTreeIconComponent,
+  SparklesIcon: SparklesIconComponent, 
+  MessageSquareQuestion: MessageSquareQuestionIconComponent, // Corrected key to match usage
+  LockIcon: LockIconComponent, 
+  HelpCircle: HelpCircleIconComponent,
+  ArrowRight, // ArrowRight can stay as is if not conflicting
 };
 
 interface AiTool {
@@ -62,7 +61,7 @@ const aiTools: AiTool[] = [
     id: "doubt-solver",
     title: "AI Doubt Solver",
     description: "Get instant, context-aware explanations for your academic questions.",
-    iconName: "MessageSquareQuestion",
+    iconName: "MessageSquareQuestion", // This name must match a key in iconMap
     iconColorClass: "text-indigo-500",
     link: "/ai-tools/doubt-solver",
     status: "Active",
@@ -104,8 +103,8 @@ export default function AiToolsPage() {
         {aiTools.map((tool) => {
           const IconComponent = iconMap[tool.iconName];
           if (!IconComponent) {
-            console.error(`Icon not found in map: ${tool.iconName}`);
-            return <div key={tool.id}>Error: Icon {tool.iconName} not found</div>; // Fallback UI
+            console.error(`[Server] Icon not found in map: ${tool.iconName}`); // Log on server, useful for debugging
+            return <div key={tool.id}>Error: Icon {tool.iconName} not found (Client Fallback)</div>; 
           }
           return (
             <Card 
@@ -153,7 +152,7 @@ export default function AiToolsPage() {
 
        <Card className="mt-6 sm:mt-8 p-4 sm:p-6 rounded-xl border bg-card text-card-foreground shadow-lg">
           <CardHeader className="p-0 pb-3 sm:pb-4">
-            <CardTitle className="text-lg sm:text-xl font-semibold flex items-center"><Sparkles className="mr-2 h-5 w-5 text-accent" /> How AI Supercharges Your Prep</CardTitle>
+            <CardTitle className="text-lg sm:text-xl font-semibold flex items-center"><SparklesIconComponent className="mr-2 h-5 w-5 text-accent" /> How AI Supercharges Your Prep</CardTitle>
           </CardHeader>
           <CardContent className="p-0">
             <ul className="list-disc list-outside space-y-2 text-sm sm:text-base text-muted-foreground pl-5">
