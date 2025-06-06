@@ -15,7 +15,7 @@ import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from '@/components/ui/badge';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Loader2, Sparkles, Brain, HelpCircle, CheckCircle, XCircle, Lightbulb, Award, Percent, SkipForward, ChevronsRight, Wand2, ArrowUp } from 'lucide-react';
+import { Loader2, Sparkles, Brain, HelpCircle, CheckCircle, XCircle, Lightbulb, Award, Percent, SkipForward, ChevronsRight, Wand2 } from 'lucide-react';
 import { generateQuiz } from '@/ai/flows/generate-quiz-flow';
 import type { GenerateQuizInput, GenerateQuizOutput, QuizQuestion } from '@/ai/schemas/quiz-tool-schemas';
 import { GenerateQuizInputSchema } from '@/ai/schemas/quiz-tool-schemas';
@@ -87,8 +87,7 @@ export default function SmartQuizPage() {
   const { toast } = useToast();
   const quizAreaRef = useRef<HTMLDivElement>(null);
   const questionCardRef = useRef<HTMLDivElement>(null);
-  const resultsScrollRef = useRef<HTMLDivElement>(null); 
-  const [showScrollToTop, setShowScrollToTop] = useState(false);
+  // resultsScrollRef and showScrollToTop removed
 
   const [isLoadingProfile, setIsLoadingProfile] = useState(true);
   const [userProfile, setUserProfile] = useState<UserProfileData | null>(null);
@@ -154,26 +153,9 @@ export default function SmartQuizPage() {
     }
   }, [quizState, currentQuestionIndex]);
   
-  useEffect(() => {
-    const scrollAreaElement = resultsScrollRef.current;
-    const handleScroll = () => {
-      if (scrollAreaElement) {
-        setShowScrollToTop(scrollAreaElement.scrollTop > 200);
-      }
-    };
-    if (scrollAreaElement) {
-      scrollAreaElement.addEventListener('scroll', handleScroll);
-    }
-    return () => {
-      if (scrollAreaElement) {
-        scrollAreaElement.removeEventListener('scroll', handleScroll);
-      }
-    };
-  }, [quizState]);
+  // useEffect for scroll to top button removed
 
-  const scrollToResultsTop = () => {
-    resultsScrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
-  };
+  // scrollToResultsTop function removed
 
 
   const onSubmit: SubmitHandler<QuizFormData> = async (data) => {
@@ -545,7 +527,7 @@ export default function SmartQuizPage() {
                     </CardDescription>
                 </CardHeader>
                 <CardContent className="p-0 relative flex-grow overflow-hidden">
-                 <ScrollArea ref={resultsScrollRef} className="h-full"> 
+                 <ScrollArea className="h-full"> 
                     <div className="divide-y divide-border p-4 sm:p-6">
                     {quizData.questions.map((q, qIndex) => {
                         const userAnswer = userAnswers[qIndex];
@@ -600,17 +582,7 @@ export default function SmartQuizPage() {
                     })}
                     </div>
                  </ScrollArea>
-                  {showScrollToTop && (
-                    <Button
-                        onClick={scrollToResultsTop}
-                        variant="outline"
-                        size="icon"
-                        className="absolute bottom-4 right-4 sm:bottom-6 sm:right-6 h-10 w-10 sm:h-12 sm:w-12 rounded-full shadow-lg bg-background hover:bg-muted z-10"
-                        aria-label="Scroll to top"
-                    >
-                        <ArrowUp className="h-5 w-5 sm:h-6 sm:w-6" />
-                    </Button>
-                  )}
+                  {/* Scroll to top button removed */}
                 </CardContent>
                 <CardFooter className="flex flex-col sm:flex-row justify-center items-center gap-2 sm:gap-4 p-4 sm:p-6 border-t shrink-0">
                     <Button onClick={handleRetakeQuiz} variant="outline" className="w-full sm:w-auto text-sm sm:text-base">
@@ -627,3 +599,4 @@ export default function SmartQuizPage() {
     </div>
   );
 }
+
