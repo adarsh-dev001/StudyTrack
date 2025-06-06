@@ -2,7 +2,7 @@
 "use client"
 
 import type { ChangeEvent } from "react";
-import React, { useState, useEffect, Suspense } from "react"
+import React, { useState, useEffect, Suspense, useCallback, memo } from "react" // Added useCallback, memo
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import {
@@ -76,6 +76,90 @@ function NewTaskDialogFallback() {
     );
 }
 
+interface PlannerTaskDisplayItemProps {
+  task: Task;
+  onToggleStatus: (taskId: string) => void;
+  onDeleteTask: (taskId: string) => void;
+  onDragStartTask: (task: Task, e: React.DragEvent) => void;
+}
+
+const PlannerTaskDisplayItem = memo(function PlannerTaskDisplayItem({ task, onToggleStatus, onDeleteTask, onDragStartTask }: PlannerTaskDisplayItemProps) {
+  const subjectInfo = getSubjectInfo(task.subject);
+  const priorityInfo = getPriorityBadgeInfo(task.priority);
+  const endTime = hourToDisplayTime(task.startHour + task.duration);
+
+  return (
+    <TooltipProvider key={task.id}>
+      <Tooltip delayDuration={300}>
+        <TooltipTrigger asChild>
+          <div
+            draggable
+            onDragStart={(e) => onDragStartTask(task, e)}
+            className={cn(
+              "rounded-md p-2 mb-1.5 cursor-move shadow-sm border relative group transition-all duration-200 ease-out transform hover:shadow-lg hover:scale-[1.01]",
+              task.status === "completed" ? "opacity-60 bg-opacity-70 line-through" : "opacity-100",
+              subjectInfo.color,
+              "text-sm"
+            )}
+            style={{ minHeight: `${Math.max(1, task.duration) * 2.25}rem` }}
+          >
+            <div className="flex items-start justify-between">
+              <div className="flex-1 overflow-hidden pr-1">
+                <div className="flex items-center">
+                  <GripVertical className="h-4 w-4 mr-1 opacity-50 shrink-0 group-hover:opacity-70" />
+                  <h4 className="font-semibold truncate" title={task.title}>{task.title}</h4>
+                </div>
+                <div className="text-xs mt-0.5 mb-1 opacity-80">
+                  <span className="font-medium">{subjectInfo.name}</span>
+                  {task.topic && <span className="truncate block" title={task.topic}> {task.topic}</span>}
+                </div>
+                <div className="flex items-center text-xs opacity-70">
+                  <Clock className="h-3 w-3 mr-1 shrink-0" />
+                  <span>{task.duration} {task.duration === 1 ? 'hr' : 'hrs'}</span>
+                </div>
+              </div>
+              <div className="flex flex-col items-center ml-1 space-y-0.5">
+                <button
+                  onClick={() => onToggleStatus(task.id)}
+                  className="p-0.5 rounded-full hover:bg-black/10 dark:hover:bg-white/10 transition-colors"
+                  title={task.status === "completed" ? "Mark as pending" : "Mark as completed"}
+                >
+                  {task.status === "completed" ? (
+                    <CheckCircle2 className="h-4 w-4 text-green-600 dark:text-green-400" />
+                  ) : (
+                    <CheckCircle2 className="h-4 w-4 opacity-40 hover:opacity-70" />
+                  )}
+                </button>
+                <button
+                  onClick={() => onDeleteTask(task.id)}
+                  className="p-0.5 rounded-full hover:bg-black/10 dark:hover:bg-white/10 transition-colors"
+                  title="Delete task"
+                >
+                  <Trash2 className="h-4 w-4 text-red-500 hover:text-red-700 dark:hover:text-red-400" />
+                </button>
+              </div>
+            </div>
+            {task.priority && (
+              <div className="mt-1.5">
+                <Badge variant={priorityInfo.variant} className={priorityInfo.className}>{priorityInfo.text}</Badge>
+              </div>
+            )}
+          </div>
+        </TooltipTrigger>
+        <TooltipContent side="top" align="center" className="w-64">
+          <p className="font-semibold text-sm">{task.title}</p>
+          <p className="text-xs text-muted-foreground">Subject: {subjectInfo.name}</p>
+          {task.topic && <p className="text-xs text-muted-foreground">Topic: {task.topic}</p>}
+          <p className="text-xs text-muted-foreground">Time: {hourToDisplayTime(task.startHour)} - {endTime}</p>
+          <p className="text-xs text-muted-foreground">Duration: {task.duration} hr(s)</p>
+          <p className="text-xs text-muted-foreground capitalize">Priority: {task.priority}</p>
+          {task.description && <p className="text-xs text-muted-foreground mt-1">Notes: {task.description}</p>}
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  )
+});
+
 
 export function PlannerView({ selectedDate, selectedSubjectFilter, onDateChange, onViewChange }: PlannerViewProps) {
   const { currentUser } = useAuth();
@@ -134,16 +218,16 @@ export function PlannerView({ selectedDate, selectedSubjectFilter, onDateChange,
     return () => unsubscribe();
   }, [currentUser, selectedSubjectFilter]); 
 
-  const handleInputChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  const handleInputChange = useCallback((e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setNewTask(prev => ({ ...prev, [name]: value }));
-  };
+  }, []);
 
-  const handleSelectChange = (name: string, value: string | number) => {
+  const handleSelectChange = useCallback((name: string, value: string | number) => {
     setNewTask(prev => ({ ...prev, [name]: value }));
-  };
+  }, []);
 
-  const handleCreateTask = async () => {
+  const handleCreateTask = useCallback(async () => {
     if (!currentUser || !db) {
       console.error("User not logged in or DB not available");
       return;
@@ -188,27 +272,27 @@ export function PlannerView({ selectedDate, selectedSubjectFilter, onDateChange,
       console.error("Error creating task: ", error);
       alert("Failed to create task. Please try again.");
     }
-  }
+  }, [currentUser, newTask, selectedDate]);
 
-  const handleDragStart = (task: Task, e: React.DragEvent) => {
+  const handleDragStart = useCallback((task: Task, e: React.DragEvent) => {
     setDraggedTask(task);
     if (e.dataTransfer) {
       e.dataTransfer.effectAllowed = "move";
       e.dataTransfer.setData("text/plain", task.id);
     }
-  }
+  }, []);
 
-  const handleDragOver = (day: number, hour: number, e: React.DragEvent) => {
+  const handleDragOver = useCallback((day: number, hour: number, e: React.DragEvent) => {
     e.preventDefault()
     if(e.dataTransfer) e.dataTransfer.dropEffect = "move";
     setDraggedOver({ day, hour })
-  }
+  }, []);
 
-  const handleDragLeave = (e: React.DragEvent) => {
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
     setDraggedOver(null);
-  }
+  }, []);
 
-  const handleDrop = async (day: number, hour: number) => {
+  const handleDrop = useCallback(async (day: number, hour: number) => {
     if (!currentUser || !db || !draggedTask || !draggedTask.id) return;
 
     const taskDocRef = doc(db, "users", currentUser.uid, "plannerTasks", draggedTask.id);
@@ -222,9 +306,9 @@ export function PlannerView({ selectedDate, selectedSubjectFilter, onDateChange,
     }
     setDraggedTask(null)
     setDraggedOver(null)
-  }
+  }, [currentUser, draggedTask]);
 
-  const toggleTaskStatus = async (taskId: string) => {
+  const toggleTaskStatus = useCallback(async (taskId: string) => {
     if (!currentUser || !db) return;
     const taskToUpdate = tasks.find(task => task.id === taskId);
     if (!taskToUpdate) return;
@@ -239,9 +323,9 @@ export function PlannerView({ selectedDate, selectedSubjectFilter, onDateChange,
     } catch (error) {
       console.error("Error updating task status: ", error);
     }
-  }
+  }, [currentUser, tasks]);
 
-  const handleDeleteTask = async (taskId: string) => {
+  const handleDeleteTask = useCallback(async (taskId: string) => {
     if (!currentUser || !db) return;
     if (!window.confirm("Are you sure you want to delete this task?")) return;
 
@@ -254,92 +338,15 @@ export function PlannerView({ selectedDate, selectedSubjectFilter, onDateChange,
     } catch (error) {
       console.error("Error deleting task: ", error);
     }
-  }
+  }, [currentUser]);
   
-  const handleDayHeaderClick = (dayIndexInWeek: number) => {
+  const handleDayHeaderClick = useCallback((dayIndexInWeek: number) => {
     const weekStart = startOfWeek(selectedDate, { weekStartsOn: 0 }); 
     const clickedDayDate = addDays(weekStart, dayIndexInWeek);
     onDateChange(clickedDayDate);
     onViewChange('day');
-  };
+  }, [selectedDate, onDateChange, onViewChange]);
 
-
-  const renderTask = (task: Task) => {
-    const subjectInfo = getSubjectInfo(task.subject);
-    const priorityInfo = getPriorityBadgeInfo(task.priority);
-    const endTime = hourToDisplayTime(task.startHour + task.duration);
-
-    return (
-    <TooltipProvider key={task.id}>
-      <Tooltip delayDuration={300}>
-        <TooltipTrigger asChild>
-          <div
-            draggable
-            onDragStart={(e) => handleDragStart(task, e)}
-            className={cn(
-              "rounded-md p-2 mb-1.5 cursor-move shadow-sm border relative group transition-all duration-200 ease-out transform hover:shadow-lg hover:scale-[1.01]",
-              task.status === "completed" ? "opacity-60 bg-opacity-70 line-through" : "opacity-100",
-              subjectInfo.color,
-              "text-sm"
-            )}
-            style={{ minHeight: `${Math.max(1, task.duration) * 2.25}rem` }} 
-          >
-            <div className="flex items-start justify-between">
-              <div className="flex-1 overflow-hidden pr-1">
-                <div className="flex items-center">
-                  <GripVertical className="h-4 w-4 mr-1 opacity-50 shrink-0 group-hover:opacity-70" />
-                  <h4 className="font-semibold truncate" title={task.title}>{task.title}</h4>
-                </div>
-                <div className="text-xs mt-0.5 mb-1 opacity-80">
-                  <span className="font-medium">{subjectInfo.name}</span>
-                  {task.topic && <span className="truncate block" title={task.topic}> {task.topic}</span>}
-                </div>
-                <div className="flex items-center text-xs opacity-70">
-                  <Clock className="h-3 w-3 mr-1 shrink-0" />
-                  <span>{task.duration} {task.duration === 1 ? 'hr' : 'hrs'}</span>
-                </div>
-              </div>
-              <div className="flex flex-col items-center ml-1 space-y-0.5">
-                <button
-                  onClick={() => toggleTaskStatus(task.id)}
-                  className="p-0.5 rounded-full hover:bg-black/10 dark:hover:bg-white/10 transition-colors"
-                  title={task.status === "completed" ? "Mark as pending" : "Mark as completed"}
-                >
-                  {task.status === "completed" ? (
-                    <CheckCircle2 className="h-4 w-4 text-green-600 dark:text-green-400" />
-                  ) : (
-                    <CheckCircle2 className="h-4 w-4 opacity-40 hover:opacity-70" />
-                  )}
-                </button>
-                <button
-                  onClick={() => handleDeleteTask(task.id)}
-                  className="p-0.5 rounded-full hover:bg-black/10 dark:hover:bg-white/10 transition-colors"
-                  title="Delete task"
-                >
-                  <Trash2 className="h-4 w-4 text-red-500 hover:text-red-700 dark:hover:text-red-400" />
-                </button>
-              </div>
-            </div>
-            {task.priority && (
-              <div className="mt-1.5">
-                <Badge variant={priorityInfo.variant} className={priorityInfo.className}>{priorityInfo.text}</Badge>
-              </div>
-            )}
-          </div>
-        </TooltipTrigger>
-        <TooltipContent side="top" align="center" className="w-64">
-          <p className="font-semibold text-sm">{task.title}</p>
-          <p className="text-xs text-muted-foreground">Subject: {subjectInfo.name}</p>
-          {task.topic && <p className="text-xs text-muted-foreground">Topic: {task.topic}</p>}
-          <p className="text-xs text-muted-foreground">Time: {hourToDisplayTime(task.startHour)} - {endTime}</p>
-          <p className="text-xs text-muted-foreground">Duration: {task.duration} hr(s)</p>
-          <p className="text-xs text-muted-foreground capitalize">Priority: {task.priority}</p>
-          {task.description && <p className="text-xs text-muted-foreground mt-1">Notes: {task.description}</p>}
-        </TooltipContent>
-      </Tooltip>
-    </TooltipProvider>
-    )
-  }
 
   const MainContent = () => {
     if (isLoadingTasks) {
@@ -430,7 +437,15 @@ export function PlannerView({ selectedDate, selectedSubjectFilter, onDateChange,
                     <ScrollArea className="h-full">
                       <div className="p-px">
                       {tasksInSlot.length > 0 ?
-                        tasksInSlot.map(task => renderTask(task)) :
+                        tasksInSlot.map(task => 
+                          <PlannerTaskDisplayItem 
+                            key={task.id} 
+                            task={task} 
+                            onToggleStatus={toggleTaskStatus} 
+                            onDeleteTask={handleDeleteTask}
+                            onDragStartTask={handleDragStart}
+                          />
+                        ) :
                         (isOver && draggedTask) && (
                           <div className="h-full flex items-center justify-center text-muted-foreground text-xs opacity-70">
                             Drop here

@@ -2,7 +2,7 @@
 "use client";
 
 import type { ChangeEvent } from "react";
-import React, { useState, useEffect, Suspense } from "react";
+import React, { useState, useEffect, Suspense, useCallback, memo } from "react"; // Added useCallback, memo
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
@@ -63,6 +63,72 @@ function NewTaskDialogFallback() {
     );
 }
 
+interface DayViewTaskCardProps {
+  task: Task;
+  onToggleStatus: (taskId: string) => void;
+  onDeleteTask: (taskId: string) => void;
+}
+
+const DayViewTaskCard = memo(function DayViewTaskCard({ task, onToggleStatus, onDeleteTask }: DayViewTaskCardProps) {
+  const subjectInfo = getSubjectInfo(task.subject);
+  const priorityInfo = getPriorityBadgeInfo(task.priority);
+  const endTime = hourToDisplayTime(task.startHour + task.duration);
+
+  return (
+    <TooltipProvider key={task.id}>
+      <Tooltip delayDuration={300}>
+        <TooltipTrigger asChild>
+          <Card className={cn(
+              "mb-2 sm:mb-3 shadow-md border transition-all duration-200 ease-out transform hover:shadow-lg hover:scale-[1.01]", 
+              subjectInfo.color, 
+              task.status === "completed" ? "opacity-60 line-through" : ""
+          )}>
+            <CardHeader className="pb-1.5 sm:pb-2 pt-2 sm:pt-3 px-2 sm:px-3">
+              <div className="flex justify-between items-start gap-1 sm:gap-2">
+                <CardTitle className={cn("text-sm sm:text-base font-semibold leading-tight break-words", subjectInfo.textColor)} title={task.title}>
+                  {task.title}
+                </CardTitle>
+                <div className="flex items-center space-x-0.5 sm:space-x-1 shrink-0">
+                  <Button variant="ghost" size="icon" className="h-5 w-5 sm:h-6 sm:w-6" onClick={() => onToggleStatus(task.id)} title={task.status === "completed" ? "Mark pending" : "Mark completed"}>
+                    {task.status === "completed" ? <CheckCircle2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-green-600" /> : <CheckCircle2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 opacity-50 hover:opacity-100" />}
+                  </Button>
+                  <Button variant="ghost" size="icon" className="h-5 w-5 sm:h-6 sm:w-6" onClick={() => onDeleteTask(task.id)} title="Delete task">
+                    <Trash2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-red-500 hover:text-red-700" />
+                  </Button>
+                </div>
+              </div>
+              <div className={cn("text-xs opacity-90", subjectInfo.textColor)}>
+                <span className="font-medium">{subjectInfo.name}</span>
+                {task.topic && <span className="ml-1 break-all"> - {task.topic}</span>}
+              </div>
+            </CardHeader>
+            <CardContent className="px-2 sm:px-3 pb-2 sm:pb-3 text-xs">
+              {task.description && <p className={cn("mb-1.5 sm:mb-2 opacity-80 break-words", subjectInfo.textColor)}>{task.description}</p>}
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-1 sm:gap-2">
+                <div className={cn("flex items-center opacity-80", subjectInfo.textColor)}>
+                  <Clock className="h-3 w-3 mr-1" />
+                  <span>{hourToDisplayTime(task.startHour)} ({task.duration} {task.duration === 1 ? "hr" : "hrs"})</span>
+                </div>
+                <Badge variant={priorityInfo.variant} className={cn("mt-1 sm:mt-0 text-[10px] sm:text-xs px-1.5 py-0.5", priorityInfo.className)}>{priorityInfo.text}</Badge>
+              </div>
+            </CardContent>
+          </Card>
+        </TooltipTrigger>
+        <TooltipContent side="top" align="center" className="w-64">
+          <p className="font-semibold text-sm">{task.title}</p>
+          <p className="text-xs text-muted-foreground">Subject: {subjectInfo.name}</p>
+          {task.topic && <p className="text-xs text-muted-foreground">Topic: {task.topic}</p>}
+          <p className="text-xs text-muted-foreground">Time: {hourToDisplayTime(task.startHour)} - {endTime}</p>
+          <p className="text-xs text-muted-foreground">Duration: {task.duration} hr(s)</p>
+          <p className="text-xs text-muted-foreground capitalize">Priority: {task.priority}</p>
+          {task.description && <p className="text-xs text-muted-foreground mt-1">Notes: {task.description}</p>}
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  );
+});
+
+
 export default function DayView({ selectedDate, selectedSubjectFilter }: DayViewProps) {
   const { currentUser } = useAuth();
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -118,16 +184,16 @@ export default function DayView({ selectedDate, selectedSubjectFilter }: DayView
     return () => unsubscribe();
   }, [currentUser, selectedDate, selectedSubjectFilter]);
 
-  const handleInputChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  const handleInputChange = useCallback((e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setNewTask(prev => ({ ...prev, [name]: value }));
-  };
+  }, []);
 
-  const handleSelectChange = (name: string, value: string | number) => {
+  const handleSelectChange = useCallback((name: string, value: string | number) => {
     setNewTask(prev => ({ ...prev, [name]: value }));
-  };
+  }, []);
 
-  const handleCreateTask = async () => {
+  const handleCreateTask = useCallback(async () => {
     if (!currentUser || !db) return;
     if (!newTask.title || !newTask.subject || newTask.startHour === undefined || newTask.duration === undefined) {
       alert("Please fill in all required fields: Title, Subject, Start Time, and Duration.");
@@ -162,9 +228,9 @@ export default function DayView({ selectedDate, selectedSubjectFilter }: DayView
       console.error("Error creating task: ", error);
       alert("Failed to create task. Please try again.");
     }
-  };
+  }, [currentUser, newTask, selectedDate]);
 
-  const toggleTaskStatus = async (taskId: string) => {
+  const toggleTaskStatus = useCallback(async (taskId: string) => {
     if (!currentUser || !db) return;
     const taskToUpdate = tasks.find(task => task.id === taskId);
     if (!taskToUpdate) return;
@@ -178,9 +244,9 @@ export default function DayView({ selectedDate, selectedSubjectFilter }: DayView
     } catch (error) {
       console.error("Error updating task status: ", error);
     }
-  };
+  }, [currentUser, tasks]);
 
-  const handleDeleteTask = async (taskId: string) => {
+  const handleDeleteTask = useCallback(async (taskId: string) => {
     if (!currentUser || !db) return;
     if (!window.confirm("Are you sure you want to delete this task?")) return;
     try {
@@ -191,66 +257,8 @@ export default function DayView({ selectedDate, selectedSubjectFilter }: DayView
     } catch (error) {
       console.error("Error deleting task: ", error);
     }
-  };
+  }, [currentUser]);
 
-  const renderTaskCard = (task: Task) => {
-    const subjectInfo = getSubjectInfo(task.subject);
-    const priorityInfo = getPriorityBadgeInfo(task.priority);
-    const endTime = hourToDisplayTime(task.startHour + task.duration);
-
-    return (
-      <TooltipProvider key={task.id}>
-        <Tooltip delayDuration={300}>
-          <TooltipTrigger asChild>
-            <Card className={cn(
-                "mb-2 sm:mb-3 shadow-md border transition-all duration-200 ease-out transform hover:shadow-lg hover:scale-[1.01]", 
-                subjectInfo.color, 
-                task.status === "completed" ? "opacity-60 line-through" : ""
-            )}>
-              <CardHeader className="pb-1.5 sm:pb-2 pt-2 sm:pt-3 px-2 sm:px-3">
-                <div className="flex justify-between items-start gap-1 sm:gap-2">
-                  <CardTitle className={cn("text-sm sm:text-base font-semibold leading-tight break-words", subjectInfo.textColor)} title={task.title}>
-                    {task.title}
-                  </CardTitle>
-                  <div className="flex items-center space-x-0.5 sm:space-x-1 shrink-0">
-                    <Button variant="ghost" size="icon" className="h-5 w-5 sm:h-6 sm:w-6" onClick={() => toggleTaskStatus(task.id)} title={task.status === "completed" ? "Mark pending" : "Mark completed"}>
-                      {task.status === "completed" ? <CheckCircle2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-green-600" /> : <CheckCircle2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 opacity-50 hover:opacity-100" />}
-                    </Button>
-                    <Button variant="ghost" size="icon" className="h-5 w-5 sm:h-6 sm:w-6" onClick={() => handleDeleteTask(task.id)} title="Delete task">
-                      <Trash2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-red-500 hover:text-red-700" />
-                    </Button>
-                  </div>
-                </div>
-                <div className={cn("text-xs opacity-90", subjectInfo.textColor)}>
-                  <span className="font-medium">{subjectInfo.name}</span>
-                  {task.topic && <span className="ml-1 break-all"> - {task.topic}</span>}
-                </div>
-              </CardHeader>
-              <CardContent className="px-2 sm:px-3 pb-2 sm:pb-3 text-xs">
-                {task.description && <p className={cn("mb-1.5 sm:mb-2 opacity-80 break-words", subjectInfo.textColor)}>{task.description}</p>}
-                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-1 sm:gap-2">
-                  <div className={cn("flex items-center opacity-80", subjectInfo.textColor)}>
-                    <Clock className="h-3 w-3 mr-1" />
-                    <span>{hourToDisplayTime(task.startHour)} ({task.duration} {task.duration === 1 ? "hr" : "hrs"})</span>
-                  </div>
-                  <Badge variant={priorityInfo.variant} className={cn("mt-1 sm:mt-0 text-[10px] sm:text-xs px-1.5 py-0.5", priorityInfo.className)}>{priorityInfo.text}</Badge>
-                </div>
-              </CardContent>
-            </Card>
-          </TooltipTrigger>
-          <TooltipContent side="top" align="center" className="w-64">
-            <p className="font-semibold text-sm">{task.title}</p>
-            <p className="text-xs text-muted-foreground">Subject: {subjectInfo.name}</p>
-            {task.topic && <p className="text-xs text-muted-foreground">Topic: {task.topic}</p>}
-            <p className="text-xs text-muted-foreground">Time: {hourToDisplayTime(task.startHour)} - {endTime}</p>
-            <p className="text-xs text-muted-foreground">Duration: {task.duration} hr(s)</p>
-            <p className="text-xs text-muted-foreground capitalize">Priority: {task.priority}</p>
-            {task.description && <p className="text-xs text-muted-foreground mt-1">Notes: {task.description}</p>}
-          </TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
-    );
-  };
 
   if (isLoadingTasks) {
     return (
@@ -341,7 +349,14 @@ export default function DayView({ selectedDate, selectedSubjectFilter }: DayView
                 </div>
                 <div className="flex-grow pl-1.5 sm:pl-2 border-l min-h-[2.5rem] sm:min-h-[3rem]">
                   {tasksByHour[hour] && tasksByHour[hour].length > 0 ? (
-                    tasksByHour[hour].map(task => renderTaskCard(task))
+                    tasksByHour[hour].map(task => 
+                      <DayViewTaskCard 
+                        key={task.id} 
+                        task={task} 
+                        onToggleStatus={toggleTaskStatus} 
+                        onDeleteTask={handleDeleteTask} 
+                      />
+                    )
                   ) : (
                     <div className="text-[10px] sm:text-xs text-muted-foreground/70 italic h-full flex items-center">No tasks scheduled.</div>
                   )}

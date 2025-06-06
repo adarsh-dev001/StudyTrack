@@ -1,7 +1,7 @@
 
 'use client'; 
 
-import React from 'react'; // Added React import
+import React from 'react'; 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
@@ -71,7 +71,7 @@ const navSections: NavSection[] = [
   }
 ];
 
-export function AppSidebar() {
+const AppSidebarComponent = () => {
   const pathname = usePathname();
 
   const isNavItemActive = (itemHref: string) => {
@@ -154,4 +154,6 @@ export function AppSidebar() {
     </Sidebar>
   );
 }
+
+export const AppSidebar = React.memo(AppSidebarComponent);
     
