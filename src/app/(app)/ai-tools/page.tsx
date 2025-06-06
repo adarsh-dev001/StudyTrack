@@ -2,17 +2,17 @@
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { BrainCircuit, Sparkles, ListTree, Brain, HelpCircle, Lock, Edit, ArrowRight } from "lucide-react";
+import { BrainCircuit, Sparkles, ListTree, Brain, HelpCircle, Lock, Edit, ArrowRight, MessageSquareQuestion } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import { Badge } from "@/components/ui/badge"; // Import Badge
-import { cn } from "@/lib/utils"; // Import cn
+import { Badge } from "@/components/ui/badge"; 
+import { cn } from "@/lib/utils"; 
 
 interface AiTool {
   id: string;
   title: string;
   description: string;
   icon: LucideIcon;
-  iconColorClass?: string; // For custom icon color
+  iconColorClass?: string; 
   link: string;
   status: "Active" | "Coming Soon" | "Unlockable";
   actionText: string;
@@ -40,10 +40,20 @@ const aiTools: AiTool[] = [
     actionText: "Use Summarizer"
   },
   {
+    id: "doubt-solver",
+    title: "AI Doubt Solver",
+    description: "Get instant, context-aware explanations for your academic questions.",
+    icon: MessageSquareQuestion,
+    iconColorClass: "text-indigo-500",
+    link: "/ai-tools/doubt-solver",
+    status: "Active",
+    actionText: "Ask a Question"
+  },
+  {
     id: "productivity-analyzer",
     title: "Productivity Analysis AI",
     description: "Unlock AI-driven insights! Requires a 7-day activity streak to access.",
-    icon: Lock, // Changed icon to Lock
+    icon: Lock, 
     iconColorClass: "text-purple-500",
     link: "/ai-tools/productivity-analyzer",
     status: "Unlockable",
@@ -139,6 +149,7 @@ export default function AiToolsPage() {
                 <li><span className="font-medium text-foreground">Efficient Learning:</span> Summarize long texts quickly and grasp key concepts faster.</li>
                 <li><span className="font-medium text-foreground">Targeted Assessment:</span> Generate custom quizzes to test your knowledge on specific topics and difficulties.</li>
                 <li><span className="font-medium text-foreground">Productivity Insights:</span> Understand your study habits and get AI-driven advice to optimize your focus.</li>
+                <li><span className="font-medium text-foreground">Instant Doubt Resolution:</span> Get clear explanations for academic questions, personalized to your context.</li>
                 <li><span className="font-medium text-foreground">Motivational Boost:</span> Stay engaged with AI-driven recommendations and progress tracking.</li>
             </ul>
           </CardContent>

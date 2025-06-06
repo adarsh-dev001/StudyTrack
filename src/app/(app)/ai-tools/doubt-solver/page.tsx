@@ -106,8 +106,17 @@ export default function DoubtSolverPage() {
     };
   }, [currentUser?.uid, form, toast]);
 
-  const handleOnboardingSuccess = () => {
+  const handleOnboardingComplete = () => {
     setShowOnboardingModal(false);
+    // Re-fetch profile to get updated onboarding status
+    if(currentUser?.uid) {
+        const profileDocRef = doc(db, 'users', currentUser.uid, 'userProfile', 'profile');
+        getDoc(profileDocRef).then((profileSnap) => { // Use getDoc for a one-time fetch after completion
+            if (profileSnap.exists()) {
+                setUserProfile(profileSnap.data() as UserProfileData);
+            }
+        });
+    }
   };
 
 
@@ -173,7 +182,7 @@ export default function DoubtSolverPage() {
           </DialogHeader>
           <ScrollArea className="h-[calc(90vh-8rem)] p-4 sm:p-6">
              <Suspense fallback={<OnboardingFormFallback />}>
-                <OnboardingForm userId={currentUser.uid} onComplete={handleOnboardingSuccess} />
+                <OnboardingForm userId={currentUser.uid} onComplete={handleOnboardingComplete} />
              </Suspense>
           </ScrollArea>
         </DialogContent>
@@ -296,7 +305,7 @@ export default function DoubtSolverPage() {
                 </div>
             )}
           </CardContent>
-           <CardFooter className="pt-3 sm:pt-4 border-t">
+           <CardFooter className="pt-3 sm:pt-4 border-t p-4 sm:p-6">
             <p className="text-xs text-muted-foreground">
               Remember: AI explanations are a helpful starting point. Always cross-verify critical information with trusted sources.
             </p>
@@ -306,4 +315,3 @@ export default function DoubtSolverPage() {
     </div>
   );
 }
-

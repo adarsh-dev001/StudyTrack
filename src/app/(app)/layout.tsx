@@ -69,20 +69,6 @@ export default function AppLayout({
     };
   }, [currentUser?.uid]);
 
-  // REMOVED: Onboarding redirection logic from here. It will be handled contextually by AI tool pages.
-  // useEffect(() => {
-  //   if (!authLoading && !loadingProfile && currentUser) {
-  //     const isOnboardingPage = pathname === '/onboarding';
-  //     const isAuthPage = pathname === '/login' || pathname === '/signup';
-
-  //     if (userProfile?.onboardingCompleted === false && !isOnboardingPage && !isAuthPage) {
-  //       router.push('/onboarding');
-  //     } else if (userProfile?.onboardingCompleted === true && isOnboardingPage) {
-  //       router.push('/dashboard');
-  //     }
-  //   }
-  // }, [currentUser, userProfile, authLoading, loadingProfile, pathname, router]);
-
 
   if (authLoading || (currentUser && loadingProfile)) {
     return (
@@ -105,8 +91,10 @@ export default function AppLayout({
      );
   }
 
+  // If the user is not logged in and trying to access an app page (not marketing/auth), they will be redirected by the first useEffect.
+  // This check is an additional safeguard or for scenarios where the first useEffect might not have run yet (though unlikely with proper setup).
   if (!currentUser && pathname !== '/login' && pathname !== '/signup' && !pathname.startsWith('/blog') && pathname !== '/' && pathname !=='/terms' && pathname !=='/privacy') {
-    return null;
+    return null; 
   }
 
 
@@ -148,7 +136,7 @@ export default function AppLayout({
                     <Button variant="ghost" className="relative h-9 w-9 rounded-full">
                       <Avatar className="h-9 w-9">
                         {}
-                        <AvatarImage src="" alt="User avatar" /> 
+                        <AvatarImage src={currentUser.photoURL || ""} alt="User avatar" /> 
                         <AvatarFallback>{userInitial}</AvatarFallback>
                       </Avatar>
                     </Button>
