@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react'; // Added Suspense
 import { useAuth } from '@/contexts/auth-context';
 import { db } from '@/lib/firebase';
 import { doc, onSnapshot, type Timestamp } from 'firebase/firestore';
@@ -9,11 +9,69 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { ListChecks, CalendarDays, BrainCircuit, Loader2 } from 'lucide-react';
-import DailyChallengesCard from '@/components/dashboard/DailyChallengesCard';
-import DashboardMetricsCard from '@/components/dashboard/DashboardMetricsCard'; // New import
-import TaskOverviewWidget from '@/components/dashboard/TaskOverviewWidget'; // New import
+import DashboardMetricsCard from '@/components/dashboard/DashboardMetricsCard';
 import type { StreakData } from '@/lib/profile-types';
 import { motion } from 'framer-motion';
+import { Skeleton } from '@/components/ui/skeleton'; // Added Skeleton
+
+// Lazy load components
+const DailyChallengesCard = React.lazy(() => import('@/components/dashboard/DailyChallengesCard'));
+const TaskOverviewWidget = React.lazy(() => import('@/components/dashboard/TaskOverviewWidget'));
+
+// Fallback Skeletons
+function DailyChallengesCardFallback() {
+  return (
+    <Card className="shadow-lg">
+      <CardHeader className="p-4 sm:p-6">
+        <Skeleton className="h-6 w-3/4" />
+        <Skeleton className="h-4 w-1/2 mt-1" />
+      </CardHeader>
+      <CardContent className="space-y-3 sm:space-y-4 p-4 sm:p-6">
+        {[1, 2].map(i => (
+          <div key={i} className="p-3 sm:p-4 border rounded-lg bg-card/40 shadow-sm space-y-2">
+            <div className="flex items-start gap-2">
+              <Skeleton className="h-8 w-8 sm:h-10 sm:w-10 rounded-md" />
+              <div className="w-full">
+                <Skeleton className="h-4 sm:h-5 w-3/4 mb-1" />
+                <Skeleton className="h-3 sm:h-4 w-full" />
+              </div>
+            </div>
+            <Skeleton className="h-2 sm:h-2.5 w-full mt-1" />
+            <Skeleton className="h-7 sm:h-8 w-1/3 ml-auto mt-2" />
+          </div>
+        ))}
+      </CardContent>
+    </Card>
+  );
+}
+
+function TaskOverviewWidgetFallback() {
+  return (
+    <Card className="shadow-lg h-full flex flex-col">
+      <CardHeader>
+        <Skeleton className="h-6 w-1/2" />
+        <Skeleton className="h-4 w-3/4 mt-1" />
+      </CardHeader>
+      <CardContent className="flex-grow p-0">
+        <div className="space-y-2 px-4 pb-4">
+          {[1, 2, 3].map(i => (
+            <div key={i} className="p-2.5 rounded-md border flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5">
+              <div className="flex-grow">
+                <Skeleton className="h-4 w-3/4 mb-1" />
+                <Skeleton className="h-3 w-1/2" />
+              </div>
+              <Skeleton className="h-5 w-12 self-start sm:self-center" />
+            </div>
+          ))}
+        </div>
+      </CardContent>
+      <CardFooter className="pt-3">
+        <Skeleton className="h-9 w-full" />
+      </CardFooter>
+    </Card>
+  );
+}
+
 
 export default function DashboardPage() {
   const { currentUser, loading: authLoading } = useAuth();
@@ -84,14 +142,18 @@ export default function DashboardPage() {
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.5, delay: 0.2 }}
             >
-              <DailyChallengesCard />
+              <Suspense fallback={<DailyChallengesCardFallback />}>
+                <DailyChallengesCard />
+              </Suspense>
             </motion.div>
             <motion.div
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.5, delay: 0.3 }}
             >
-              <TaskOverviewWidget />
+              <Suspense fallback={<TaskOverviewWidgetFallback />}>
+                <TaskOverviewWidget />
+              </Suspense>
             </motion.div>
           </div>
         </>
