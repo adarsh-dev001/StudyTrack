@@ -53,7 +53,7 @@ const step4BaseSchema = z.object({
   socialVisibilityPublic: z.boolean().optional(),
 });
 
-// Merge base schemas
+// Merge base schemas first
 const mergedBaseSchema = step1BaseSchema
   .merge(step2BaseSchema)
   .merge(step3BaseSchema)
@@ -76,7 +76,7 @@ export type OnboardingFormData = z.infer<typeof fullOnboardingSchema>;
 const getBaseSchemaForStep = (step: number) => {
   if (step === 1) return step1BaseSchema;
   if (step === 2) return step2BaseSchema;
-  if (step === 3) return step3BaseSchema;
+  if (step === 3) return step3BaseSchema; // Use step3BaseSchema for validation logic
   if (step === 4) return step4BaseSchema;
   return fullOnboardingSchema; 
 };
@@ -116,7 +116,7 @@ export default function OnboardingForm({ userId, onOnboardingSuccess }: { userId
 
   const methods = useForm<OnboardingFormData>({
     resolver: zodResolver(fullOnboardingSchema),
-    mode: 'onTouched',
+    mode: 'onTouched', // Validate on blur/touch
     defaultValues: {
       fullName: '',
       age: null,
@@ -165,6 +165,7 @@ export default function OnboardingForm({ userId, onOnboardingSuccess }: { userId
         setValue('subjectDetails', newSubjectDetails, { shouldValidate: currentStep === 3, shouldDirty: true });
       }
     } else if (watchedTargetExams && watchedTargetExams.length === 0) {
+      // Clear subjectDetails if no exam is selected
       if (getValues('subjectDetails')?.length > 0) {
           setValue('subjectDetails', [], { shouldValidate: currentStep === 3, shouldDirty: true });
       }
@@ -173,14 +174,29 @@ export default function OnboardingForm({ userId, onOnboardingSuccess }: { userId
 
 
   const handleNextStep = async () => {
-    if (currentStep === TOTAL_STEPS) { 
+    if (currentStep === TOTAL_STEPS) { // If on the review step, next action is submit
         await handleSubmit(onSubmit)();
         return;
     }
+    // Get the Zod schema for the current step's fields
     const baseSchemaForCurrentStep = getBaseSchemaForStep(currentStep);
     const fieldsToValidate = Object.keys(baseSchemaForCurrentStep.shape) as Array<keyof OnboardingFormData>;
     
     let isValid = await trigger(fieldsToValidate);
+
+    // Special handling for step 3 (subjectDetails) if it's optional but not empty
+    if (currentStep === 3 && baseSchemaForCurrentStep.shape.subjectDetails?.isOptional()) {
+        const subjectDetailsValue = getValues('subjectDetails');
+        if (subjectDetailsValue && subjectDetailsValue.length > 0) {
+            // If subjectDetails is optional but has entries, validate it specifically
+            const subjectDetailsValid = await trigger(['subjectDetails']);
+            isValid = isValid && subjectDetailsValid;
+        } else {
+             // If subjectDetails is optional and empty, it's considered valid for this step's progression
+             // (assuming the main schema allows it to be optional)
+        }
+    }
+
 
     if (isValid) {
       if (currentStep < TOTAL_STEPS) {
@@ -204,29 +220,33 @@ export default function OnboardingForm({ userId, onOnboardingSuccess }: { userId
     setIsLoading(true);
     const userProfileRef = doc(db, 'users', userId, 'userProfile', 'profile');
 
+    // Ensure data transformations (like for 'age') are done before saving
     let finalData = { ...data };
     if (!finalData.targetExams?.includes('other')) {
-      finalData.otherExamName = '';
+      finalData.otherExamName = ''; // Clear otherExamName if 'Other' is not selected
     }
      if (finalData.age === null || finalData.age === 0 || isNaN(Number(finalData.age))) {
-        delete (finalData as any).age;
+        // If age is null, 0, or NaN, ensure it's stored as null or omitted.
+        // Firestore can handle nulls. If you want to omit, use `delete (finalData as any).age;`
+        finalData.age = null; 
     } else {
-        finalData.age = Number(finalData.age);
+        finalData.age = Number(finalData.age); // Ensure it's a number
     }
     
+    // Ensure subjectDetails is an array, even if empty
     finalData.subjectDetails = finalData.subjectDetails || [];
 
     const profilePayload: Partial<UserProfileData> = {
       ...finalData,
-      onboardingCompleted: true, 
+      onboardingCompleted: true, // Mark onboarding as completed
     };
 
     try {
-      await setDoc(userProfileRef, profilePayload, { merge: true });
-      if (auth.currentUser && data.fullName) {
+      await setDoc(userProfileRef, profilePayload, { merge: true }); // Use merge to update existing doc or create if not exists
+      if (auth.currentUser && data.fullName) { // Update Firebase Auth display name if provided
         await updateProfile(auth.currentUser, { displayName: data.fullName });
       }
-      onOnboardingSuccess();
+      onOnboardingSuccess(); // Callback to notify parent component (e.g., to close modal)
     } catch (error: any) {
       console.error('Error saving onboarding data:', error);
       toast({
@@ -253,7 +273,7 @@ export default function OnboardingForm({ userId, onOnboardingSuccess }: { userId
   };
 
   return (
-    <Card className="w-full max-w-2xl shadow-2xl">
+    <Card className="w-full max-w-2xl shadow-2xl"> {/* Removed my-4 sm:my-8 */}
       <CardHeader className="text-center p-4 sm:p-6">
         <Sparkles className="mx-auto h-8 w-8 sm:h-10 sm:w-10 text-primary mb-1 sm:mb-2" />
         <CardTitle className="text-xl sm:text-2xl md:text-3xl font-bold">
@@ -266,8 +286,9 @@ export default function OnboardingForm({ userId, onOnboardingSuccess }: { userId
       <CardContent className="p-4 sm:p-6">
         <Progress value={progressValue} className="mb-6 sm:mb-8 h-2.5 sm:h-3" />
         <FormProvider {...methods}>
+          {/* Removed Framer Motion AnimatePresence and motion.div for simplicity and to ensure scrolling */}
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-5 sm:space-y-6">
-            <div> {/* This div no longer uses Framer Motion */}
+            <div>
               <Suspense fallback={<OnboardingStepSkeleton />}>
                 {renderStepContent()}
               </Suspense>

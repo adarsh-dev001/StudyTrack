@@ -206,7 +206,13 @@ export default function AiRecommendationsPage() {
 
   if (showOnboardingModal && currentUser) {
     return (
-      <Dialog open={showOnboardingModal} onOpenChange={setShowOnboardingModal}>
+      <Dialog open={showOnboardingModal} onOpenChange={(isOpen) => {
+          if (!isOpen && profile && !profile.onboardingCompleted) {
+            // User tried to close modal without completing onboarding.
+            // Optionally show a toast or keep modal open. For now, allow closing.
+          }
+          setShowOnboardingModal(isOpen);
+        }}>
         <DialogContent className="max-w-2xl w-[95vw] max-h-[90vh] flex flex-col p-0">
           <DialogHeader className="p-4 sm:p-6 border-b text-center shrink-0">
             <DialogTitle className="text-xl sm:text-2xl">Complete Your Profile for AI Coach</DialogTitle>
@@ -491,3 +497,4 @@ export default function AiRecommendationsPage() {
   );
 }
 
+    
