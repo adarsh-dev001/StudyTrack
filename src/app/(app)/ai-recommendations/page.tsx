@@ -1,15 +1,15 @@
 
 'use client';
 
-import React, { useState, useEffect, Suspense } from 'react';
+import React, { useState, useEffect, Suspense, useCallback } from 'react';
 import { useAuth } from '@/contexts/auth-context';
 import { db } from '@/lib/firebase';
-import { doc, onSnapshot, Unsubscribe } from 'firebase/firestore';
+import { doc, onSnapshot, Unsubscribe, getDoc } from 'firebase/firestore';
 import type { UserProfileData } from '@/lib/profile-types';
 import {
   generatePersonalizedRecommendations,
   type PersonalizedRecommendationsOutput,
-  type PersonalizedRecommendationsInput, // Ensure input type is available if needed here
+  type PersonalizedRecommendationsInput,
 } from '@/ai/flows/generate-personalized-recommendations';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -21,7 +21,6 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Loader2, Wand2, Brain, ListChecks, CalendarClock, Flag, Target as TargetIcon, Goal, Lightbulb, Zap, ShieldCheck, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { cn } from '@/lib/utils';
 import Link from 'next/link';
 
 function OnboardingFormFallback() {
@@ -97,49 +96,10 @@ export default function AiRecommendationsPage() {
   const [error, setError] = useState<string | null>(null);
   const [showOnboardingModal, setShowOnboardingModal] = useState(false);
 
-  useEffect(() => {
-    let unsubscribeProfile: Unsubscribe | undefined;
-    if (currentUser?.uid) {
-      setIsLoadingProfile(true);
-      const profileDocRef = doc(db, 'users', currentUser.uid, 'userProfile', 'profile');
-
-      unsubscribeProfile = onSnapshot(profileDocRef, (profileSnap) => {
-        if (profileSnap.exists()) {
-          const userProfileData = profileSnap.data() as UserProfileData;
-          setProfile(userProfileData);
-          if (!userProfileData.onboardingCompleted) {
-            setShowOnboardingModal(true);
-          } else {
-            setShowOnboardingModal(false);
-            // Check if recommendations need to be fetched
-            if (!recommendations && !isLoadingRecommendations && !error) {
-              fetchRecommendations(userProfileData);
-            }
-          }
-        } else {
-          setProfile(null);
-          setShowOnboardingModal(true); // Prompt onboarding if profile doesn't exist
-        }
-        setIsLoadingProfile(false);
-      }, (err) => {
-        console.error("Error fetching profile:", err);
-        setError("Could not load your profile.");
-        setIsLoadingProfile(false);
-      });
-    } else {
-        setIsLoadingProfile(false);
-        setShowOnboardingModal(false);
-    }
-
-    return () => unsubscribeProfile?.();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentUser?.uid]); // recommendations, isLoadingRecommendations, error removed to avoid re-fetch loops
-
-  async function fetchRecommendations(userProfile: UserProfileData) {
+  const fetchRecommendations = useCallback(async (userProfile: UserProfileData) => {
     setIsLoadingRecommendations(true);
-    setError(null); // Reset error before new fetch
+    setError(null);
     try {
-       // Map UserProfileData to PersonalizedRecommendationsInput if necessary
        const inputForAI: PersonalizedRecommendationsInput = {
         name: userProfile.fullName,
         targetExams: userProfile.targetExams,
@@ -169,22 +129,64 @@ export default function AiRecommendationsPage() {
     } finally {
       setIsLoadingRecommendations(false);
     }
-  }
+  }, []); // Dependencies: setIsLoadingRecommendations, setError, setRecommendations are stable
 
-  const handleOnboardingComplete = () => {
+  useEffect(() => {
+    let unsubscribeProfile: Unsubscribe | undefined;
+    if (currentUser?.uid) {
+      setIsLoadingProfile(true);
+      const profileDocRef = doc(db, 'users', currentUser.uid, 'userProfile', 'profile');
+
+      unsubscribeProfile = onSnapshot(profileDocRef, (profileSnap) => {
+        if (profileSnap.exists()) {
+          const userProfileData = profileSnap.data() as UserProfileData;
+          setProfile(userProfileData);
+          if (!userProfileData.onboardingCompleted) {
+            setShowOnboardingModal(true);
+          } else {
+            setShowOnboardingModal(false);
+            // Check if recommendations need to be fetched
+            // Only fetch if profile exists, onboarding is complete, and recommendations haven't been fetched/errored
+            if (!recommendations && !isLoadingRecommendations && !error) {
+              fetchRecommendations(userProfileData);
+            }
+          }
+        } else {
+          setProfile(null);
+          setShowOnboardingModal(true);
+        }
+        setIsLoadingProfile(false);
+      }, (err) => {
+        console.error("Error fetching profile:", err);
+        setError("Could not load your profile.");
+        setIsLoadingProfile(false);
+      });
+    } else {
+        setIsLoadingProfile(false);
+        setShowOnboardingModal(false); // No user, no onboarding modal
+    }
+
+    return () => unsubscribeProfile?.();
+  }, [currentUser?.uid, fetchRecommendations, recommendations, isLoadingRecommendations, error]);
+
+
+  const handleOnboardingComplete = async () => { // Made async
     setShowOnboardingModal(false);
-    // Re-fetch profile to get updated onboarding status and then fetch recommendations
     if(currentUser?.uid) {
         const profileDocRef = doc(db, 'users', currentUser.uid, 'userProfile', 'profile');
-        onSnapshot(profileDocRef, (profileSnap) => { // Use onSnapshot to get live update
+        try {
+            const profileSnap = await getDoc(profileDocRef); // Use getDoc for a one-time fetch
             if (profileSnap.exists()) {
                 const userProfileData = profileSnap.data() as UserProfileData;
-                setProfile(userProfileData); // Update profile state
+                setProfile(userProfileData);
                 if (userProfileData.onboardingCompleted && !recommendations && !isLoadingRecommendations && !error) {
                     fetchRecommendations(userProfileData);
                 }
             }
-        });
+        } catch (err) {
+            console.error("Error re-fetching profile after onboarding:", err);
+            setError("Could not reload profile after onboarding.");
+        }
     }
   };
 
@@ -201,7 +203,8 @@ export default function AiRecommendationsPage() {
   if (showOnboardingModal && currentUser) {
     return (
       <Dialog open={showOnboardingModal} onOpenChange={(isOpen) => {
-          if (!currentUser) return;
+          if (!currentUser) return; // Should not happen if modal is shown, but good check
+          // Prevent closing if onboarding isn't complete, unless explicitly trying to close.
           if (!isOpen && profile && !profile.onboardingCompleted) {
              setShowOnboardingModal(true); return;
           }
@@ -402,7 +405,7 @@ export default function AiRecommendationsPage() {
             </CardContent>
          </Card>
       )}
-       {!isLoadingRecommendations && !profile && (
+       {!isLoadingRecommendations && !profile && !currentUser && ( // Updated condition for logged out state
          <Card>
             <CardContent className="pt-6 text-center">
                 <p className="text-muted-foreground">Please log in to access AI Coach recommendations.</p>
@@ -413,4 +416,3 @@ export default function AiRecommendationsPage() {
     </div>
   );
 }
-
