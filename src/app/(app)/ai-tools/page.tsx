@@ -13,14 +13,14 @@ import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import {
   BrainCircuit,
-  ListTree, // For map value
-  Sparkles,       // For map value (mapped from SparklesIcon key)
-  MessageSquareQuestion, // For map value (mapped from MessageSquare key)
-  Lock,           // For map value (mapped from LockIcon key)
-  HelpCircle,     // For map value
-  ArrowRight,     // For card footer
+  ListTree,
+  Sparkles,
+  MessageSquareQuestion, // Direct import
+  Lock,
+  HelpCircle,
+  ArrowRight,
 } from "lucide-react";
-import type { LucideIcon } from "lucide-react"; // Keep this for type safety if needed elsewhere
+import type { LucideIcon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
@@ -29,9 +29,9 @@ import { cn } from "@/lib/utils";
 // Values are the imported Lucide components.
 const iconMap: { [key: string]: LucideIcon } = {
   ListTree: ListTree,
-  SparklesIcon: Sparkles, 
-  MessageSquare: MessageSquareQuestion, // Key is "MessageSquare", value is imported MessageSquareQuestion
-  LockIcon: Lock,         
+  Sparkles: Sparkles, // Key matches imported name
+  MessageSquareQuestion: MessageSquareQuestion, // Key matches imported name
+  Lock: Lock, // Key matches imported name
   HelpCircle: HelpCircle,
 };
 
@@ -61,7 +61,7 @@ const aiTools: AiTool[] = [
     id: "material-summarizer",
     title: "Study Material Summarizer",
     description: "Quickly grasp key concepts by summarizing your study materials.",
-    iconName: "SparklesIcon", 
+    iconName: "Sparkles", // Updated to match direct import/key
     iconColorClass: "text-amber-500",
     link: "/ai-tools/material-summarizer",
     status: "Active",
@@ -71,7 +71,7 @@ const aiTools: AiTool[] = [
     id: "doubt-solver",
     title: "AI Doubt Solver",
     description: "Get instant, context-aware explanations for your academic questions.",
-    iconName: "MessageSquare", // ✅ Matches iconMap key
+    iconName: "MessageSquareQuestion", // Updated to match direct import/key
     iconColorClass: "text-indigo-500",
     link: "/ai-tools/doubt-solver",
     status: "Active",
@@ -81,7 +81,7 @@ const aiTools: AiTool[] = [
     id: "productivity-analyzer",
     title: "Productivity Analysis AI",
     description: "Unlock AI-driven insights! Requires a 7-day activity streak to access.",
-    iconName: "LockIcon", 
+    iconName: "Lock", // Updated to match direct import/key
     iconColorClass: "text-purple-500",
     link: "/ai-tools/productivity-analyzer",
     status: "Unlockable",
@@ -113,7 +113,6 @@ export default function AiToolsPage() {
         {aiTools.map((tool) => {
           const IconComponent = iconMap[tool.iconName];
           if (!IconComponent) {
-            // This console.error will appear in the client's browser console if an icon is not found
             console.error(`[Client] Icon not found in map: ${tool.iconName}`);
             return <div key={tool.id}>Error: Icon {tool.iconName} not found. Check iconMap.</div>;
           }
