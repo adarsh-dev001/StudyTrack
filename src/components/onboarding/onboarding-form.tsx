@@ -53,6 +53,9 @@ const step4BaseSchema = z.object({
   distractionStruggles: z.string().max(500, "Response too long.").optional(),
   motivationType: z.string().min(1, "Select your motivation type."),
   socialVisibilityPublic: z.boolean().optional(),
+  weakSubjects: z.array(z.string()).optional(),
+  strongSubjects: z.array(z.string()).optional(),
+  preferredLearningStyles: z.array(z.string()).min(1, "Select at least one learning style.").optional(),
 });
 
 const mergedBaseSchema = step1BaseSchema
@@ -153,6 +156,9 @@ export default function OnboardingForm({ userId, onComplete }: OnboardingFormPro
       distractionStruggles: '',
       motivationType: '',
       socialVisibilityPublic: false,
+      weakSubjects: [],
+      strongSubjects: [],
+      preferredLearningStyles: [],
     },
   });
 
@@ -329,3 +335,4 @@ export default function OnboardingForm({ userId, onComplete }: OnboardingFormPro
     </Card>
   );
 }
+

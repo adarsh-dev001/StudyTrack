@@ -45,6 +45,9 @@ export interface UserProfileData {
   preferredStudyTime?: string[]; // Stores IDs like 'morning', 'evening'
   distractionStruggles?: string;
   motivationType?: string;
+  weakSubjects?: string[]; // Added
+  strongSubjects?: string[]; // Added
+  preferredLearningStyles?: string[]; // Added
   
   // General
   socialVisibilityPublic?: boolean;

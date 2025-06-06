@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Checkbox } from '@/components/ui/checkbox';
 import { Textarea } from '@/components/ui/textarea';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { DAILY_STUDY_HOURS_OPTIONS, PREFERRED_STUDY_TIMES, MOTIVATION_TYPES } from '@/lib/constants';
+import { DAILY_STUDY_HOURS_OPTIONS, PREFERRED_STUDY_TIMES, MOTIVATION_TYPES, SUBJECT_OPTIONS, PREFERRED_LEARNING_STYLES } from '@/lib/constants';
 import type { OnboardingFormData } from './onboarding-form';
 
 export default function Step4StudyPreferences() {
@@ -68,6 +68,97 @@ export default function Step4StudyPreferences() {
           </FormItem>
         )}
       />
+      
+      <FormField
+        control={control}
+        name="weakSubjects"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel className="text-sm sm:text-base font-semibold">Weak Subject(s) (Optional)</FormLabel>
+            <FormDescription className="text-xs sm:text-sm">Select subjects you find challenging.</FormDescription>
+            <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-2 md:grid-cols-3 gap-x-3 gap-y-2 sm:gap-x-4 sm:gap-y-3 pt-1 sm:pt-2">
+              {SUBJECT_OPTIONS.map((subjectOption) => (
+                <FormItem key={subjectOption.id + "-weak-onboarding"} className="flex flex-row items-center space-x-2 space-y-0">
+                  <FormControl>
+                    <Checkbox
+                      checked={field.value?.includes(subjectOption.id)}
+                      onCheckedChange={(checked) => {
+                        const currentSelectedSubjects = field.value || [];
+                        return checked
+                          ? field.onChange([...currentSelectedSubjects, subjectOption.id])
+                          : field.onChange(currentSelectedSubjects.filter((value) => value !== subjectOption.id));
+                      }}
+                    />
+                  </FormControl>
+                  <FormLabel className="font-normal text-xs sm:text-sm">{subjectOption.label}</FormLabel>
+                </FormItem>
+              ))}
+            </div>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+
+      <FormField
+        control={control}
+        name="strongSubjects"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel className="text-sm sm:text-base font-semibold">Strong Subject(s) (Optional)</FormLabel>
+            <FormDescription className="text-xs sm:text-sm">Select subjects you are confident in.</FormDescription>
+            <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-2 md:grid-cols-3 gap-x-3 gap-y-2 sm:gap-x-4 sm:gap-y-3 pt-1 sm:pt-2">
+              {SUBJECT_OPTIONS.map((subjectOption) => (
+                <FormItem key={subjectOption.id + "-strong-onboarding"} className="flex flex-row items-center space-x-2 space-y-0">
+                  <FormControl>
+                    <Checkbox
+                      checked={field.value?.includes(subjectOption.id)}
+                      onCheckedChange={(checked) => {
+                        const currentSelectedSubjects = field.value || [];
+                        return checked
+                          ? field.onChange([...currentSelectedSubjects, subjectOption.id])
+                          : field.onChange(currentSelectedSubjects.filter((value) => value !== subjectOption.id));
+                      }}
+                    />
+                  </FormControl>
+                  <FormLabel className="font-normal text-xs sm:text-sm">{subjectOption.label}</FormLabel>
+                </FormItem>
+              ))}
+            </div>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+      
+       <FormField
+        control={control}
+        name="preferredLearningStyles"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel className="text-sm sm:text-base font-semibold">General Preferred Learning Style(s)</FormLabel>
+            <FormDescription className="text-xs sm:text-sm">How do you prefer to learn overall? (You can specify per subject too).</FormDescription>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-3 gap-y-2 sm:gap-x-4 sm:gap-y-3 pt-1 sm:pt-2">
+              {PREFERRED_LEARNING_STYLES.map((styleOption) => (
+                <FormItem key={styleOption.id + "-general-onboarding"} className="flex flex-row items-center space-x-2 space-y-0">
+                  <FormControl>
+                    <Checkbox
+                      checked={field.value?.includes(styleOption.id)}
+                      onCheckedChange={(checked) => {
+                        const currentSelectedStyles = field.value || [];
+                        return checked
+                          ? field.onChange([...currentSelectedStyles, styleOption.id])
+                          : field.onChange(currentSelectedStyles.filter((value) => value !== styleOption.id));
+                      }}
+                    />
+                  </FormControl>
+                  <FormLabel className="font-normal text-xs sm:text-sm">{styleOption.label}</FormLabel>
+                </FormItem>
+              ))}
+            </div>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+
 
       <FormField
         control={control}
@@ -139,3 +230,4 @@ export default function Step4StudyPreferences() {
     </div>
   );
 }
+
