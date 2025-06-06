@@ -55,7 +55,7 @@ const step4BaseSchema = z.object({
   socialVisibilityPublic: z.boolean().optional(),
   weakSubjects: z.array(z.string()).optional(),
   strongSubjects: z.array(z.string()).optional(),
-  preferredLearningStyles: z.array(z.string()).min(1, "Select at least one learning style.").optional(),
+  preferredLearningStyles: z.array(z.string()).min(1, "Select at least one learning style."), // Removed .optional()
 });
 
 const mergedBaseSchema = step1BaseSchema
@@ -90,7 +90,7 @@ export type OnboardingFormData = z.infer<typeof fullOnboardingSchema>;
 const getBaseSchemaForStep = (step: number) => {
   if (step === 1) return step1BaseSchema;
   if (step === 2) return step2BaseSchema;
-  if (step === 3) return step3BaseSchema; // subjectDetails validation is trickier with partial
+  if (step === 3) return step3BaseSchema; 
   if (step === 4) return step4BaseSchema;
   return fullOnboardingSchema; 
 };
@@ -310,7 +310,7 @@ export default function OnboardingForm({ userId, onComplete }: OnboardingFormPro
         <Progress value={progressValue} className="mb-6 sm:mb-8 h-2.5 sm:h-3" />
         <FormProvider {...methods}>
           <form onSubmit={handleSubmit(onSubmit)}>
-            <div className="space-y-5 sm:space-y-6"> {/* Moved space-y here */}
+            <div className="space-y-5 sm:space-y-6"> 
               <Suspense fallback={<OnboardingStepSkeleton />}>
                 {renderStepContent()}
               </Suspense>
@@ -335,4 +335,3 @@ export default function OnboardingForm({ userId, onComplete }: OnboardingFormPro
     </Card>
   );
 }
-
