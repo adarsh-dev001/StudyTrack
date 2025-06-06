@@ -29,7 +29,7 @@ export default function Step4StudyPreferences() {
                 </SelectTrigger>
               </FormControl>
               <SelectContent>
-                {DAILY_STUDY_HOURS_OPTIONS.map(option => (
+                {(DAILY_STUDY_HOURS_OPTIONS || []).map(option => (
                   <SelectItem key={option.value} value={option.value} className="text-sm sm:text-base">{option.label}</SelectItem>
                 ))}
               </SelectContent>
@@ -47,7 +47,7 @@ export default function Step4StudyPreferences() {
             <FormLabel className="text-sm sm:text-base font-semibold">Preferred Study Time(s) <span className="text-destructive">*</span></FormLabel>
             <FormDescription className="text-xs sm:text-sm">When are you most productive?</FormDescription>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-3 gap-y-2 sm:gap-x-4 sm:gap-y-3 pt-1 sm:pt-2">
-              {PREFERRED_STUDY_TIMES.map((time) => (
+              {(PREFERRED_STUDY_TIMES || []).map((time) => (
                 <FormItem key={time.id} className="flex flex-row items-center space-x-2 space-y-0">
                   <FormControl>
                     <Checkbox
@@ -77,7 +77,7 @@ export default function Step4StudyPreferences() {
             <FormLabel className="text-sm sm:text-base font-semibold">Weak Subject(s) (Optional)</FormLabel>
             <FormDescription className="text-xs sm:text-sm">Select subjects you find challenging.</FormDescription>
             <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-2 md:grid-cols-3 gap-x-3 gap-y-2 sm:gap-x-4 sm:gap-y-3 pt-1 sm:pt-2">
-              {SUBJECT_OPTIONS.map((subjectOption) => (
+              {(SUBJECT_OPTIONS || []).map((subjectOption) => (
                 <FormItem key={subjectOption.id + "-weak-onboarding"} className="flex flex-row items-center space-x-2 space-y-0">
                   <FormControl>
                     <Checkbox
@@ -107,7 +107,7 @@ export default function Step4StudyPreferences() {
             <FormLabel className="text-sm sm:text-base font-semibold">Strong Subject(s) (Optional)</FormLabel>
             <FormDescription className="text-xs sm:text-sm">Select subjects you are confident in.</FormDescription>
             <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-2 md:grid-cols-3 gap-x-3 gap-y-2 sm:gap-x-4 sm:gap-y-3 pt-1 sm:pt-2">
-              {SUBJECT_OPTIONS.map((subjectOption) => (
+              {(SUBJECT_OPTIONS || []).map((subjectOption) => (
                 <FormItem key={subjectOption.id + "-strong-onboarding"} className="flex flex-row items-center space-x-2 space-y-0">
                   <FormControl>
                     <Checkbox
@@ -137,7 +137,7 @@ export default function Step4StudyPreferences() {
             <FormLabel className="text-sm sm:text-base font-semibold">General Preferred Learning Style(s)</FormLabel>
             <FormDescription className="text-xs sm:text-sm">How do you prefer to learn overall? (You can specify per subject too).</FormDescription>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-3 gap-y-2 sm:gap-x-4 sm:gap-y-3 pt-1 sm:pt-2">
-              {PREFERRED_LEARNING_STYLES.map((styleOption) => (
+              {(PREFERRED_LEARNING_STYLES || []).map((styleOption) => (
                 <FormItem key={styleOption.id + "-general-onboarding"} className="flex flex-row items-center space-x-2 space-y-0">
                   <FormControl>
                     <Checkbox
@@ -192,7 +192,7 @@ export default function Step4StudyPreferences() {
                 value={field.value || ''}
                 className="flex flex-col space-y-1.5 sm:space-y-2"
               >
-                {MOTIVATION_TYPES.map(type => (
+                {(MOTIVATION_TYPES || []).map(type => (
                   <FormItem key={type.value} className="flex items-center space-x-3 space-y-0">
                     <FormControl><RadioGroupItem value={type.value} /></FormControl>
                     <FormLabel className="font-normal text-xs sm:text-sm">{type.label}</FormLabel>

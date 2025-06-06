@@ -21,8 +21,8 @@ export default function Step3SubjectDetails({ selectedExam }: Step3SubjectDetail
   const { control, getValues, setValue, formState: { errors } } = useFormContext<OnboardingFormData>();
   
   const subjectsForSelectedExam = React.useMemo(() => {
-    if (!selectedExam) return EXAM_SUBJECT_MAP['other']; 
-    return EXAM_SUBJECT_MAP[selectedExam] || EXAM_SUBJECT_MAP['other'];
+    if (!selectedExam) return EXAM_SUBJECT_MAP['other'] || []; 
+    return EXAM_SUBJECT_MAP[selectedExam] || EXAM_SUBJECT_MAP['other'] || [];
   }, [selectedExam]);
 
   const { fields } = useFieldArray({
@@ -32,7 +32,7 @@ export default function Step3SubjectDetails({ selectedExam }: Step3SubjectDetail
 
   React.useEffect(() => {
     const currentSubjectDetails = getValues('subjectDetails') || [];
-    const newSubjectDetails = subjectsForSelectedExam.map(examSubject => {
+    const newSubjectDetails = (subjectsForSelectedExam || []).map(examSubject => {
       const existingDetail = currentSubjectDetails.find(sd => sd.subjectId === examSubject.id);
       return existingDetail || {
         subjectId: examSubject.id,
@@ -81,7 +81,7 @@ export default function Step3SubjectDetails({ selectedExam }: Step3SubjectDetail
                     <Select onValueChange={controllerField.onChange} value={controllerField.value || ''}>
                       <FormControl><SelectTrigger className="text-xs sm:text-sm h-9"><SelectValue placeholder="Select level" /></SelectTrigger></FormControl>
                       <SelectContent>
-                        {PREPARATION_LEVELS.map(level => (
+                        {(PREPARATION_LEVELS || []).map(level => (
                           <SelectItem key={level.value} value={level.value} className="text-xs sm:text-sm">{level.label}</SelectItem>
                         ))}
                       </SelectContent>
@@ -108,7 +108,7 @@ export default function Step3SubjectDetails({ selectedExam }: Step3SubjectDetail
                   <FormItem>
                     <FormLabel className="text-xs sm:text-sm font-medium">Preferred Learning Methods <span className="text-destructive">*</span></FormLabel>
                     <div className="grid grid-cols-1 xs:grid-cols-2 gap-x-2 gap-y-1.5 pt-0.5">
-                      {PREFERRED_LEARNING_METHODS_PER_SUBJECT.map((method) => (
+                      {(PREFERRED_LEARNING_METHODS_PER_SUBJECT || []).map((method) => (
                         <FormItem key={method.id} className="flex flex-row items-center space-x-1.5 space-y-0">
                           <FormControl>
                             <Checkbox
