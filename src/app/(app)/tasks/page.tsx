@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { TaskForm, type TaskFormData } from '@/components/tasks/task-form';
 import { TaskItem, type Task, type TaskPriority } from '@/components/tasks/task-item';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -80,12 +80,12 @@ export default function TasksPage() {
     toast({ title: "Task Updated", description: "Your task details have been saved." });
   };
 
-  const openEditModal = (task: Task) => {
+  const openEditModal = useCallback((task: Task) => {
     setEditingTask(task);
     setIsEditModalOpen(true);
-  };
+  }, []);
 
-  const awardCoinsAndRecordInteraction = async () => {
+  const awardCoinsAndRecordInteraction = useCallback(async () => {
     if (!currentUser?.uid || !db) return;
     await recordPlatformInteraction(currentUser.uid);
     const userProfileDocRef = doc(db, 'users', currentUser.uid, 'userProfile', 'profile');
@@ -109,9 +109,9 @@ export default function TasksPage() {
       console.error("Error awarding coins for task:", error);
       toast({ title: 'Coin Award Error', description: 'Could not update your coin balance.', variant: 'destructive' });
     }
-  };
+  }, [currentUser, toast]);
 
-  const handleToggleComplete = (id: string) => {
+  const handleToggleComplete = useCallback((id: string) => {
     let taskJustCompleted = false;
     setTasks(prevTasks =>
       prevTasks.map(task => {
@@ -125,13 +125,13 @@ export default function TasksPage() {
     if (taskJustCompleted && currentUser) {
       awardCoinsAndRecordInteraction();
     }
-  };
+  }, [currentUser, awardCoinsAndRecordInteraction]);
 
-  const handleDeleteTask = (id: string) => {
+  const handleDeleteTask = useCallback((id: string) => {
     if (!window.confirm("Are you sure you want to delete this task? This action cannot be undone.")) return;
     setTasks(prevTasks => prevTasks.filter(task => task.id !== id));
     toast({ title: "Task Deleted", description: "The task has been removed." });
-  };
+  }, [toast]);
 
   const filteredTasks = useMemo(() => {
     return tasks.filter(task => {

@@ -1,6 +1,7 @@
 
 'use client';
 
+import React from 'react'; // Added React import for React.memo
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Trash2, Edit3 } from 'lucide-react';
@@ -25,18 +26,18 @@ interface TaskItemProps {
   task: Task;
   onToggleComplete: (id: string) => void;
   onDelete: (id: string) => void;
-  onEdit: (task: Task) => void; // Placeholder for edit functionality
+  onEdit: (task: Task) => void; 
   canEarnCoins?: boolean;
 }
 
-export function TaskItem({ task, onToggleComplete, onDelete, onEdit, canEarnCoins }: TaskItemProps) {
+export const TaskItem = React.memo(function TaskItem({ task, onToggleComplete, onDelete, onEdit, canEarnCoins }: TaskItemProps) {
   const subjectInfo = getSubjectInfo(task.subject);
   const priorityInfo = getPriorityBadgeInfo(task.priority);
   const isDeadlinePast = task.deadline && !task.completed && isPast(parseISO(task.deadline));
 
   return (
     <div className={cn(
-      "flex flex-col sm:flex-row items-start sm:items-center justify-between p-3 my-2 rounded-lg border shadow-sm hover:shadow-md transition-shadow duration-150",
+      "flex flex-col sm:flex-row items-start sm:items-center justify-between p-3 my-1 rounded-lg border shadow-sm hover:shadow-md transition-shadow duration-150",
       task.completed ? "bg-muted/50 opacity-70" : subjectInfo.color,
       task.completed && "border-gray-300 dark:border-gray-600"
     )}>
@@ -62,7 +63,7 @@ export function TaskItem({ task, onToggleComplete, onDelete, onEdit, canEarnCoin
             {task.title}
           </label>
           <div className="text-xs mt-1 flex flex-wrap gap-x-2 gap-y-1 items-center">
-            <Badge variant="outline" className={cn("border-opacity-50 text-opacity-80", subjectInfo.textColor, subjectInfo.color?.replace('bg-', 'border-'))}>
+            <Badge variant="outline" size="sm" className={cn("border-opacity-50 text-opacity-80 px-1.5 py-0 text-[10px]", subjectInfo.textColor, subjectInfo.color?.replace('bg-', 'border-'))}>
                 {subjectInfo.name}
             </Badge>
             {task.deadline && (
@@ -79,7 +80,7 @@ export function TaskItem({ task, onToggleComplete, onDelete, onEdit, canEarnCoin
         </div>
       </div>
       <div className="flex items-center gap-1 self-end sm:self-center shrink-0">
-        <Badge variant={priorityInfo.variant} className={cn(priorityInfo.className, "text-xs")}>{priorityInfo.text}</Badge>
+        <Badge variant={priorityInfo.variant} size="sm" className={cn(priorityInfo.className, "text-xs px-1.5 py-0")}>{priorityInfo.text}</Badge>
         <Button
             variant="ghost"
             size="icon"
@@ -102,4 +103,4 @@ export function TaskItem({ task, onToggleComplete, onDelete, onEdit, canEarnCoin
       </div>
     </div>
   );
-}
+});
