@@ -15,12 +15,12 @@ import {
   BrainCircuit,
   ListTree,
   Sparkles,
-  MessageSquareQuestion, // Ensured direct import
+  MessageSquare, // Corrected import
   Lock,
   HelpCircle,
   ArrowRight,
 } from "lucide-react";
-import type { LucideIcon } from "lucide-react"; // Keep this for type safety if needed elsewhere, or remove if only for map keys
+import type { LucideIcon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
@@ -29,9 +29,9 @@ import { cn } from "@/lib/utils";
 // Values are the imported Lucide components.
 const iconMap: { [key: string]: LucideIcon } = {
   ListTree: ListTree,
-  Sparkles: Sparkles, // Key matches imported name
-  MessageSquareQuestion: MessageSquareQuestion, // Key matches imported name
-  Lock: Lock, // Key matches imported name
+  Sparkles: Sparkles,
+  MessageSquare: MessageSquare, // Corrected mapping
+  Lock: Lock,
   HelpCircle: HelpCircle,
 };
 
@@ -71,7 +71,7 @@ const aiTools: AiTool[] = [
     id: "doubt-solver",
     title: "AI Doubt Solver",
     description: "Get instant, context-aware explanations for your academic questions.",
-    iconName: "MessageSquareQuestion", 
+    iconName: "MessageSquare", // Corrected iconName
     iconColorClass: "text-indigo-500",
     link: "/ai-tools/doubt-solver",
     status: "Active",
@@ -113,7 +113,7 @@ export default function AiToolsPage() {
         {aiTools.map((tool) => {
           const IconComponent = iconMap[tool.iconName];
           if (!IconComponent) {
-            console.error(`[Client] Icon not found in map: ${tool.iconName}`); // Changed from [Server] to [Client] as this page is "use client"
+            console.error(`[Client] Icon not found in map: ${tool.iconName}`);
             return <div key={tool.id}>Error: Icon {tool.iconName} not found. Check iconMap.</div>;
           }
           return (
@@ -178,3 +178,4 @@ export default function AiToolsPage() {
     </div>
   );
 }
+
