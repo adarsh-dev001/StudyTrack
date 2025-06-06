@@ -1,29 +1,36 @@
 
 "use client";
 
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { 
-  BrainCircuit, 
+import {
+  BrainCircuit,
   ListTree,
-  Sparkles, 
+  Sparkles,
   MessageSquareQuestion,
-  Lock,     
-  HelpCircle, 
-  ArrowRight 
+  Lock,
+  HelpCircle,
+  ArrowRight,
 } from "lucide-react";
-import type { LucideIcon } from "lucide-react";
-import { Badge } from "@/components/ui/badge"; 
-import { cn } from "@/lib/utils"; 
+import type { LucideIcon } from "lucide-react"; // For explicit typing if preferred, but inference works
+import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 
 // Define an icon map
-// Keys here MUST EXACTLY match iconName strings in aiTools array.
+// Keys here MUST EXACTLY match iconName strings in aiTools array AND the imported component name.
 const iconMap: { [key: string]: LucideIcon } = {
   ListTree: ListTree,
-  SparklesIcon: Sparkles, // Key is "SparklesIcon", value is imported Sparkles component
+  Sparkles: Sparkles, // Changed key from SparklesIcon to Sparkles
   MessageSquareQuestion: MessageSquareQuestion,
-  LockIcon: Lock,         // Key is "LockIcon", value is imported Lock component
+  Lock: Lock,         // Changed key from LockIcon to Lock
   HelpCircle: HelpCircle,
 };
 
@@ -32,7 +39,7 @@ interface AiTool {
   title: string;
   description: string;
   iconName: keyof typeof iconMap; // iconName must be a key defined in iconMap
-  iconColorClass?: string; 
+  iconColorClass?: string;
   link: string;
   status: "Active" | "Coming Soon" | "Unlockable";
   actionText: string;
@@ -43,51 +50,51 @@ const aiTools: AiTool[] = [
     id: "syllabus-suggester",
     title: "AI Syllabus Suggester",
     description: "Get personalized syllabus suggestions for your exams (NEET, UPSC, JEE, etc.).",
-    iconName: "ListTree",
+    iconName: "ListTree", // Matches key in iconMap
     iconColorClass: "text-sky-500",
     link: "/ai-tools/syllabus-suggester",
     status: "Active",
-    actionText: "Use Suggester"
+    actionText: "Use Suggester",
   },
   {
     id: "material-summarizer",
     title: "Study Material Summarizer",
     description: "Quickly grasp key concepts by summarizing your study materials.",
-    iconName: "SparklesIcon",
+    iconName: "Sparkles", // Changed from SparklesIcon to Sparkles
     iconColorClass: "text-amber-500",
     link: "/ai-tools/material-summarizer",
     status: "Active",
-    actionText: "Use Summarizer"
+    actionText: "Use Summarizer",
   },
   {
     id: "doubt-solver",
     title: "AI Doubt Solver",
     description: "Get instant, context-aware explanations for your academic questions.",
-    iconName: "MessageSquareQuestion", 
+    iconName: "MessageSquareQuestion", // Matches key in iconMap
     iconColorClass: "text-indigo-500",
     link: "/ai-tools/doubt-solver",
     status: "Active",
-    actionText: "Ask a Question"
+    actionText: "Ask a Question",
   },
   {
     id: "productivity-analyzer",
     title: "Productivity Analysis AI",
     description: "Unlock AI-driven insights! Requires a 7-day activity streak to access.",
-    iconName: "LockIcon",
+    iconName: "Lock", // Changed from LockIcon to Lock
     iconColorClass: "text-purple-500",
     link: "/ai-tools/productivity-analyzer",
     status: "Unlockable",
-    actionText: "Check Status"
+    actionText: "Check Status",
   },
   {
     id: "smart-quiz",
     title: "SmartQuiz AI",
     description: "Generate custom quizzes on any topic, tailored to exam type and difficulty.",
-    iconName: "HelpCircle",
+    iconName: "HelpCircle", // Matches key in iconMap
     iconColorClass: "text-green-500",
     link: "/ai-tools/smart-quiz",
     status: "Active",
-    actionText: "Create Quiz"
+    actionText: "Create Quiz",
   },
 ];
 
@@ -96,7 +103,7 @@ export default function AiToolsPage() {
     <div className="w-full space-y-6 sm:space-y-8">
       <header className="space-y-1.5">
         <h1 className="text-2xl sm:text-3xl font-bold tracking-tight md:text-4xl flex items-center">
-         <BrainCircuit className="mr-2 sm:mr-3 h-7 w-7 sm:h-8 sm:w-8 text-primary" /> AI Powered Tools
+          <BrainCircuit className="mr-2 sm:mr-3 h-7 w-7 sm:h-8 sm:w-8 text-primary" /> AI Powered Tools
         </h1>
         <p className="text-md sm:text-lg text-muted-foreground">Your Study Companions: Leverage smart tools to supercharge your prep.</p>
       </header>
@@ -105,12 +112,12 @@ export default function AiToolsPage() {
         {aiTools.map((tool) => {
           const IconComponent = iconMap[tool.iconName];
           if (!IconComponent) {
-            console.error(`[Client] Icon not found in map: ${tool.iconName}`); // Changed to Client as it's now a client component
-            return <div key={tool.id}>Error: Icon {tool.iconName} not found.</div>; 
+            console.error(`[Client] Icon not found in map: ${tool.iconName}`);
+            return <div key={tool.id}>Error: Icon {tool.iconName} not found.</div>;
           }
           return (
-            <Card 
-              key={tool.id} 
+            <Card
+              key={tool.id}
               className={cn(
                 "shadow-lg hover:shadow-2xl transition-all duration-300 ease-out transform hover:-translate-y-1.5 flex flex-col",
                 tool.status === "Coming Soon" && "opacity-70 bg-muted/30",
@@ -135,10 +142,10 @@ export default function AiToolsPage() {
                 <CardDescription className="text-sm sm:text-base">{tool.description}</CardDescription>
               </CardContent>
               <CardFooter className="p-4 sm:p-6">
-                <Button 
-                  asChild 
-                  variant={tool.status === "Active" ? "default" : "outline"} 
-                  className="w-full text-sm sm:text-base group" 
+                <Button
+                  asChild
+                  variant={tool.status === "Active" ? "default" : "outline"}
+                  className="w-full text-sm sm:text-base group"
                   disabled={tool.status === "Coming Soon"}
                 >
                   <Link href={tool.link || "#"}>
@@ -152,21 +159,23 @@ export default function AiToolsPage() {
         })}
       </div>
 
-       <Card className="mt-6 sm:mt-8 p-4 sm:p-6 rounded-xl border bg-card text-card-foreground shadow-lg">
-          <CardHeader className="p-0 pb-3 sm:pb-4">
-            <CardTitle className="text-lg sm:text-xl font-semibold flex items-center"><Sparkles className="mr-2 h-5 w-5 text-accent" /> How AI Supercharges Your Prep</CardTitle>
-          </CardHeader>
-          <CardContent className="p-0">
-            <ul className="list-disc list-outside space-y-2 text-sm sm:text-base text-muted-foreground pl-5">
-                <li><span className="font-medium text-foreground">Personalized Study Plans:</span> Get syllabi tailored to your exam, subjects, and available time.</li>
-                <li><span className="font-medium text-foreground">Efficient Learning:</span> Summarize long texts quickly and grasp key concepts faster.</li>
-                <li><span className="font-medium text-foreground">Targeted Assessment:</span> Generate custom quizzes to test your knowledge on specific topics and difficulties.</li>
-                <li><span className="font-medium text-foreground">Productivity Insights:</span> Understand your study habits and get AI-driven advice to optimize your focus.</li>
-                <li><span className="font-medium text-foreground">Instant Doubt Resolution:</span> Get clear explanations for academic questions, personalized to your context.</li>
-                <li><span className="font-medium text-foreground">Motivational Boost:</span> Stay engaged with AI-driven recommendations and progress tracking.</li>
-            </ul>
-          </CardContent>
-        </Card>
+      <Card className="mt-6 sm:mt-8 p-4 sm:p-6 rounded-xl border bg-card text-card-foreground shadow-lg">
+        <CardHeader className="p-0 pb-3 sm:pb-4">
+          <CardTitle className="text-lg sm:text-xl font-semibold flex items-center"><Sparkles className="mr-2 h-5 w-5 text-accent" /> How AI Supercharges Your Prep</CardTitle>
+        </CardHeader>
+        <CardContent className="p-0">
+          <ul className="list-disc list-outside space-y-2 text-sm sm:text-base text-muted-foreground pl-5">
+            <li><span className="font-medium text-foreground">Personalized Study Plans:</span> Get syllabi tailored to your exam, subjects, and available time.</li>
+            <li><span className="font-medium text-foreground">Efficient Learning:</span> Summarize long texts quickly and grasp key concepts faster.</li>
+            <li><span className="font-medium text-foreground">Targeted Assessment:</span> Generate custom quizzes to test your knowledge on specific topics and difficulties.</li>
+            <li><span className="font-medium text-foreground">Productivity Insights:</span> Understand your study habits and get AI-driven advice to optimize your focus.</li>
+            <li><span className="font-medium text-foreground">Instant Doubt Resolution:</span> Get clear explanations for academic questions, personalized to your context.</li>
+            <li><span className="font-medium text-foreground">Motivational Boost:</span> Stay engaged with AI-driven recommendations and progress tracking.</li>
+          </ul>
+        </CardContent>
+      </Card>
     </div>
   );
 }
+
+    
