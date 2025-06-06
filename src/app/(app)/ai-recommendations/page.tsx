@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect, Suspense } from 'react';
@@ -106,28 +107,24 @@ export default function AiRecommendationsPage() {
        )}
 
       <Dialog open={showOnboardingModal} onOpenChange={(isOpen) => {
-          if (!currentUser) return; // Prevent state changes if no user
+          if (!currentUser) return; 
           if (!isOpen && profile && !profile.onboardingCompleted) {
-             // If user tries to close modal before completing onboarding, keep it open or show a message
-             // For now, let's keep it open:
              setShowOnboardingModal(true);
              return;
           }
           setShowOnboardingModal(isOpen);
         }}>
-        <DialogContent className="max-w-2xl w-[95vw] max-h-[90vh] flex flex-col p-0">
+        <DialogContent className="max-w-2xl w-[95vw] max-h-[90vh] p-0">
           <DialogHeader className="p-4 sm:p-6 border-b text-center shrink-0">
             <DialogTitle className="text-xl sm:text-2xl">Complete Your Profile</DialogTitle>
             <DialogDescription className="text-xs sm:text-sm">
               Please provide your details to personalize your StudyTrack experience and unlock AI features.
             </DialogDescription>
           </DialogHeader>
-          <ScrollArea className="flex-grow min-h-0">
-            <div className="p-4 sm:p-6">
-              <Suspense fallback={<OnboardingFormFallback />}>
-                <OnboardingForm onComplete={() => setShowOnboardingModal(false)} userId={currentUser?.uid} />
-              </Suspense>
-            </div>
+          <ScrollArea className="h-[calc(90vh-8rem)] p-4 sm:p-6">
+            <Suspense fallback={<OnboardingFormFallback />}>
+              <OnboardingForm onComplete={() => setShowOnboardingModal(false)} userId={currentUser?.uid} />
+            </Suspense>
           </ScrollArea>
         </DialogContent>
       </Dialog>

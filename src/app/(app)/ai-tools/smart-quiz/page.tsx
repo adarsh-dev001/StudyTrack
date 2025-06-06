@@ -311,19 +311,17 @@ export default function SmartQuizPage() {
           }
           setShowOnboardingModal(isOpen);
         }}>
-        <DialogContent className="max-w-2xl w-[95vw] max-h-[90vh] flex flex-col p-0">
+        <DialogContent className="max-w-2xl w-[95vw] max-h-[90vh] p-0">
           <DialogHeader className="p-4 sm:p-6 border-b text-center shrink-0">
             <DialogTitle className="text-xl sm:text-2xl">Complete Your Profile</DialogTitle>
             <DialogDescription className="text-xs sm:text-sm">
               Please provide your details to personalize your StudyTrack experience and unlock AI features.
             </DialogDescription>
           </DialogHeader>
-           <ScrollArea className="flex-grow min-h-0">
-            <div className="p-4 sm:p-6">
+           <ScrollArea className="h-[calc(90vh-8rem)] p-4 sm:p-6">
              <Suspense fallback={<OnboardingFormFallback />}>
                 <OnboardingForm userId={currentUser.uid} onComplete={handleOnboardingSuccess} />
              </Suspense>
-            </div>
           </ScrollArea>
         </DialogContent>
       </Dialog>
@@ -436,7 +434,7 @@ export default function SmartQuizPage() {
                     type="submit" 
                     disabled={form.formState.isSubmitting} 
                     size="lg" 
-                    className="w-full sm:w-auto text-base py-3 bg-gradient-to-r from-primary to-accent hover:from-primary/90 hover:to-accent/90 text-primary-foreground"
+                    className="w-full sm:w-auto text-base py-3 bg-gradient-to-r from-primary to-accent hover:from-primary/90 hover:to-accent/90 text-primary-foreground rounded-lg shadow-md hover:shadow-lg transition-all duration-300 ease-in-out transform hover:scale-105"
                 >
                     <Wand2 className="mr-2 h-5 w-5" />
                     Generate SmartQuiz
