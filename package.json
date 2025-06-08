@@ -51,6 +51,8 @@
     "framer-motion": "^12.16.0",
     "genkit": "^1.8.0",
     "gray-matter": "^4.0.3",
+    "html2canvas": "^1.4.1",
+    "jspdf": "^2.5.1",
     "lucide-react": "^0.475.0",
     "next": "^15.3.3",
     "next-mdx-remote": "^4.2.0",
@@ -66,6 +68,7 @@
     "tailwind-merge": "^3.0.1",
     "tailwindcss-animate": "^1.0.7",
     "uuid": "^10.0.0",
+    "youtube-transcript": "1.0.6",
     "zod": "^3.25.48",
     "zustand": "^5.0.5"
   },
