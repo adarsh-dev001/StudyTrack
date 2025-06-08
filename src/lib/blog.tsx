@@ -16,13 +16,27 @@ export interface PostMeta {
   category: string;
   metaDescription: string;
   author: string;
-  featuredImage?: string; // Added optional featuredImage
+  featuredImage?: string;
   [key: string]: any;
 }
 
 export interface BlogPostPageData {
   mdxSource: MDXRemoteSerializeResult;
   metadata: PostMeta;
+}
+
+function normalizeImagePath(imagePath?: string): string | undefined {
+  if (typeof imagePath === 'string') {
+    let normalizedPath = imagePath;
+    if (normalizedPath.startsWith('public/')) {
+      normalizedPath = normalizedPath.substring('public'.length);
+    }
+    if (!normalizedPath.startsWith('/') && !normalizedPath.startsWith('http')) {
+      normalizedPath = '/' + normalizedPath;
+    }
+    return normalizedPath.trim() === '/' ? undefined : normalizedPath; // Avoid just "/"
+  }
+  return undefined;
 }
 
 export function getPostSlugs() {
@@ -65,7 +79,7 @@ export async function getPostBySlug(slug: string): Promise<BlogPostPageData | nu
     category: (frontmatterData.category || 'Uncategorized') as string,
     metaDescription: (frontmatterData.metaDescription || '') as string,
     author: (frontmatterData.author || 'Anonymous') as string,
-    featuredImage: (frontmatterData.featuredImage || undefined) as string | undefined, // Extract featuredImage
+    featuredImage: normalizeImagePath(frontmatterData.featuredImage as string | undefined),
     ...frontmatterData,
   };
 
@@ -99,7 +113,7 @@ export async function getAllPostsMeta(): Promise<PostMeta[]> {
       category: (data.category || 'Uncategorized') as string,
       metaDescription: (data.metaDescription || '') as string,
       author: (data.author || 'Anonymous') as string,
-      featuredImage: (data.featuredImage || undefined) as string | undefined, // Extract featuredImage
+      featuredImage: normalizeImagePath(data.featuredImage as string | undefined),
       ...data,
     } as PostMeta;
   });
