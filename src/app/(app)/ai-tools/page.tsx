@@ -15,31 +15,30 @@ import {
   BrainCircuit,
   ListTree,
   Sparkles,
-  MessageSquare, // Corrected import
+  MessageSquare,
   Lock,
   HelpCircle,
   ArrowRight,
+  Youtube, // Added Youtube icon
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
-// Define an icon map based on user's working example structure
-// Keys here MUST EXACTLY match iconName strings in aiTools array.
-// Values are the imported Lucide components.
 const iconMap: { [key: string]: LucideIcon } = {
   ListTree: ListTree,
   Sparkles: Sparkles,
-  MessageSquare: MessageSquare, // Corrected mapping
+  MessageSquare: MessageSquare,
   Lock: Lock,
   HelpCircle: HelpCircle,
+  Youtube: Youtube, // Added Youtube to map
 };
 
 interface AiTool {
   id: string;
   title: string;
   description: string;
-  iconName: keyof typeof iconMap; // iconName must be a key defined in iconMap
+  iconName: keyof typeof iconMap; 
   iconColorClass?: string;
   link: string;
   status: "Active" | "Coming Soon" | "Unlockable";
@@ -68,10 +67,20 @@ const aiTools: AiTool[] = [
     actionText: "Use Summarizer",
   },
   {
+    id: "youtube-summarizer", // New Tool
+    title: "YouTube Video Summarizer",
+    description: "Generate notes, summaries, and quizzes from YouTube video transcripts.",
+    iconName: "Youtube", 
+    iconColorClass: "text-red-500",
+    link: "/ai-tools/youtube-summarizer",
+    status: "Active",
+    actionText: "Summarize Video",
+  },
+  {
     id: "doubt-solver",
     title: "AI Doubt Solver",
     description: "Get instant, context-aware explanations for your academic questions.",
-    iconName: "MessageSquare", // Corrected iconName
+    iconName: "MessageSquare",
     iconColorClass: "text-indigo-500",
     link: "/ai-tools/doubt-solver",
     status: "Active",
@@ -167,7 +176,7 @@ export default function AiToolsPage() {
         <CardContent className="p-0">
           <ul className="list-disc list-outside space-y-2 text-sm sm:text-base text-muted-foreground pl-5">
             <li><span className="font-medium text-foreground">Personalized Study Plans:</span> Get syllabi tailored to your exam, subjects, and available time.</li>
-            <li><span className="font-medium text-foreground">Efficient Learning:</span> Summarize long texts quickly and grasp key concepts faster.</li>
+            <li><span className="font-medium text-foreground">Efficient Learning:</span> Summarize long texts or video transcripts quickly and grasp key concepts faster.</li>
             <li><span className="font-medium text-foreground">Targeted Assessment:</span> Generate custom quizzes to test your knowledge on specific topics and difficulties.</li>
             <li><span className="font-medium text-foreground">Productivity Insights:</span> Understand your study habits and get AI-driven advice to optimize your focus.</li>
             <li><span className="font-medium text-foreground">Instant Doubt Resolution:</span> Get clear explanations for academic questions, personalized to your context.</li>
@@ -179,3 +188,4 @@ export default function AiToolsPage() {
   );
 }
 
+    

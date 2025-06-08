@@ -17,6 +17,7 @@ import {
   Settings,
   ShoppingCart, 
   HelpCircle,
+  Youtube, // Added Youtube icon
 } from 'lucide-react';
 import {
   Sidebar,
@@ -57,6 +58,7 @@ const navSections: NavSection[] = [
     title: 'AI Features',
     items: [
       { href: '/ai-tools', label: 'AI Tools Hub', icon: BrainCircuit },
+      { href: '/ai-tools/youtube-summarizer', label: 'Video Summarizer', icon: Youtube },
       { href: '/ai-tools/smart-quiz', label: 'SmartQuiz AI', icon: HelpCircle },
       { href: '/ai-recommendations', label: 'AI Coach', icon: Brain },
     ]
@@ -75,12 +77,29 @@ const AppSidebarComponent = () => {
   const pathname = usePathname();
 
   const isNavItemActive = (itemHref: string) => {
-    if (['/dashboard', '/ai-recommendations', '/ai-tools/smart-quiz', '/pomodoro', '/streaks', '/rewards-shop', '/settings'].includes(itemHref)) {
+    // Exact match for top-level dashboard items and settings
+    const exactMatchPaths = [
+        '/dashboard', 
+        '/ai-recommendations', 
+        '/pomodoro', 
+        '/streaks', 
+        '/rewards-shop', 
+        '/settings'
+    ];
+    if (exactMatchPaths.includes(itemHref)) {
       return pathname === itemHref;
     }
+    // For /ai-tools, it should be active if pathname starts with /ai-tools but is NOT a more specific AI tool already listed
     if (itemHref === '/ai-tools') {
-      return pathname.startsWith('/ai-tools') && pathname !== '/ai-tools/smart-quiz';
+      return pathname.startsWith('/ai-tools') && 
+             !pathname.startsWith('/ai-tools/smart-quiz') &&
+             !pathname.startsWith('/ai-tools/youtube-summarizer'); // Add other specific AI tools here
     }
+    // For specific AI tools like /ai-tools/smart-quiz or /ai-tools/youtube-summarizer
+    if (itemHref.startsWith('/ai-tools/')) {
+        return pathname === itemHref || pathname.startsWith(itemHref + "/"); // for potential sub-pages
+    }
+    // Default startsWith for other sections like /study-planner, /tasks
     return pathname.startsWith(itemHref);
   };
 
