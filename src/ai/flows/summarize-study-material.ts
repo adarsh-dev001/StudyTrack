@@ -23,7 +23,7 @@ const SummarizeStudyMaterialInputSchema = z.object({
 export type SummarizeStudyMaterialInput = z.infer<typeof SummarizeStudyMaterialInputSchema>;
 
 const MCQSchema = z.object({
-  question: z.string().describe("The MCQ question text."),
+  questionText: z.string().describe("The MCQ question text."), // Changed from 'question' to 'questionText'
   options: z.array(z.string()).min(3).max(5).describe("An array of 3-5 answer options."),
   correctAnswerIndex: z.number().int().min(0).describe("The 0-based index of the correct answer in the options array."),
   explanation: z.string().optional().describe("A brief explanation for why the answer is correct and/or why other options are incorrect.")
@@ -33,7 +33,7 @@ export type MCQ = z.infer<typeof MCQSchema>;
 const SummarizeStudyMaterialOutputSchema = z.object({
   summary: z.string().describe('A concise summary of the study material, approximately 100-200 words.'),
   keyConcepts: z.array(z.string()).min(3).max(7).describe("An array of 3-7 bullet points highlighting the key concepts from the material."),
-  multipleChoiceQuestions: z.array(MCQSchema).min(3).max(5).describe("An array of 3-5 multiple-choice questions based on the material. Each MCQ should have a question, options, the index of the correct option, and an explanation.")
+  multipleChoiceQuestions: z.array(MCQSchema).min(3).max(5).describe("An array of 3-5 multiple-choice questions based on the material. Each MCQ should have a questionText, options, the index of the correct option, and an explanation.")
 });
 
 export type SummarizeStudyMaterialOutput = z.infer<typeof SummarizeStudyMaterialOutputSchema>;
@@ -46,6 +46,7 @@ export async function summarizeStudyMaterial(
 
 const summarizeStudyMaterialPrompt = ai.definePrompt({
   name: 'summarizeStudyMaterialPrompt',
+  model: 'openai/gpt-3.5-turbo', // Specify OpenAI model here
   input: {schema: SummarizeStudyMaterialInputSchema},
   output: {schema: SummarizeStudyMaterialOutputSchema},
   prompt: `You are an AI study assistant for students preparing for competitive exams.
@@ -67,7 +68,7 @@ Based on the student's profile context, the topic, and the provided material, pl
 1.  **Summary**: Write a concise summary of the material, around 100-200 words. Tailor the focus of the summary to be most relevant for someone preparing for {{#if examType}}{{examType}}{{else}}their exams{{/if}} at a {{#if userLevel}}{{userLevel}}{{else}}general{{/if}} level.
 2.  **Key Concepts**: List 5-7 key concepts from the material. Highlight concepts most pertinent to the {{#if examType}}{{examType}}{{else}}general competitive exam{{/if}} context, considering a {{#if userLevel}}{{userLevel}}{{else}}general{{/if}} understanding.
 3.  **Multiple Choice Questions**: Generate 3-5 multiple-choice questions (MCQs) based on the material. The difficulty and style of MCQs should be appropriate for a {{#if userLevel}}{{userLevel}}{{else}}general{{/if}} level student aiming for the {{#if examType}}{{examType}}{{else}}exams{{/if}}. For each MCQ:
-    *   Provide a clear question.
+    *   Provide a clear questionText.
     *   Provide 4 distinct answer options.
     *   Clearly indicate the 0-based index of the correct answer within the options array.
     *   Provide a brief explanation for why the correct answer is right and, if relevant, why other choices might be incorrect.
@@ -76,7 +77,7 @@ Based on the student's profile context, the topic, and the provided material, pl
 Content Generation Guidelines:
 - Authenticity & Validity: The summary, key concepts, and MCQs must be authentic and accurately reflect the provided \`material\` and \`topic\`.
 - Structure & Formatting (within JSON string values):
-    - For the \`summary\` field, the \`question\` and \`explanation\` fields within MCQs, and individual strings in the \`keyConcepts\` array:
+    - For the \`summary\` field, the \`questionText\` and \`explanation\` fields within MCQs, and individual strings in the \`keyConcepts\` array:
         - Use clear, engaging, and well-structured language.
         - You MAY use **bold** text (using \`**text**\`) or _italic_ text (using \`*text*\` or \`_text_\`) for emphasis on key terms, definitions, or important parts of an explanation.
         - Incorporate relevant emojis (e.g., 💡, ✅, 🎯, 🤔, 🌱, 🔑) where appropriate.
@@ -103,7 +104,7 @@ const summarizeStudyMaterialFlow = ai.defineFlow(
     // Validate that options array length matches correctAnswerIndex bounds
     output.multipleChoiceQuestions.forEach(mcq => {
       if (mcq.correctAnswerIndex < 0 || mcq.correctAnswerIndex >= mcq.options.length) {
-        throw new Error(`Invalid correctAnswerIndex for question: "${mcq.question}". Index ${mcq.correctAnswerIndex} is out of bounds for ${mcq.options.length} options.`);
+        throw new Error(`Invalid correctAnswerIndex for question: "${mcq.questionText}". Index ${mcq.correctAnswerIndex} is out of bounds for ${mcq.options.length} options.`);
       }
     });
     return output;

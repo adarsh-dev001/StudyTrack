@@ -1,8 +1,9 @@
 
 'use client';
 
-import React, { useState, useEffect, Suspense } from 'react';
+import React, { useState, useEffect, Suspense, useCallback } from 'react';
 import { PlannerHeader } from '@/components/planner/planner-header';
+import PlannerRightSidebar from '@/components/planner/PlannerRightSidebar';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Loader2 } from 'lucide-react';
 import { useAuth } from '@/contexts/auth-context';
@@ -12,6 +13,7 @@ import type { UserProfileData } from '@/lib/profile-types';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import OnboardingForm from '@/components/onboarding/onboarding-form';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { useToast } from '@/hooks/use-toast'; // Added useToast
 
 const PlannerView = React.lazy(() => import('@/components/planner/planner-view').then(module => ({ default: module.PlannerView })));
 const DayView = React.lazy(() => import('@/components/planner/day-view'));
@@ -81,6 +83,7 @@ export default function StudyPlannerPage() {
   const [userProfile, setUserProfile] = useState<UserProfileData | null>(null);
   const [isLoadingProfile, setIsLoadingProfile] = useState(true);
   const [showOnboardingModal, setShowOnboardingModal] = useState(false);
+  const { toast } = useToast(); // Added useToast
 
   useEffect(() => {
     let unsubscribeProfile: Unsubscribe | undefined;
@@ -115,6 +118,7 @@ export default function StudyPlannerPage() {
 
   const handleOnboardingSuccess = () => {
     setShowOnboardingModal(false);
+    // Optionally refetch profile or rely on onSnapshot
   };
 
   const handleDateChange = (date: Date | undefined) => {
@@ -122,6 +126,18 @@ export default function StudyPlannerPage() {
       setSelectedDate(date);
     }
   };
+  
+  const handleAddTaskFromSidebar = useCallback(() => {
+    // This function would ideally open the same modal as the PlannerView's "Add Task"
+    // For now, let's just log it or show a toast
+    toast({ title: "Add Event", description: "This would open the new event/task dialog." });
+    console.log("Add Event/Task from sidebar clicked");
+  }, [toast]);
+
+  const handleGenerateStudyPlanFromSidebar = useCallback(() => {
+    toast({ title: "Generate Study Plan", description: "This feature is coming soon!" });
+    console.log("Generate Study Plan from sidebar clicked");
+  }, [toast]);
 
   if (isLoadingProfile) {
     return (
@@ -160,55 +176,66 @@ export default function StudyPlannerPage() {
   }
 
   return (
-    <div className="w-full flex h-full flex-col space-y-4">
-      <PlannerHeader
-        currentView={currentView}
-        onViewChange={setCurrentView}
-        selectedDate={selectedDate}
-        onDateChange={handleDateChange}
-        selectedSubject={selectedSubject}
-        onSubjectChange={setSelectedSubject}
-        allSubjectsValue={ALL_SUBJECTS_FILTER_VALUE}
-      />
-      <div className="flex-grow overflow-hidden">
-        {(!currentUser || (userProfile && !userProfile.onboardingCompleted)) && !showOnboardingModal && (
-             <div className="flex flex-col items-center justify-center min-h-[calc(100vh-300px)] text-center p-6">
-                <p className="text-lg text-muted-foreground">
-                    {currentUser ? "Please complete your profile setup to use the Study Planner effectively." : "Please log in to use the Study Planner."}
-                </p>
-                {!currentUser && <Button onClick={() => { if (typeof window !== 'undefined') window.location.href = '/login'; }} className="mt-4">Log In</Button>}
-             </div>
-        )}
-        {currentUser && userProfile?.onboardingCompleted && currentView === 'week' && (
-          <Suspense fallback={<PlannerViewFallback />}>
-            <PlannerView
-              selectedDate={selectedDate}
-              selectedSubjectFilter={selectedSubject === ALL_SUBJECTS_FILTER_VALUE ? null : selectedSubject}
-              onDateChange={setSelectedDate}
-              onViewChange={setCurrentView}
-            />
-          </Suspense>
-        )}
-        {currentUser && userProfile?.onboardingCompleted && currentView === 'day' && (
-           <Suspense fallback={<DayViewFallback />}>
-            <DayView
-              selectedDate={selectedDate}
-              selectedSubjectFilter={selectedSubject === ALL_SUBJECTS_FILTER_VALUE ? null : selectedSubject}
-            />
-          </Suspense>
-        )}
-        {currentUser && userProfile?.onboardingCompleted && currentView === 'month' && (
-          <Suspense fallback={<MonthViewFallback />}>
-            <MonthView
+    <div className="flex h-full w-full overflow-hidden">
+      <div className="flex-1 flex flex-col min-w-0">
+        <div className="p-4 md:p-6 lg:p-8 border-b">
+          <PlannerHeader
+            currentView={currentView}
+            onViewChange={setCurrentView}
+            selectedDate={selectedDate}
+            onDateChange={handleDateChange}
+            selectedSubject={selectedSubject}
+            onSubjectChange={setSelectedSubject}
+            allSubjectsValue={ALL_SUBJECTS_FILTER_VALUE}
+          />
+        </div>
+        <div className="flex-grow overflow-auto p-4 md:p-6 lg:p-8">
+          {(!currentUser || (userProfile && !userProfile.onboardingCompleted)) && !showOnboardingModal && (
+               <div className="flex flex-col items-center justify-center h-full text-center">
+                  <p className="text-lg text-muted-foreground">
+                      {currentUser ? "Please complete your profile setup to use the Study Planner effectively." : "Please log in to use the Study Planner."}
+                  </p>
+                  {!currentUser && <Button onClick={() => { if (typeof window !== 'undefined') window.location.href = '/login'; }} className="mt-4">Log In</Button>}
+               </div>
+          )}
+          {currentUser && userProfile?.onboardingCompleted && currentView === 'week' && (
+            <Suspense fallback={<PlannerViewFallback />}>
+              <PlannerView
                 selectedDate={selectedDate}
+                selectedSubjectFilter={selectedSubject === ALL_SUBJECTS_FILTER_VALUE ? null : selectedSubject}
                 onDateChange={setSelectedDate}
                 onViewChange={setCurrentView}
+              />
+            </Suspense>
+          )}
+          {currentUser && userProfile?.onboardingCompleted && currentView === 'day' && (
+             <Suspense fallback={<DayViewFallback />}>
+              <DayView
+                selectedDate={selectedDate}
                 selectedSubjectFilter={selectedSubject === ALL_SUBJECTS_FILTER_VALUE ? null : selectedSubject}
-            />
-          </Suspense>
-        )}
+              />
+            </Suspense>
+          )}
+          {currentUser && userProfile?.onboardingCompleted && currentView === 'month' && (
+            <Suspense fallback={<MonthViewFallback />}>
+              <MonthView
+                  selectedDate={selectedDate}
+                  onDateChange={setSelectedDate}
+                  onViewChange={setCurrentView}
+                  selectedSubjectFilter={selectedSubject === ALL_SUBJECTS_FILTER_VALUE ? null : selectedSubject}
+              />
+            </Suspense>
+          )}
+        </div>
+      </div>
+      <div className="w-full max-w-xs hidden lg:block border-l">
+        <PlannerRightSidebar 
+          onAddTask={handleAddTaskFromSidebar} 
+          onGenerateStudyPlan={handleGenerateStudyPlanFromSidebar} 
+        />
       </div>
     </div>
   );
 }
+
     

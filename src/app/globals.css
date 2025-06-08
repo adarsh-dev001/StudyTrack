@@ -55,6 +55,14 @@ body {
     --sidebar-accent-foreground: 240 5.9% 10%;
     --sidebar-border: 220 13% 91%;
     --sidebar-ring: 217.2 91.2% 59.8%;
+
+    /* New theme colors based on screenshot */
+    --theme-purple-light: 246 80% 97%; /* approx #E9E7FD for light backgrounds */
+    --theme-purple-medium: 255 85% 60%; /* approx #7C3AED for primary buttons */
+    --theme-purple-dark: 255 80% 50%;
+    --theme-green-cta: 145 63% 49%; /* approx #22C55E */
+    --theme-red-cta: 0 84% 60%; /* approx #EF4444 */
+    --theme-yellow-cta: 45 93% 47%; /* approx #F59E0B */
   }
 
   .dark {
@@ -100,6 +108,14 @@ body {
     --sidebar-accent-foreground: 240 4.8% 95.9%;
     --sidebar-border: 240 3.7% 15.9%;
     --sidebar-ring: 217.2 91.2% 59.8%;
+
+    /* New theme colors based on screenshot - dark mode */
+    --theme-purple-light: 255 30% 20%; 
+    --theme-purple-medium: 255 80% 70%; 
+    --theme-purple-dark: 255 75% 60%;
+    --theme-green-cta: 145 55% 55%;
+    --theme-red-cta: 0 70% 60%;
+    --theme-yellow-cta: 45 80% 55%;
   }
 }
 
@@ -112,4 +128,4 @@ body {
   }
   /* Redundant table styles removed as they are handled by mdx-components.tsx and Tailwind Typography */
 }
-
+    
