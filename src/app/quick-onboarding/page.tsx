@@ -10,10 +10,11 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Loader2, ArrowRight, CheckCircle } from 'lucide-react';
 import { useAuth } from '@/contexts/auth-context';
 import { db } from '@/lib/firebase';
-import { doc, setDoc, getDoc, updateDoc } from 'firebase/firestore';
+import { doc, setDoc, getDoc, Timestamp } from 'firebase/firestore'; // Added Timestamp
 import type { UserProfileData } from '@/lib/profile-types'; 
 import { DEFAULT_THEME_ID } from '@/lib/themes';
 import { useToast } from '@/hooks/use-toast';
+import { v4 as uuidv4 } from 'uuid'; // Import uuid
 
 interface QuizQuestion {
   id: number;
@@ -29,6 +30,17 @@ interface OnboardingAnswers {
   studyTimePerDay: string;
 }
 
+// Data structure for anonymous profile storage
+interface QuickOnboardingDataToStore {
+  targetExam?: string;
+  otherExamName?: string; // If targetExam is "Other"
+  strugglingSubject?: string;
+  studyTimePerDay?: string;
+  quickOnboardingCompleted: true;
+  createdAt: Timestamp;
+}
+
+
 const questions: QuizQuestion[] = [
   { id: 1, text: "What are you preparing for?", options: ["NEET", "JEE", "UPSC", "Class 10 Boards", "Other"], answerKey: 'targetExam' },
   { id: 2, text: "Which subject do you struggle with most?", options: ["Physics", "Chemistry", "Biology", "Math", "History", "None/Other"], answerKey: 'strugglingSubject' },
@@ -36,32 +48,39 @@ const questions: QuizQuestion[] = [
 ];
 
 const TOTAL_QUESTIONS = questions.length;
+const ANON_USER_ID_KEY = 'anonUserId_studytrack';
 
 export default function QuickOnboardingPage() {
   const router = useRouter();
-  const { currentUser, loading: authLoading } = useAuth(); // Added authLoading
+  const { currentUser, loading: authLoading } = useAuth();
   const { toast } = useToast();
   const [currentStep, setCurrentStep] = useState(1);
   const [answers, setAnswers] = useState<Partial<OnboardingAnswers>>({});
   const [isLoading, setIsLoading] = useState(false);
   const [initialCheckDone, setInitialCheckDone] = useState(false);
+  const [anonUserId, setAnonUserId] = useState<string | null>(null);
 
   useEffect(() => {
-    // This effect now only runs after authLoading is false and initialCheckDone is false
     if (!authLoading && !initialCheckDone) {
-      setInitialCheckDone(true); // Mark that the initial check has been performed
+      setInitialCheckDone(true);
       if (currentUser) {
         const checkProfile = async () => {
           const profileRef = doc(db, 'users', currentUser.uid, 'userProfile', 'profile');
           const profileSnap = await getDoc(profileRef);
           if (profileSnap.exists() && (profileSnap.data()?.onboardingCompleted || profileSnap.data()?.quickOnboardingCompleted)) {
-            // If user is logged in and has completed any onboarding, send them away from quick onboarding.
-            // router.push('/dashboard'); // Or /ai-tools, depending on desired flow for already onboarded users.
+            // router.push('/ai-tools'); // User already onboarded, go to tools
           }
         };
         checkProfile();
+      } else {
+        // Handle anonymous user ID
+        let existingAnonId = localStorage.getItem(ANON_USER_ID_KEY);
+        if (!existingAnonId) {
+          existingAnonId = uuidv4();
+          localStorage.setItem(ANON_USER_ID_KEY, existingAnonId);
+        }
+        setAnonUserId(existingAnonId);
       }
-      // If currentUser is null, we allow them to proceed with quick onboarding as a guest.
     }
   }, [currentUser, authLoading, router, initialCheckDone]);
 
@@ -97,10 +116,18 @@ export default function QuickOnboardingPage() {
     }
 
     setIsLoading(true);
-    // Simulate API call or processing
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    
+    const collectedAnswers: Partial<QuickOnboardingDataToStore> = {
+        quickOnboardingCompleted: true,
+        createdAt: Timestamp.now(),
+    };
+    if (answers.targetExam) collectedAnswers.targetExam = answers.targetExam;
+    if (answers.targetExam === "Other") collectedAnswers.otherExamName = "User Specified"; // Simplified for now
+    if (answers.strugglingSubject && answers.strugglingSubject !== "None/Other") collectedAnswers.strugglingSubject = answers.strugglingSubject;
+    if (answers.studyTimePerDay) collectedAnswers.studyTimePerDay = answers.studyTimePerDay;
 
-    if (currentUser) { // Only save to Firestore if user is logged in
+
+    if (currentUser) {
       const userProfileRef = doc(db, 'users', currentUser.uid, 'userProfile', 'profile');
       try {
         const profileSnap = await getDoc(userProfileRef);
@@ -111,8 +138,8 @@ export default function QuickOnboardingPage() {
           weakSubjects: answers.strugglingSubject && answers.strugglingSubject !== "None/Other" ? [answers.strugglingSubject] : currentData.weakSubjects || [],
           dailyStudyHours: answers.studyTimePerDay || currentData.dailyStudyHours || '',
           quickOnboardingCompleted: true,
-          onboardingCompleted: currentData.onboardingCompleted || false,
-          email: currentUser.email || '',
+          onboardingCompleted: currentData.onboardingCompleted || false, // Preserve full onboarding status
+          email: currentUser.email || currentData.email || '',
           coins: currentData.coins || 0,
           xp: currentData.xp || 0,
           earnedBadgeIds: currentData.earnedBadgeIds || [],
@@ -140,17 +167,28 @@ export default function QuickOnboardingPage() {
         setIsLoading(false);
         return;
       }
-    } else {
-      // For guests, we might store this in localStorage/sessionStorage if AI tools need it.
-      // For now, we're just letting them pass through.
-      toast({
-        title: "Preferences Noted!",
-        description: "Let's explore the AI tools.",
-      });
+    } else if (anonUserId) {
+        // Save to anonymousProfiles collection for guest user
+        try {
+            const anonProfileRef = doc(db, 'anonymousProfiles', anonUserId);
+            await setDoc(anonProfileRef, collectedAnswers);
+             toast({
+                title: "Preferences Noted!",
+                description: "We'll use this to tailor your experience. Sign up to save your progress!",
+            });
+        } catch (error) {
+            console.error("Error saving anonymous onboarding data:", error);
+            toast({
+                title: "Error",
+                description: "Could not note your preferences. Features might not be fully personalized.",
+                variant: "destructive",
+            });
+            // Allow user to proceed but with a warning
+        }
     }
 
     setIsLoading(false);
-    router.push('/ai-tools'); // Navigate to AI Tools Hub
+    router.push('/ai-tools'); 
   };
 
   const currentQuestion = questions[currentStep - 1];
@@ -179,7 +217,7 @@ export default function QuickOnboardingPage() {
     if (newDirection > 0) handleNext();
   };
 
-  if (authLoading && !initialCheckDone) { // Show loader only during initial auth check
+  if (authLoading && !initialCheckDone) { 
     return (
       <div className="flex min-h-screen items-center justify-center p-4 bg-gradient-to-br from-sky-100 via-indigo-50 to-purple-100 dark:from-sky-900 dark:via-indigo-950 dark:to-purple-900">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
@@ -254,7 +292,7 @@ export default function QuickOnboardingPage() {
               ) : (
                 <CheckCircle className="mr-2 h-5 w-5" />
               )}
-              {isLoading ? (currentUser ? 'Saving Profile...' : 'Proceeding...') : (currentUser ? 'Save & Explore Tools' : 'Explore AI Tools')}
+              {isLoading ? (currentUser ? 'Saving...' : 'Proceeding...') : 'Explore AI Tools'}
             </Button>
           )}
         </CardFooter>
