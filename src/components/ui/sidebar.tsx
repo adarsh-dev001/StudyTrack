@@ -70,34 +70,69 @@ const SidebarProvider = React.forwardRef<
   ) => {
     const isMobile = useIsMobile()
     const [openMobile, setOpenMobile] = React.useState(false)
+    const [isMounted, setIsMounted] = React.useState(false);
 
-    // This is the internal state of the sidebar.
-    // We use openProp and setOpenProp for control from outside the component.
-    const [_open, _setOpen] = React.useState(defaultOpen)
+    React.useEffect(() => {
+      setIsMounted(true);
+    }, []);
+
+    const [_open, _setOpen] = React.useState(() => {
+      if (isMounted && typeof window !== "undefined") {
+        const cookieValue = document.cookie
+          .split("; ")
+          .find((row) => row.startsWith(`${SIDEBAR_COOKIE_NAME}=`))
+          ?.split("=")[1];
+        if (cookieValue) {
+          return cookieValue === "true";
+        }
+      }
+      return defaultOpen;
+    });
+
+    // Effect to update _open state if cookie value changes after initial mount (e.g. another tab)
+    React.useEffect(() => {
+        if (isMounted && typeof window !== "undefined") {
+            const cookieValue = document.cookie
+              .split("; ")
+              .find((row) => row.startsWith(`${SIDEBAR_COOKIE_NAME}=`))
+              ?.split("=")[1];
+            const cookieOpenState = cookieValue ? cookieValue === "true" : defaultOpen;
+            if (_open !== cookieOpenState && !openProp) { // Only update if not controlled and different
+                 _setOpen(cookieOpenState);
+            }
+        }
+    // Run this effect only once on mount after isMounted becomes true, 
+    // or if defaultOpen changes (which is unlikely for this use case).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [isMounted, defaultOpen, openProp]);
+
+
     const open = openProp ?? _open
+    
     const setOpen = React.useCallback(
       (value: boolean | ((value: boolean) => boolean)) => {
-        const openState = typeof value === "function" ? value(open) : value
+        const openState = typeof value === "function" ? value(_open) : value;
         if (setOpenProp) {
-          setOpenProp(openState)
+          setOpenProp(openState);
         } else {
-          _setOpen(openState)
+          _setOpen(openState);
         }
-
-        // This sets the cookie to keep the sidebar state.
-        document.cookie = `${SIDEBAR_COOKIE_NAME}=${openState}; path=/; max-age=${SIDEBAR_COOKIE_MAX_AGE}`
       },
-      [setOpenProp, open]
-    )
+      [setOpenProp, _open]
+    );
 
-    // Helper to toggle the sidebar.
+    React.useEffect(() => {
+      if (isMounted && typeof document !== "undefined" && !openProp) { // Only write cookie if not controlled externally
+        document.cookie = `${SIDEBAR_COOKIE_NAME}=${open}; path=/; max-age=${SIDEBAR_COOKIE_MAX_AGE}`;
+      }
+    }, [open, isMounted, openProp]);
+
     const toggleSidebar = React.useCallback(() => {
       return isMobile
-        ? setOpenMobile((open) => !open)
-        : setOpen((open) => !open)
+        ? setOpenMobile((currentOpenMobile) => !currentOpenMobile)
+        : setOpen((currentOpen) => !currentOpen)
     }, [isMobile, setOpen, setOpenMobile])
 
-    // Adds a keyboard shortcut to toggle the sidebar.
     React.useEffect(() => {
       const handleKeyDown = (event: KeyboardEvent) => {
         if (
@@ -113,8 +148,6 @@ const SidebarProvider = React.forwardRef<
       return () => window.removeEventListener("keydown", handleKeyDown)
     }, [toggleSidebar])
 
-    // We add a state so that we can do data-state="expanded" or "collapsed".
-    // This makes it easier to style the sidebar with Tailwind classes.
     const state = open ? "expanded" : "collapsed"
 
     const contextValue = React.useMemo<SidebarContext>(
@@ -161,7 +194,7 @@ interface SidebarProps extends React.ComponentProps<"div"> {
   side?: "left" | "right";
   variant?: "sidebar" | "floating" | "inset";
   collapsible?: "offcanvas" | "icon" | "none";
-  defaultOpen?: boolean; // Added to destructure and prevent passing to DOM
+  defaultOpen?: boolean; 
 }
 
 const Sidebar = React.forwardRef<HTMLDivElement, SidebarProps>(
@@ -172,7 +205,7 @@ const Sidebar = React.forwardRef<HTMLDivElement, SidebarProps>(
       collapsible = "offcanvas",
       className,
       children,
-      defaultOpen, // Destructured here
+      defaultOpen, 
       ...props
     },
     ref
@@ -223,7 +256,6 @@ const Sidebar = React.forwardRef<HTMLDivElement, SidebarProps>(
         data-variant={variant}
         data-side={side}
       >
-        {/* This is what handles the sidebar gap on desktop */}
         <div
           className={cn(
             "duration-200 relative h-svh w-[--sidebar-width] bg-transparent transition-[width] ease-linear",
@@ -236,7 +268,6 @@ const Sidebar = React.forwardRef<HTMLDivElement, SidebarProps>(
             side === "left"
               ? "left-0 group-data-[collapsible=offcanvas]:left-[calc(var(--sidebar-width)*-1)]"
               : "right-0 group-data-[collapsible=offcanvas]:right-[calc(var(--sidebar-width)*-1)]",
-            // Adjust the padding for floating and inset variants.
             variant === "floating" || variant === "inset"
               ? "p-2 group-data-[collapsible=icon]:w-[calc(var(--sidebar-width-icon)_+_theme(spacing.4)_+2px)]"
               : "group-data-[collapsible=icon]:w-[--sidebar-width-icon] group-data-[side=left]:border-r group-data-[side=right]:border-l",
