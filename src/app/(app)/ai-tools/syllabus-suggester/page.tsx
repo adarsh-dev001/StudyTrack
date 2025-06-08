@@ -2,7 +2,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef, Suspense } from 'react';
-import { useForm, type SubmitHandler } from 'react-hook-form';
+import { useForm, type SubmitHandler, useWatch } from 'react-hook-form'; // Added useWatch
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Button } from '@/components/ui/button';
@@ -35,16 +35,8 @@ const SyllabusResultDisplay = React.lazy(() => import('@/components/ai-tools/syl
 const SyllabusResultDisplayFallback = React.lazy(() => import('@/components/ai-tools/syllabus-suggester/SyllabusResultDisplayFallback'));
 
 
-const commonSubjects = Object.values(EXAM_SUBJECT_MAP).flat().reduce((acc, subject) => {
-    if (!acc.find(s => s.id === subject.id)) {
-        acc.push(subject);
-    }
-    return acc;
-}, [] as {id: string, name: string}[]).sort((a,b) => a.name.localeCompare(b.name));
-
-
 const syllabusFormSchema = z.object({
-  examType: z.string().min(3, { message: 'Exam type must be at least 3 characters long.' }).max(50, { message: 'Exam type cannot exceed 50 characters.' }),
+  examType: z.string().min(1, { message: 'Exam type is required.' }).max(50, { message: 'Exam type cannot exceed 50 characters.' }),
   subjects: z.array(z.string()).refine((value) => value.some((item) => item), {
     message: "You have to select at least one subject.",
   }),
@@ -107,6 +99,26 @@ export default function SyllabusSuggesterPage() {
     },
   });
   
+  const watchedExamType = useWatch({ control: form.control, name: 'examType' });
+
+  const availableSubjectsForForm = React.useMemo(() => {
+    if (!watchedExamType) return EXAM_SUBJECT_MAP['other'] || [];
+    return EXAM_SUBJECT_MAP[watchedExamType.toLowerCase()] || EXAM_SUBJECT_MAP['other'] || [];
+  }, [watchedExamType]);
+
+  useEffect(() => {
+    // When availableSubjectsForForm changes (due to examType change),
+    // filter the currently selected subjects to remove any that are no longer relevant.
+    const currentSelectedSubjects = form.getValues('subjects') || [];
+    const newRelevantSelectedSubjects = currentSelectedSubjects.filter(subjectId =>
+      availableSubjectsForForm.some(availSub => availSub.id === subjectId)
+    );
+    if (newRelevantSelectedSubjects.length !== currentSelectedSubjects.length) {
+      form.setValue('subjects', newRelevantSelectedSubjects, { shouldValidate: true, shouldDirty: true });
+    }
+  }, [availableSubjectsForForm, form]);
+
+
   useEffect(() => {
     let unsubscribeProfile: Unsubscribe | undefined;
     if (currentUser?.uid) {
@@ -120,18 +132,23 @@ export default function SyllabusSuggesterPage() {
                   setShowOnboardingModal(true);
                 } else {
                   setShowOnboardingModal(false);
-                  // Pre-fill form if not already dirty
                   if (!form.formState.isDirty) {
                      const dailyHoursMatch = DAILY_STUDY_HOURS_OPTIONS.find(opt => data.dailyStudyHours?.includes(opt.value.split('-')[0]));
-                     const prepLevelMatch = PREPARATION_LEVELS.find(pl => data.subjectDetails?.[0]?.preparationLevel === pl.value);
+                     const prepLevelMatch = PREPARATION_LEVELS.find(pl => data.subjectDetails?.[0]?.preparationLevel === pl.value || data.preparationLevel === pl.value); // Check general prep level too
+
+                     const initialExamType = data.targetExams && data.targetExams.length > 0 
+                                    ? (data.targetExams[0] === 'other' && data.otherExamName ? data.otherExamName : data.targetExams[0]) 
+                                    : '';
+                     
+                     const subjectsForInitialExam = initialExamType ? (EXAM_SUBJECT_MAP[initialExamType.toLowerCase()] || EXAM_SUBJECT_MAP['other']) : [];
+                     const initialSubjects = data.subjectDetails?.map(sd => sd.subjectId).filter(id => subjectsForInitialExam.some(sfe => sfe.id === id)) || [];
+
 
                      form.reset({
-                        examType: data.targetExams && data.targetExams.length > 0 
-                                    ? (data.targetExams[0] === 'other' && data.otherExamName ? data.otherExamName : data.targetExams[0]) 
-                                    : '',
-                        subjects: data.subjectDetails?.map(sd => sd.subjectId).filter(id => commonSubjects.some(cs => cs.id === id)) || [],
+                        examType: initialExamType,
+                        subjects: initialSubjects,
                         timeAvailablePerDay: dailyHoursMatch ? parseFloat(dailyHoursMatch.value.split('-')[0]) : 4,
-                        targetDate: data.examAttemptYear ? new Date(parseInt(data.examAttemptYear), 5, 1) : addDays(new Date(), 90), // Default to June 1st of exam year
+                        targetDate: data.examAttemptYear ? new Date(parseInt(data.examAttemptYear), 5, 1) : addDays(new Date(), 90),
                         preparationLevel: (prepLevelMatch?.value || 'intermediate') as 'beginner' | 'intermediate' | 'advanced',
                         studyMode: data.studyMode || 'self_study',
                         weakTopics: data.weakSubjects || [],
@@ -142,9 +159,6 @@ export default function SyllabusSuggesterPage() {
                 }
             } else {
               setUserProfile(null);
-              // If no profile, and considering quick onboarding might store preferences,
-              // we might not want to *always* show full onboarding here.
-              // However, AI tools generally benefit from full profile.
               setShowOnboardingModal(true); 
             }
             setIsLoadingProfile(false);
@@ -154,17 +168,15 @@ export default function SyllabusSuggesterPage() {
             setIsLoadingProfile(false);
         });
     } else {
-        setIsLoadingProfile(false); // No user, no profile loading
-        // For guests, we might fetch from anonymousProfiles if that was implemented here
+        setIsLoadingProfile(false); 
     }
      return () => {
       if (unsubscribeProfile) unsubscribeProfile();
     };
-  }, [currentUser?.uid, form, toast]); // form is in dependency array for form.formState.isDirty & form.reset
+  }, [currentUser?.uid, form, toast]); 
 
   const handleOnboardingSuccess = () => {
     setShowOnboardingModal(false);
-    // Trigger profile re-fetch or rely on onSnapshot
   };
 
 
@@ -242,14 +254,12 @@ export default function SyllabusSuggesterPage() {
     );
   }
   
-  // Predefined exams from constants
   const predefinedExams = PREDEFINED_EXAMS_CONST.map(exam => ({
-    value: exam.value, // Use the value (e.g., 'NEET', 'JEE')
-    label: exam.label  // Use the label (e.g., 'NEET (Medical Entrance)')
+    value: exam.value, 
+    label: exam.label 
   }));
-  // For 'Other' input field, we derive the actual value from form.watch
-  const watchedExamType = form.watch('examType');
-  const isOtherExamSelected = predefinedExams.find(ex => ex.value === watchedExamType)?.label === 'Other (Specify)';
+  
+  const isOtherExamSelectedInitial = predefinedExams.find(ex => ex.value === form.getValues('examType'))?.label === 'Other';
 
 
   return (
@@ -277,7 +287,14 @@ export default function SyllabusSuggesterPage() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel className="text-sm sm:text-base">Exam Type <span className="text-destructive">*</span></FormLabel>
-                     <Select onValueChange={field.onChange} value={field.value || ''}>
+                     <Select 
+                        onValueChange={(value) => {
+                            field.onChange(value);
+                            // Reset subjects when exam type changes to ensure valid selection
+                            form.setValue('subjects', [], { shouldValidate: true }); 
+                        }} 
+                        value={field.value || ''}
+                     >
                       <FormControl>
                         <SelectTrigger className="text-sm sm:text-base">
                           <SelectValue placeholder="Select the exam you're preparing for" />
@@ -291,17 +308,16 @@ export default function SyllabusSuggesterPage() {
                         ))}
                       </SelectContent>
                     </Select>
-                    {isOtherExamSelected && (
+                    {watchedExamType === 'other' && ( // Check against watched value
                         <Input
                             placeholder="Specify other exam type"
-                            onChange={(e) => field.onChange(e.target.value)} // Still update field.value
+                            onChange={(e) => field.onChange(e.target.value)}
                             className="mt-2 text-sm sm:text-base"
-                            // Value for this input should be handled carefully if field.value is used for Select
-                            // If field.value holds the ID 'Other', this input allows user to type the actual name
+                            // This logic might need refinement if `field.value` for Select is strictly ID
                         />
                     )}
                     <FormDescription className="text-xs sm:text-sm">
-                      Choose the competitive exam you are targeting. If 'Other', type the name above.
+                      Choose the competitive exam you are targeting.
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
@@ -316,32 +332,36 @@ export default function SyllabusSuggesterPage() {
                     <div className="mb-1 sm:mb-2">
                       <FormLabel className="text-sm sm:text-base font-semibold">Subjects <span className="text-destructive">*</span></FormLabel>
                       <FormDescription className="text-xs sm:text-sm">
-                        Select all subjects you want to include in the syllabus.
+                        Select subjects relevant to your chosen exam.
                       </FormDescription>
                     </div>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-x-3 gap-y-2 sm:gap-x-4 sm:gap-y-2.5 pt-1 sm:pt-2">
-                    {commonSubjects.map((item) => (
-                      <FormItem
-                        key={item.id}
-                        className="flex flex-row items-center space-x-2 space-y-0"
-                      >
-                        <FormControl>
-                          <Checkbox
-                            checked={field.value?.includes(item.id)}
-                            onCheckedChange={(checked) => {
-                              const currentSelection = field.value || [];
-                              return checked
-                                ? field.onChange([...currentSelection, item.id])
-                                : field.onChange(currentSelection.filter(value => value !== item.id));
-                            }}
-                          />
-                        </FormControl>
-                        <FormLabel className="text-xs sm:text-sm font-normal">
-                          {item.name}
-                        </FormLabel>
-                      </FormItem>
-                    ))}
-                    </div>
+                    {availableSubjectsForForm.length > 0 ? (
+                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-x-3 gap-y-2 sm:gap-x-4 sm:gap-y-2.5 pt-1 sm:pt-2">
+                        {availableSubjectsForForm.map((item) => (
+                        <FormItem
+                            key={item.id}
+                            className="flex flex-row items-center space-x-2 space-y-0"
+                        >
+                            <FormControl>
+                            <Checkbox
+                                checked={field.value?.includes(item.id)}
+                                onCheckedChange={(checked) => {
+                                const currentSelection = field.value || [];
+                                return checked
+                                    ? field.onChange([...currentSelection, item.id])
+                                    : field.onChange(currentSelection.filter(value => value !== item.id));
+                                }}
+                            />
+                            </FormControl>
+                            <FormLabel className="text-xs sm:text-sm font-normal">
+                            {item.name}
+                            </FormLabel>
+                        </FormItem>
+                        ))}
+                        </div>
+                    ) : (
+                        <p className="text-xs text-muted-foreground pt-1">Select an exam type to see relevant subjects, or subjects for "Other" will be shown.</p>
+                    )}
                     <FormMessage />
                   </FormItem>
                 )}
@@ -510,7 +530,7 @@ export default function SyllabusSuggesterPage() {
 
             </CardContent>
             <CardFooter className="p-4 sm:p-6">
-              <Button type="submit" disabled={isLoading} size="default" className="w-full sm:w-auto text-sm sm:text-base">
+              <Button type="submit" disabled={isLoading || !watchedExamType} size="default" className="w-full sm:w-auto text-sm sm:text-base">
                 {isLoading ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 sm:h-5 sm:w-5 animate-spin" />
@@ -557,3 +577,5 @@ export default function SyllabusSuggesterPage() {
     </div>
   );
 }
+
+    

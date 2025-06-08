@@ -6,6 +6,8 @@ export const TARGET_EXAMS = [
   { value: 'cat', label: 'CAT (MBA Entrance)' },
   { value: 'bank_exams', label: 'Bank Exams (PO, Clerk)' },
   { value: 'ssc', label: 'SSC Exams (CGL, CHSL)' },
+  { value: 'class_10_boards', label: 'Class 10 Boards' },
+  { value: 'class_12_boards', label: 'Class 12 Boards' },
   { value: 'psc', label: 'PSC (State Level)' },
   { value: 'other', label: 'Other' },
 ];
@@ -21,41 +23,69 @@ export const EXAM_SUBJECT_MAP: Record<string, { id: string, name: string }[]> = 
     { id: 'chemistry', name: 'Chemistry' },
     { id: 'biology', name: 'Biology (Botany & Zoology)' },
   ],
-  upsc: [ // Example subjects, can be more comprehensive
-    { id: 'history', name: 'History' },
-    { id: 'geography', name: 'Geography' },
+  upsc: [
     { id: 'polity', name: 'Polity' },
+    { id: 'geography', name: 'Geography' },
     { id: 'economy', name: 'Economy' },
+    { id: 'history', name: 'History' },
     { id: 'current_affairs', name: 'Current Affairs' },
+    { id: 'ethics_integrity_aptitude', name: 'Ethics, Integrity & Aptitude' },
+    { id: 'essay', name: 'Essay' },
     { id: 'optional_subject_1', name: 'Optional Subject 1' },
     { id: 'optional_subject_2', name: 'Optional Subject 2' },
+    { id: 'general_science_tech', name: 'General Science & Tech' },
+    { id: 'environment_ecology', name: 'Environment & Ecology' },
   ],
-  cat: [ // Example subjects
+  ssc: [
+    { id: 'general_intelligence_reasoning', name: 'General Intelligence & Reasoning' },
     { id: 'quantitative_aptitude', name: 'Quantitative Aptitude' },
-    { id: 'verbal_ability', name: 'Verbal Ability & Reading Comprehension' },
-    { id: 'data_interpretation', name: 'Data Interpretation & Logical Reasoning' },
+    { id: 'english_language_comprehension', name: 'English Language & Comprehension' },
+    { id: 'general_awareness', name: 'General Awareness' },
+  ],
+  cat: [
+    { id: 'quantitative_ability', name: 'Quantitative Ability (QA)' },
+    { id: 'verbal_ability_reading_comprehension', name: 'Verbal Ability & Reading Comprehension (VARC)' },
+    { id: 'data_interpretation_logical_reasoning', name: 'Data Interpretation & Logical Reasoning (DILR)' },
   ],
   bank_exams: [
     { id: 'reasoning_ability', name: 'Reasoning Ability' },
-    { id: 'quantitative_aptitude', name: 'Quantitative Aptitude' },
-    { id: 'english_language', name: 'English Language' },
-    { id: 'general_awareness', name: 'General/Financial Awareness' },
+    { id: 'quantitative_aptitude_banking', name: 'Quantitative Aptitude (Banking)' },
+    { id: 'english_language_banking', name: 'English Language (Banking)' },
+    { id: 'general_financial_awareness', name: 'General/Financial Awareness' },
+    { id: 'computer_aptitude', name: 'Computer Aptitude' },
   ],
-  ssc: [
-    { id: 'general_intelligence', name: 'General Intelligence & Reasoning' },
-    { id: 'quantitative_aptitude', name: 'Quantitative Aptitude' },
-    { id: 'english_comprehension', name: 'English Comprehension' },
-    { id: 'general_awareness', name: 'General Awareness' },
+  class_10_boards: [
+    { id: 'mathematics_10', name: 'Mathematics (Class 10)' },
+    { id: 'science_10', name: 'Science (Physics, Chemistry, Biology - Class 10)' },
+    { id: 'social_science_10', name: 'Social Science (History, Geography, Civics, Economics - Class 10)' },
+    { id: 'english_10', name: 'English (Class 10)' },
+    { id: 'second_language_10', name: 'Second Language (e.g., Hindi, Regional - Class 10)' },
   ],
-  psc: [ // Generic, often varies by state
+  class_12_boards: [ // Example, can be more specific by stream
+    { id: 'physics_12', name: 'Physics (Class 12)' },
+    { id: 'chemistry_12', name: 'Chemistry (Class 12)' },
+    { id: 'mathematics_12', name: 'Mathematics (Class 12)' },
+    { id: 'biology_12', name: 'Biology (Class 12)' },
+    { id: 'english_12', name: 'English (Class 12)' },
+    { id: 'accountancy_12', name: 'Accountancy (Class 12)' },
+    { id: 'business_studies_12', name: 'Business Studies (Class 12)' },
+    { id: 'economics_12', name: 'Economics (Class 12)' },
+    { id: 'history_12', name: 'History (Class 12)' },
+    { id: 'political_science_12', name: 'Political Science (Class 12)' },
+    { id: 'geography_12', name: 'Geography (Class 12)' },
+    { id: 'computer_science_12', name: 'Computer Science (Class 12)' },
+  ],
+  psc: [ 
     { id: 'general_studies_state', name: 'General Studies (State Specific)' },
-    { id: 'aptitude_reasoning', name: 'Aptitude & Reasoning' },
-    { id: 'regional_language', name: 'Regional Language Paper' },
+    { id: 'aptitude_reasoning_psc', name: 'Aptitude & Reasoning (PSC)' },
+    { id: 'regional_language_psc', name: 'Regional Language Paper (PSC)' },
+    { id: 'state_specific_gk', name: 'State Specific GK' },
   ],
-  other: [ // For 'Other' exam type, allow manual input or generic subjects
-    { id: 'custom_subject_1', name: 'Custom Subject 1' },
-    { id: 'custom_subject_2', name: 'Custom Subject 2' },
-    { id: 'custom_subject_3', name: 'Custom Subject 3' },
+  other: [ 
+    { id: 'core_subject_1', name: 'Core Subject 1' },
+    { id: 'core_subject_2', name: 'Core Subject 2' },
+    { id: 'elective_subject_1', name: 'Elective Subject 1' },
+    { id: 'general_aptitude', name: 'General Aptitude/Reasoning' },
   ],
 };
 
@@ -111,20 +141,16 @@ export const PREFERRED_STUDY_TIMES = [
 
 // General subject options, might be used if not dynamically loading based on exam.
 // For the new form, EXAM_SUBJECT_MAP is more relevant for dynamic subjects.
-export const SUBJECT_OPTIONS = [
-  { id: 'physics', label: 'Physics' },
-  { id: 'chemistry', label: 'Chemistry' },
-  { id: 'biology', label: 'Biology' },
-  { id: 'mathematics', label: 'Mathematics' },
-  { id: 'history', label: 'History' },
-  { id: 'geography', label: 'Geography' },
-  { id: 'polity', label: 'Polity' },
-  { id: 'economy', label: 'Economy' },
-  { id: 'general_science', label: 'General Science' },
-  { id: 'english', label: 'English' },
-  { id: 'current_affairs', label: 'Current Affairs' },
-  { id: 'other', label: 'Other Subject' }
-];
+export const SUBJECT_OPTIONS = Object.values(EXAM_SUBJECT_MAP)
+    .flat()
+    .reduce((acc, subject) => {
+        if (!acc.find(s => s.id === subject.id)) {
+            acc.push(subject);
+        }
+        return acc;
+    }, [] as {id: string, name: string}[])
+    .sort((a,b) => a.name.localeCompare(b.name));
+
 
 export const PREFERRED_LEARNING_STYLES = [
   { id: 'visual', label: 'Visual (Diagrams, Videos)' },
@@ -167,3 +193,5 @@ export const PREVIOUS_ATTEMPTS_OPTIONS = [
   { value: '3', label: '3 Previous Attempts' },
   { value: '4+', label: '4 or More Previous Attempts' },
 ];
+
+    
