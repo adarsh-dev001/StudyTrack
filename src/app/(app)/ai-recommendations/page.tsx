@@ -44,7 +44,7 @@ function OnboardingFormFallback() {
 
 function RecommendationsSkeleton() {
     return (
-      <div className="space-y-6">
+      <div className="space-y-6 sm:space-y-8">
         <Card>
           <CardHeader>
             <Skeleton className="h-8 w-3/4" />
@@ -129,7 +129,7 @@ export default function AiRecommendationsPage() {
     } finally {
       setIsLoadingRecommendations(false);
     }
-  }, []); // Dependencies: setIsLoadingRecommendations, setError, setRecommendations are stable
+  }, []);
 
   useEffect(() => {
     let unsubscribeProfile: Unsubscribe | undefined;
@@ -145,8 +145,6 @@ export default function AiRecommendationsPage() {
             setShowOnboardingModal(true);
           } else {
             setShowOnboardingModal(false);
-            // Check if recommendations need to be fetched
-            // Only fetch if profile exists, onboarding is complete, and recommendations haven't been fetched/errored
             if (!recommendations && !isLoadingRecommendations && !error) {
               fetchRecommendations(userProfileData);
             }
@@ -163,19 +161,19 @@ export default function AiRecommendationsPage() {
       });
     } else {
         setIsLoadingProfile(false);
-        setShowOnboardingModal(false); // No user, no onboarding modal
+        setShowOnboardingModal(false); 
     }
 
     return () => unsubscribeProfile?.();
   }, [currentUser?.uid, fetchRecommendations, recommendations, isLoadingRecommendations, error]);
 
 
-  const handleOnboardingComplete = async () => { // Made async
+  const handleOnboardingComplete = async () => { 
     setShowOnboardingModal(false);
     if(currentUser?.uid) {
         const profileDocRef = doc(db, 'users', currentUser.uid, 'userProfile', 'profile');
         try {
-            const profileSnap = await getDoc(profileDocRef); // Use getDoc for a one-time fetch
+            const profileSnap = await getDoc(profileDocRef); 
             if (profileSnap.exists()) {
                 const userProfileData = profileSnap.data() as UserProfileData;
                 setProfile(userProfileData);
@@ -203,8 +201,7 @@ export default function AiRecommendationsPage() {
   if (showOnboardingModal && currentUser) {
     return (
       <Dialog open={showOnboardingModal} onOpenChange={(isOpen) => {
-          if (!currentUser) return; // Should not happen if modal is shown, but good check
-          // Prevent closing if onboarding isn't complete, unless explicitly trying to close.
+          if (!currentUser) return; 
           if (!isOpen && profile && !profile.onboardingCompleted) {
              setShowOnboardingModal(true); return;
           }
@@ -228,13 +225,13 @@ export default function AiRecommendationsPage() {
   }
 
   return (
-    <div className="w-full space-y-6">
+    <div className="w-full space-y-6 sm:space-y-8 max-w-4xl mx-auto">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
         <h1 className="text-2xl sm:text-3xl font-bold tracking-tight md:text-4xl flex items-center">
             <Brain className="mr-2 sm:mr-3 h-7 w-7 sm:h-8 sm:w-8 text-primary" /> AI Coach Recommendations
         </h1>
         {profile && profile.onboardingCompleted && (
-            <Button onClick={() => profile && fetchRecommendations(profile)} disabled={isLoadingRecommendations} size="sm">
+            <Button onClick={() => profile && fetchRecommendations(profile)} disabled={isLoadingRecommendations} size="sm" className="py-2 px-3">
                 {isLoadingRecommendations ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Wand2 className="mr-2 h-4 w-4" />}
                 Refresh Recommendations
             </Button>
@@ -245,22 +242,22 @@ export default function AiRecommendationsPage() {
 
       {!isLoadingRecommendations && error && (
         <Card className="border-destructive bg-destructive/10">
-          <CardHeader>
-            <CardTitle className="text-destructive">Error Generating Recommendations</CardTitle>
+          <CardHeader className="p-4 sm:p-6">
+            <CardTitle className="text-destructive text-lg sm:text-xl">Error Generating Recommendations</CardTitle>
           </CardHeader>
-          <CardContent>
-            <p className="text-destructive-foreground">{error}</p>
+          <CardContent className="p-4 sm:p-6">
+            <p className="text-destructive-foreground text-sm sm:text-base leading-relaxed">{error}</p>
           </CardContent>
         </Card>
       )}
 
       {!isLoadingRecommendations && !error && recommendations && (
-        <div className="space-y-6">
+        <div className="space-y-6 sm:space-y-8">
           {recommendations.fallback && (
              <Alert variant="default" className="bg-amber-500/10 border-amber-500/30 text-amber-700 dark:text-amber-300">
                 <Wand2 className="h-5 w-5 text-amber-600 dark:text-amber-400" />
-                <AlertTitle className="font-semibold">Using General Advice</AlertTitle>
-                <AlertDescription>
+                <AlertTitle className="font-semibold text-base sm:text-lg">Using General Advice</AlertTitle>
+                <AlertDescription className="text-sm sm:text-base leading-relaxed">
                     {recommendations.overallStrategyStatement || "The AI coach is currently providing general study advice. For fully personalized recommendations based on your complete profile, please ensure all profile sections are filled and try refreshing. If this persists, the AI might be under heavy load."}
                 </AlertDescription>
             </Alert>
@@ -269,8 +266,8 @@ export default function AiRecommendationsPage() {
           {!recommendations.fallback && recommendations.overallStrategyStatement && (
             <Alert variant="default" className="bg-primary/10 border-primary/30">
                 <Lightbulb className="h-5 w-5 text-primary" />
-                <AlertTitle className="font-semibold text-primary">Your AI Strategy Statement</AlertTitle>
-                <AlertDescription className="text-primary-foreground/90 dark:text-primary/90">
+                <AlertTitle className="font-semibold text-primary text-base sm:text-lg">Your AI Strategy Statement</AlertTitle>
+                <AlertDescription className="text-primary-foreground/90 dark:text-primary/90 text-sm sm:text-base leading-relaxed">
                     {recommendations.overallStrategyStatement}
                 </AlertDescription>
             </Alert>
@@ -285,28 +282,28 @@ export default function AiRecommendationsPage() {
 
             <TabsContent value="strategy">
                 <Card>
-                    <CardHeader><CardTitle>Goals & Milestones</CardTitle></CardHeader>
-                    <CardContent className="space-y-4">
+                    <CardHeader className="p-4 sm:p-6"><CardTitle className="text-lg sm:text-xl">Goals & Milestones</CardTitle></CardHeader>
+                    <CardContent className="space-y-4 sm:space-y-6 p-4 sm:p-6">
                         {recommendations.shortTermGoals && recommendations.shortTermGoals.length > 0 && (
                         <div>
-                            <h3 className="font-semibold mb-2 flex items-center"><CalendarClock className="mr-2 h-5 w-5 text-accent"/>Short-Term Goals</h3>
-                            <ul className="list-disc list-inside space-y-1 pl-2 text-muted-foreground">
+                            <h3 className="font-semibold mb-2 text-base sm:text-lg flex items-center"><CalendarClock className="mr-2 h-5 w-5 text-accent"/>Short-Term Goals</h3>
+                            <ul className="list-disc list-inside space-y-1.5 pl-2 text-muted-foreground text-sm sm:text-base leading-relaxed">
                             {recommendations.shortTermGoals.map((goal, i) => <li key={`stg-${i}`}>{goal.goal} {goal.timeline && `(${goal.timeline})`}</li>)}
                             </ul>
                         </div>
                         )}
                         {recommendations.longTermGoals && recommendations.longTermGoals.length > 0 && (
                         <div>
-                            <h3 className="font-semibold mb-2 flex items-center"><Flag className="mr-2 h-5 w-5 text-accent"/>Long-Term Goals</h3>
-                            <ul className="list-disc list-inside space-y-1 pl-2 text-muted-foreground">
+                            <h3 className="font-semibold mb-2 text-base sm:text-lg flex items-center"><Flag className="mr-2 h-5 w-5 text-accent"/>Long-Term Goals</h3>
+                            <ul className="list-disc list-inside space-y-1.5 pl-2 text-muted-foreground text-sm sm:text-base leading-relaxed">
                             {recommendations.longTermGoals.map((goal, i) => <li key={`ltg-${i}`}>{goal.goal} {goal.timeline && `(${goal.timeline})`}</li>)}
                             </ul>
                         </div>
                         )}
                          {recommendations.milestoneSuggestions && recommendations.milestoneSuggestions.length > 0 && (
                         <div>
-                            <h3 className="font-semibold mb-2 flex items-center"><TargetIcon className="mr-2 h-5 w-5 text-accent"/>Milestone Suggestions</h3>
-                            <ul className="list-disc list-inside space-y-1 pl-2 text-muted-foreground">
+                            <h3 className="font-semibold mb-2 text-base sm:text-lg flex items-center"><TargetIcon className="mr-2 h-5 w-5 text-accent"/>Milestone Suggestions</h3>
+                            <ul className="list-disc list-inside space-y-1.5 pl-2 text-muted-foreground text-sm sm:text-base leading-relaxed">
                             {recommendations.milestoneSuggestions.map((ms, i) => <li key={`ms-${i}`}>{ms}</li>)}
                             </ul>
                         </div>
@@ -317,28 +314,28 @@ export default function AiRecommendationsPage() {
 
             <TabsContent value="focus">
                 <Card>
-                    <CardHeader><CardTitle>Study Focus & Cycles</CardTitle></CardHeader>
-                    <CardContent className="space-y-4">
+                    <CardHeader className="p-4 sm:p-6"><CardTitle className="text-lg sm:text-xl">Study Focus & Cycles</CardTitle></CardHeader>
+                    <CardContent className="space-y-4 sm:space-y-6 p-4 sm:p-6">
                         {recommendations.suggestedWeeklyTimetableFocus && recommendations.suggestedWeeklyTimetableFocus.length > 0 && (
                         <div>
-                            <h3 className="font-semibold mb-2 flex items-center"><ListChecks className="mr-2 h-5 w-5 text-accent"/>Weekly Focus Areas</h3>
-                            <ul className="list-disc list-inside space-y-1 pl-2 text-muted-foreground">
+                            <h3 className="font-semibold mb-2 text-base sm:text-lg flex items-center"><ListChecks className="mr-2 h-5 w-5 text-accent"/>Weekly Focus Areas</h3>
+                            <ul className="list-disc list-inside space-y-1.5 pl-2 text-muted-foreground text-sm sm:text-base leading-relaxed">
                             {recommendations.suggestedWeeklyTimetableFocus.map((focus, i) => <li key={`wfocus-${i}`}>{focus}</li>)}
                             </ul>
                         </div>
                         )}
                         {recommendations.suggestedMonthlyGoals && recommendations.suggestedMonthlyGoals.length > 0 && (
                         <div>
-                            <h3 className="font-semibold mb-2 flex items-center"><CalendarClock className="mr-2 h-5 w-5 text-accent"/>Monthly Goals</h3>
-                            <ul className="list-disc list-inside space-y-1 pl-2 text-muted-foreground">
+                            <h3 className="font-semibold mb-2 text-base sm:text-lg flex items-center"><CalendarClock className="mr-2 h-5 w-5 text-accent"/>Monthly Goals</h3>
+                            <ul className="list-disc list-inside space-y-1.5 pl-2 text-muted-foreground text-sm sm:text-base leading-relaxed">
                             {recommendations.suggestedMonthlyGoals.map((goal, i) => <li key={`mgoal-${i}`}>{goal}</li>)}
                             </ul>
                         </div>
                         )}
                         {recommendations.studyCycleRecommendation && (
                              <div className="pt-2">
-                                <h3 className="font-semibold mb-1 flex items-center"><Clock className="mr-2 h-5 w-5 text-accent"/>Study Cycle Recommendation</h3>
-                                <p className="text-muted-foreground pl-2">{recommendations.studyCycleRecommendation}</p>
+                                <h3 className="font-semibold mb-1 text-base sm:text-lg flex items-center"><Clock className="mr-2 h-5 w-5 text-accent"/>Study Cycle Recommendation</h3>
+                                <p className="text-muted-foreground pl-2 text-sm sm:text-base leading-relaxed">{recommendations.studyCycleRecommendation}</p>
                             </div>
                         )}
                     </CardContent>
@@ -347,14 +344,14 @@ export default function AiRecommendationsPage() {
 
             <TabsContent value="tips">
                 <Card>
-                    <CardHeader><CardTitle>Personalized Tips</CardTitle></CardHeader>
-                    <CardContent>
+                    <CardHeader className="p-4 sm:p-6"><CardTitle className="text-lg sm:text-xl">Personalized Tips</CardTitle></CardHeader>
+                    <CardContent className="p-4 sm:p-6">
                         <Accordion type="single" collapsible className="w-full">
                             {recommendations.personalizedTips.timeManagement && recommendations.personalizedTips.timeManagement.length > 0 && (
                                 <AccordionItem value="time">
-                                <AccordionTrigger className="text-base"><Clock className="mr-2 h-4 w-4 text-primary"/>Time Management</AccordionTrigger>
-                                <AccordionContent>
-                                    <ul className="list-disc list-inside space-y-1 pl-4 text-muted-foreground">
+                                <AccordionTrigger className="text-base sm:text-lg"><Clock className="mr-2 h-4 w-4 sm:h-5 sm:w-5 text-primary"/>Time Management</AccordionTrigger>
+                                <AccordionContent className="pt-2">
+                                    <ul className="list-disc list-inside space-y-1.5 pl-4 text-muted-foreground text-sm sm:text-base leading-relaxed">
                                     {recommendations.personalizedTips.timeManagement.map((tip, i) => <li key={`time-${i}`}>{tip}</li>)}
                                     </ul>
                                 </AccordionContent>
@@ -362,9 +359,9 @@ export default function AiRecommendationsPage() {
                             )}
                             {recommendations.personalizedTips.subjectSpecificStudy && recommendations.personalizedTips.subjectSpecificStudy.length > 0 && (
                                 <AccordionItem value="subject">
-                                <AccordionTrigger className="text-base"><ListChecks className="mr-2 h-4 w-4 text-primary"/>Subject-Specific Study</AccordionTrigger>
-                                <AccordionContent>
-                                    <ul className="list-disc list-inside space-y-1 pl-4 text-muted-foreground">
+                                <AccordionTrigger className="text-base sm:text-lg"><ListChecks className="mr-2 h-4 w-4 sm:h-5 sm:w-5 text-primary"/>Subject-Specific Study</AccordionTrigger>
+                                <AccordionContent className="pt-2">
+                                    <ul className="list-disc list-inside space-y-1.5 pl-4 text-muted-foreground text-sm sm:text-base leading-relaxed">
                                     {recommendations.personalizedTips.subjectSpecificStudy.map((tip, i) => <li key={`subject-${i}`}>{tip}</li>)}
                                     </ul>
                                 </AccordionContent>
@@ -372,9 +369,9 @@ export default function AiRecommendationsPage() {
                             )}
                             {recommendations.personalizedTips.motivationalNudges && recommendations.personalizedTips.motivationalNudges.length > 0 && (
                                 <AccordionItem value="motivation">
-                                <AccordionTrigger className="text-base"><Zap className="mr-2 h-4 w-4 text-primary"/>Motivational Nudges</AccordionTrigger>
-                                <AccordionContent>
-                                    <ul className="list-disc list-inside space-y-1 pl-4 text-muted-foreground">
+                                <AccordionTrigger className="text-base sm:text-lg"><Zap className="mr-2 h-4 w-4 sm:h-5 sm:w-5 text-primary"/>Motivational Nudges</AccordionTrigger>
+                                <AccordionContent className="pt-2">
+                                    <ul className="list-disc list-inside space-y-1.5 pl-4 text-muted-foreground text-sm sm:text-base leading-relaxed">
                                     {recommendations.personalizedTips.motivationalNudges.map((tip, i) => <li key={`motivation-${i}`}>{tip}</li>)}
                                     </ul>
                                 </AccordionContent>
@@ -382,9 +379,9 @@ export default function AiRecommendationsPage() {
                             )}
                             {recommendations.personalizedTips.focusAndDistraction && recommendations.personalizedTips.focusAndDistraction.length > 0 && (
                                 <AccordionItem value="focus">
-                                <AccordionTrigger className="text-base"><ShieldCheck className="mr-2 h-4 w-4 text-primary"/>Focus & Distraction</AccordionTrigger>
-                                <AccordionContent>
-                                    <ul className="list-disc list-inside space-y-1 pl-4 text-muted-foreground">
+                                <AccordionTrigger className="text-base sm:text-lg"><ShieldCheck className="mr-2 h-4 w-4 sm:h-5 sm:w-5 text-primary"/>Focus & Distraction</AccordionTrigger>
+                                <AccordionContent className="pt-2">
+                                    <ul className="list-disc list-inside space-y-1.5 pl-4 text-muted-foreground text-sm sm:text-base leading-relaxed">
                                     {recommendations.personalizedTips.focusAndDistraction.map((tip, i) => <li key={`focus-${i}`}>{tip}</li>)}
                                     </ul>
                                 </AccordionContent>
@@ -400,16 +397,16 @@ export default function AiRecommendationsPage() {
 
       {!isLoadingRecommendations && !error && !recommendations && profile && profile.onboardingCompleted && (
          <Card>
-            <CardContent className="pt-6 text-center">
-                <p className="text-muted-foreground">Click "Refresh Recommendations" to get your personalized AI coaching insights.</p>
+            <CardContent className="pt-6 text-center p-4 sm:p-6">
+                <p className="text-muted-foreground text-sm sm:text-base leading-relaxed">Click "Refresh Recommendations" to get your personalized AI coaching insights.</p>
             </CardContent>
          </Card>
       )}
-       {!isLoadingRecommendations && !profile && !currentUser && ( // Updated condition for logged out state
+       {!isLoadingRecommendations && !profile && !currentUser && ( 
          <Card>
-            <CardContent className="pt-6 text-center">
-                <p className="text-muted-foreground">Please log in to access AI Coach recommendations.</p>
-                <Button asChild className="mt-4"><Link href="/login">Log In</Link></Button>
+            <CardContent className="pt-6 text-center p-4 sm:p-6">
+                <p className="text-muted-foreground text-sm sm:text-base leading-relaxed">Please log in to access AI Coach recommendations.</p>
+                <Button asChild className="mt-4 py-2 px-4"><Link href="/login">Log In</Link></Button>
             </CardContent>
          </Card>
       )}

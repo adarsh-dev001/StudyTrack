@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Loader2, Lightbulb, Zap, Brain, Award, TrendingUp, Rocket, Target as TargetIcon, Lock, Info } from 'lucide-react';
+import { Loader2, Lightbulb, Zap, Brain, Award, TrendingUp, Rocket, Target as TargetIcon, Lock, Info, ListChecks, BarChart3 } from 'lucide-react';
 import { analyzeProductivityData, type AnalyzeProductivityDataInput, type AnalyzeProductivityDataOutput } from '@/ai/flows/analyze-productivity-data';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/auth-context';
@@ -65,7 +65,7 @@ export default function ProductivityAnalyzerPage() {
   const [isLoading, setIsLoading] = useState(false);
   
   const [isLoadingProfile, setIsLoadingProfile] = useState(true);
-  const [userProfile, setUserProfile] = useState<UserProfileData | null>(null); // Added to store full profile
+  const [userProfile, setUserProfile] = useState<UserProfileData | null>(null);
   const [showOnboardingModal, setShowOnboardingModal] = useState(false);
   
   const [unlockState, setUnlockState] = useState<UnlockStatus | null>(null);
@@ -81,7 +81,7 @@ export default function ProductivityAnalyzerPage() {
       unsubscribeProfile = onSnapshot(profileDocRef, (profileSnap) => {
         if (profileSnap.exists()) {
           const data = profileSnap.data() as UserProfileData;
-          setUserProfile(data); // Store full profile
+          setUserProfile(data);
           if (!data.onboardingCompleted) {
             setShowOnboardingModal(true);
           } else {
@@ -111,7 +111,7 @@ export default function ProductivityAnalyzerPage() {
 
 
   useEffect(() => {
-    if (!userProfile?.onboardingCompleted || !currentUser?.uid) { // Check userProfile state
+    if (!userProfile?.onboardingCompleted || !currentUser?.uid) { 
       setIsLoadingUnlockStatus(false); 
       return;
     }
@@ -295,12 +295,12 @@ export default function ProductivityAnalyzerPage() {
   }
 
   return (
-    <div className="w-full space-y-6">
+    <div className="w-full space-y-6 sm:space-y-8 max-w-3xl mx-auto">
       <div>
         <h1 className="text-2xl sm:text-3xl font-bold tracking-tight md:text-4xl flex items-center">
-          <Brain className="mr-2 sm:mr-3 h-7 w-7 sm:h-8 sm:w-8 text-primary" /> Productivity Analysis AI
+          <BarChart3 className="mr-2 sm:mr-3 h-7 w-7 sm:h-8 sm:h-8 text-primary" /> Productivity Analysis AI
         </h1>
-        <p className="text-md sm:text-lg text-muted-foreground">
+        <p className="text-md sm:text-lg text-muted-foreground leading-relaxed">
           Input your weekly study data to get AI-driven insights and recommendations. 📈
         </p>
       </div>
@@ -398,7 +398,7 @@ export default function ProductivityAnalyzerPage() {
               </div>
             </CardContent>
             <CardFooter className="p-4 sm:p-6">
-              <Button type="submit" disabled={isLoading} size="default" className="w-full sm:w-auto text-sm sm:text-base">
+              <Button type="submit" disabled={isLoading} size="default" className="w-full sm:w-auto text-sm sm:text-base py-2.5 px-5">
                 {isLoading ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 sm:h-5 sm:w-5 animate-spin" />
@@ -417,55 +417,68 @@ export default function ProductivityAnalyzerPage() {
       </Card>
 
       {analysisResult && (
-        <Card className="shadow-lg animate-in fade-in-50 duration-500 mt-6">
+        <Card className="shadow-lg animate-in fade-in-50 duration-500 mt-6 sm:mt-8">
           <CardHeader className="p-4 sm:p-6">
-            <CardTitle className="text-xl sm:text-2xl font-headline text-primary flex items-center">
-                <Zap className="mr-2 h-5 w-5 sm:h-6 sm:w-6" /> 🚀 Your AI Productivity Analysis!
+            <CardTitle className="text-xl sm:text-2xl font-semibold text-primary flex items-center">
+                <Zap className="mr-2 h-5 w-5 sm:h-6 sm:w-6" /> Your AI Productivity Analysis!
             </CardTitle>
-            <CardDescription className="text-xs sm:text-sm">Here's what the AI thinks about your study habits this week.</CardDescription>
+            <CardDescription className="text-sm sm:text-base">Here's what the AI thinks about your study habits this week.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4 sm:space-y-6 p-4 sm:p-6">
-            <div className="p-3 sm:p-4 bg-secondary/40 rounded-lg border border-border">
-              <h3 className="font-semibold text-lg sm:text-xl mb-1.5 sm:mb-2 text-foreground flex items-center">
-                <Award className="mr-2 h-4 w-4 sm:h-5 sm:w-5 text-accent" /> Overall Assessment Snapshot:
-              </h3>
-              <p className="text-sm sm:text-base text-muted-foreground leading-relaxed">{analysisResult.overallAssessment}</p>
-            </div>
+            
+            <Card className="bg-card/50">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-lg sm:text-xl font-semibold flex items-center">
+                  <Award className="mr-2 h-5 w-5 text-accent" /> Overall Assessment
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-base sm:text-md text-foreground leading-relaxed">{analysisResult.overallAssessment}</p>
+              </CardContent>
+            </Card>
             
             {analysisResult.insights && analysisResult.insights.length > 0 && (
-              <div className="p-3 sm:p-4 bg-card rounded-lg border border-border">
-                <h3 className="font-semibold text-lg sm:text-xl mb-2 sm:mb-3 text-foreground flex items-center">
-                  <Lightbulb className="mr-2 h-4 w-4 sm:h-5 sm:w-5 text-yellow-500 dark:text-yellow-400" /> Personalized Insights Unlocked:
-                </h3>
-                <ul className="space-y-2 text-sm sm:text-base text-muted-foreground">
-                  {analysisResult.insights.map((insight, index) => (
-                    <li key={`insight-${index}`} className="py-0.5 sm:py-1 flex items-start">
-                        <TrendingUp className="mr-2 sm:mr-3 h-4 w-4 sm:h-5 sm:w-5 text-sky-500 dark:text-sky-400 shrink-0 mt-0.5" />
-                        <span>{insight}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
+              <Card className="bg-card/50">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-lg sm:text-xl font-semibold flex items-center">
+                    <Lightbulb className="mr-2 h-5 w-5 text-yellow-500 dark:text-yellow-400" /> Personalized Insights
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <ul className="space-y-2 text-base sm:text-md text-foreground leading-relaxed list-disc list-outside pl-5">
+                    {analysisResult.insights.map((insight, index) => (
+                      <li key={`insight-${index}`} className="flex items-start">
+                          <TrendingUp className="mr-2 sm:mr-3 h-5 w-5 text-sky-500 dark:text-sky-400 shrink-0 mt-1" />
+                          <span>{insight}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </CardContent>
+              </Card>
             )}
 
             {analysisResult.recommendations && analysisResult.recommendations.length > 0 && (
-              <div className="p-3 sm:p-4 bg-card rounded-lg border border-border">
-                <h3 className="font-semibold text-lg sm:text-xl mb-2 sm:mb-3 text-foreground flex items-center">
-                  <Rocket className="mr-2 h-4 w-4 sm:h-5 sm:w-5 text-green-500 dark:text-green-400" /> Your Action Plan for Success:
-                </h3>
-                <ul className="space-y-2 text-sm sm:text-base text-muted-foreground">
-                  {analysisResult.recommendations.map((rec, index) => (
-                    <li key={`rec-${index}`} className="py-0.5 sm:py-1 flex items-start">
-                        <TargetIcon className="mr-2 sm:mr-3 h-4 w-4 sm:h-5 sm:w-5 text-red-500 dark:text-red-400 shrink-0 mt-0.5" />
-                        <span>{rec}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
+              <Card className="bg-card/50">
+                 <CardHeader className="pb-2">
+                  <CardTitle className="text-lg sm:text-xl font-semibold flex items-center">
+                    <Rocket className="mr-2 h-5 w-5 text-green-500 dark:text-green-400" /> Actionable Recommendations
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <ul className="space-y-2 text-base sm:text-md text-foreground leading-relaxed list-disc list-outside pl-5">
+                    {analysisResult.recommendations.map((rec, index) => (
+                      <li key={`rec-${index}`} className="flex items-start">
+                          <TargetIcon className="mr-2 sm:mr-3 h-5 w-5 text-red-500 dark:text-red-400 shrink-0 mt-1" />
+                          <span>{rec}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </CardContent>
+              </Card>
             )}
           </CardContent>
            <CardFooter className="pt-4 sm:pt-6 border-t mt-4 sm:mt-6 bg-secondary/20 rounded-b-lg p-4 sm:p-6">
-            <p className="text-sm sm:text-md text-center w-full text-accent-foreground/90 font-semibold">
+            <p className="text-base sm:text-md text-center w-full text-accent-foreground/90 font-semibold leading-relaxed">
                 🙌 Keep crushing those goals! Small improvements lead to big wins. You're on the path to success!
             </p>
           </CardFooter>
@@ -474,4 +487,3 @@ export default function ProductivityAnalyzerPage() {
     </div>
   );
 }
-

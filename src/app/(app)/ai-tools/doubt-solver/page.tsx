@@ -10,7 +10,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Loader2, Wand2, MessageSquare, Brain, CheckCircle, Sparkles } from 'lucide-react'; // Corrected import
+import { Loader2, Wand2, MessageSquare, Brain, CheckCircle, Sparkles, ListChecks } from 'lucide-react';
 import { solveAcademicDoubt, type SolveAcademicDoubtInput, type SolveAcademicDoubtOutput } from '@/ai/flows/solve-academic-doubt-flow';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/auth-context';
@@ -85,7 +85,6 @@ export default function DoubtSolverPage() {
               form.setValue('subjectContext', data.subjectDetails[0].subjectName);
             } else if (data.targetExams && data.targetExams.length > 0) {
               const primaryExam = data.targetExams[0] === 'other' && data.otherExamName ? data.otherExamName : data.targetExams[0];
-              // form.setValue('subjectContext', primaryExam); // Removed, as it might not be a subject
             }
           }
         } else {
@@ -108,10 +107,9 @@ export default function DoubtSolverPage() {
 
   const handleOnboardingComplete = () => {
     setShowOnboardingModal(false);
-    // Re-fetch profile to get updated onboarding status
     if(currentUser?.uid) {
         const profileDocRef = doc(db, 'users', currentUser.uid, 'userProfile', 'profile');
-        getDoc(profileDocRef).then((profileSnap) => { // Use getDoc for a one-time fetch after completion
+        getDoc(profileDocRef).then((profileSnap) => { 
             if (profileSnap.exists()) {
                 setUserProfile(profileSnap.data() as UserProfileData);
             }
@@ -191,12 +189,12 @@ export default function DoubtSolverPage() {
   }
 
   return (
-    <div className="w-full space-y-6">
+    <div className="w-full space-y-6 sm:space-y-8 max-w-3xl mx-auto">
       <div>
         <h1 className="text-2xl sm:text-3xl font-bold tracking-tight md:text-4xl flex items-center">
-          <MessageSquare className="mr-2 sm:mr-3 h-7 w-7 sm:h-8 sm:w-8 text-primary" /> AI Doubt Solver {/* Corrected usage */}
+          <MessageSquare className="mr-2 sm:mr-3 h-7 w-7 sm:h-8 sm:w-8 text-primary" /> AI Doubt Solver
         </h1>
-        <p className="text-md sm:text-lg text-muted-foreground">
+        <p className="text-md sm:text-lg text-muted-foreground leading-relaxed">
           Got a tricky question? Ask our AI assistant for a personalized explanation. 🧑‍🏫
         </p>
       </div>
@@ -218,7 +216,7 @@ export default function DoubtSolverPage() {
                     <FormControl>
                       <Textarea
                         placeholder="e.g., Explain Newton's third law with examples, or Why is the sky blue?"
-                        className="min-h-[100px] sm:min-h-[120px] resize-y text-sm sm:text-base"
+                        className="min-h-[100px] sm:min-h-[120px] resize-y text-sm sm:text-base leading-relaxed"
                         {...field}
                       />
                     </FormControl>
@@ -244,7 +242,7 @@ export default function DoubtSolverPage() {
               />
             </CardContent>
             <CardFooter className="p-4 sm:p-6">
-              <Button type="submit" disabled={isLoading} size="default" className="w-full sm:w-auto text-sm sm:text-base">
+              <Button type="submit" disabled={isLoading} size="default" className="w-full sm:w-auto text-sm sm:text-base py-2.5 px-5">
                 {isLoading ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 sm:h-5 sm:w-5 animate-spin" />
@@ -271,7 +269,7 @@ export default function DoubtSolverPage() {
       )}
 
       {aiResponse && (
-        <Card className="shadow-lg animate-in fade-in-50 duration-500 mt-6">
+        <Card className="shadow-lg animate-in fade-in-50 duration-500 mt-6 sm:mt-8">
           <CardHeader className="p-4 sm:p-6 bg-secondary/30 rounded-t-lg">
             <CardTitle className="text-lg sm:text-xl font-semibold flex items-center">
                 <Brain className="mr-2 h-5 w-5 sm:h-6 sm:w-6 text-primary" /> AI's Explanation
@@ -280,19 +278,22 @@ export default function DoubtSolverPage() {
               Here's what our AI assistant came up with for your question.
             </CardDescription>
           </CardHeader>
-          <CardContent className="p-4 sm:p-6 space-y-4">
-            <Alert variant="default" className="bg-card">
+          <CardContent className="p-4 sm:p-6 space-y-4 sm:space-y-6">
+            <Alert variant="default" className="bg-card border-border/70">
               <Sparkles className="h-5 w-5 text-accent" />
-              <AlertTitle className="font-semibold text-accent">Explanation:</AlertTitle>
-              <AlertDescription className="prose prose-sm dark:prose-invert max-w-none text-foreground mt-1">
+              <AlertTitle className="font-semibold text-accent text-base sm:text-lg">Explanation:</AlertTitle>
+              <AlertDescription className="prose prose-base lg:prose-lg dark:prose-invert max-w-none text-foreground mt-2 leading-relaxed">
                 <div dangerouslySetInnerHTML={{ __html: aiResponse.explanation.replace(/\n/g, '<br />') }} />
               </AlertDescription>
             </Alert>
 
             {aiResponse.relatedTopics && aiResponse.relatedTopics.length > 0 && (
               <div className="p-3 sm:p-4 border rounded-lg bg-muted/50">
-                <h4 className="font-semibold text-sm sm:text-md text-foreground mb-1.5 sm:mb-2">Related Topics to Explore:</h4>
-                <ul className="list-disc list-inside space-y-1 text-xs sm:text-sm text-muted-foreground">
+                <h4 className="font-semibold text-base sm:text-lg text-foreground mb-1.5 sm:mb-2 flex items-center">
+                    <ListChecks className="mr-2 h-4 w-4 sm:h-5 sm:w-5 text-primary" />
+                    Related Topics to Explore:
+                </h4>
+                <ul className="list-disc list-inside space-y-1.5 text-sm sm:text-base text-muted-foreground leading-relaxed pl-2">
                   {aiResponse.relatedTopics.map((topic, index) => (
                     <li key={index}>{topic}</li>
                   ))}
@@ -300,13 +301,13 @@ export default function DoubtSolverPage() {
               </div>
             )}
             {aiResponse.confidenceScore !== undefined && (
-                 <div className="text-xs text-muted-foreground text-right pt-2">
+                 <div className="text-xs sm:text-sm text-muted-foreground text-right pt-2">
                     AI Confidence: {(aiResponse.confidenceScore * 100).toFixed(0)}%
                 </div>
             )}
           </CardContent>
-           <CardFooter className="pt-3 sm:pt-4 border-t p-4 sm:p-6">
-            <p className="text-xs text-muted-foreground">
+           <CardFooter className="pt-3 sm:pt-4 border-t p-4 sm:p-6 bg-secondary/20 rounded-b-lg">
+            <p className="text-xs sm:text-sm text-muted-foreground leading-normal">
               Remember: AI explanations are a helpful starting point. Always cross-verify critical information with trusted sources.
             </p>
           </CardFooter>

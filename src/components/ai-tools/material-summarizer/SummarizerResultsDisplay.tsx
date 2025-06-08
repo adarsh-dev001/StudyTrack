@@ -21,7 +21,7 @@ interface SummarizerResultsDisplayProps {
   mcqAnswers: Record<number, MCQWithUserAnswer>;
   topic: string;
   handleMcqOptionChange: (questionIndex: number, optionIndex: string) => void;
-  handleShowAnswer: (questionIndex: number) => Promise<void>; // Make it async
+  handleShowAnswer: (questionIndex: number) => Promise<void>;
 }
 
 export default function SummarizerResultsDisplay({
@@ -43,11 +43,11 @@ export default function SummarizerResultsDisplay({
         <TabsContent value="summary">
           <Card className="shadow-md">
             <CardHeader className="p-4 sm:p-6">
-              <CardTitle className="flex items-center text-md sm:text-lg"><ClipboardList className="mr-2 h-4 w-4 sm:h-5 sm:w-5 text-primary" /> 📌 Summary of Your Material</CardTitle>
-              <CardDescription className="text-xs sm:text-sm">Topic: {topic}</CardDescription>
+              <CardTitle className="flex items-center text-lg sm:text-xl font-semibold"><ClipboardList className="mr-2 h-5 w-5 sm:h-6 sm:w-6 text-primary" /> Summary of Material</CardTitle>
+              <CardDescription className="text-sm sm:text-base">Topic: {topic}</CardDescription>
             </CardHeader>
             <CardContent className="p-4 sm:p-6">
-              <div className="prose prose-xs sm:prose-sm max-w-none dark:prose-invert text-foreground leading-relaxed">
+              <div className="prose prose-base lg:prose-lg max-w-none dark:prose-invert text-foreground leading-relaxed">
                 <p>{analysisResult.summary}</p>
               </div>
             </CardContent>
@@ -57,14 +57,14 @@ export default function SummarizerResultsDisplay({
         <TabsContent value="keyConcepts">
           <Card className="shadow-md">
             <CardHeader className="p-4 sm:p-6">
-              <CardTitle className="flex items-center text-md sm:text-lg"><Sparkles className="mr-2 h-4 w-4 sm:h-5 sm:w-5 text-primary" /> 🧠 Core Concepts Unpacked</CardTitle>
-              <CardDescription className="text-xs sm:text-sm">The main ideas from your material.</CardDescription>
+              <CardTitle className="flex items-center text-lg sm:text-xl font-semibold"><Sparkles className="mr-2 h-5 w-5 sm:h-6 sm:w-6 text-primary" /> Core Concepts Unpacked</CardTitle>
+              <CardDescription className="text-sm sm:text-base">Main ideas from your material.</CardDescription>
             </CardHeader>
             <CardContent className="p-4 sm:p-6">
-              <ul className="space-y-2 text-sm sm:text-base text-foreground/90">
+              <ul className="space-y-2.5 text-base text-foreground/90 leading-relaxed">
                 {analysisResult.keyConcepts.map((concept, index) => (
                   <li key={`concept-${index}`} className="flex items-start">
-                      <CheckCircle className="mr-2 sm:mr-3 h-4 w-4 sm:h-5 sm:w-5 text-green-500 dark:text-green-400 shrink-0 mt-0.5" />
+                      <CheckCircle className="mr-2 sm:mr-3 h-5 w-5 text-green-500 dark:text-green-400 shrink-0 mt-1" />
                       <span>{concept}</span>
                   </li>
                 ))}
@@ -76,8 +76,8 @@ export default function SummarizerResultsDisplay({
         <TabsContent value="quiz">
           <Card className="shadow-md">
             <CardHeader className="p-4 sm:p-6">
-              <CardTitle className="flex items-center text-md sm:text-lg"><HelpCircle className="mr-2 h-4 w-4 sm:h-5 sm:w-5 text-primary" /> Quick Quiz: Test Your Knowledge! 🧩</CardTitle>
-              <CardDescription className="text-xs sm:text-sm">See how well you've grasped the concepts.</CardDescription>
+              <CardTitle className="flex items-center text-lg sm:text-xl font-semibold"><HelpCircle className="mr-2 h-5 w-5 sm:h-6 sm:w-6 text-primary" /> Quick Quiz: Test Your Knowledge! 🧩</CardTitle>
+              <CardDescription className="text-sm sm:text-base">See how well you've grasped the concepts.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4 sm:space-y-6 p-4 sm:p-6">
               {Object.entries(mcqAnswers).map(([qIndexStr, mcqItem]) => {
@@ -85,7 +85,7 @@ export default function SummarizerResultsDisplay({
                 const isCorrect = mcqItem.userSelectedOption === mcqItem.correctAnswerIndex;
                 return (
                   <div key={`mcq-${questionIndex}`} className="p-3 sm:p-4 border rounded-lg bg-card/30 shadow-sm">
-                    <p className="font-semibold mb-2 sm:mb-3 text-sm sm:text-base text-foreground">Question {questionIndex + 1}: {mcqItem.question}</p>
+                    <p className="font-semibold mb-2 sm:mb-3 text-base sm:text-lg text-foreground leading-snug">Question {questionIndex + 1}: {mcqItem.question}</p>
                     <RadioGroup
                       value={mcqItem.userSelectedOption?.toString()}
                       onValueChange={(value) => handleMcqOptionChange(questionIndex, value)}
@@ -98,7 +98,7 @@ export default function SummarizerResultsDisplay({
                             value={optionIndex.toString()} 
                             id={`q${questionIndex}-opt${optionIndex}`}
                             className={cn(
-                              "h-3.5 w-3.5 sm:h-4 sm:w-4",
+                              "h-4 w-4 sm:h-4 sm:w-4",
                               mcqItem.answerRevealed && optionIndex === mcqItem.correctAnswerIndex && "border-green-500 ring-green-500 text-green-700",
                               mcqItem.answerRevealed && optionIndex === mcqItem.userSelectedOption && optionIndex !== mcqItem.correctAnswerIndex && "border-red-500 ring-red-500 text-red-700"
                             )}
@@ -106,7 +106,7 @@ export default function SummarizerResultsDisplay({
                           <Label 
                             htmlFor={`q${questionIndex}-opt${optionIndex}`}
                             className={cn(
-                              "font-normal text-xs sm:text-sm",
+                              "font-normal text-sm sm:text-base leading-relaxed",
                               mcqItem.answerRevealed && optionIndex === mcqItem.correctAnswerIndex && "text-green-700 dark:text-green-400 font-medium",
                               mcqItem.answerRevealed && optionIndex === mcqItem.userSelectedOption && optionIndex !== mcqItem.correctAnswerIndex && "text-red-700 dark:text-red-400"
                             )}
@@ -120,8 +120,8 @@ export default function SummarizerResultsDisplay({
                       <Button 
                         onClick={() => handleShowAnswer(questionIndex)} 
                         variant="outline" 
-                        size="xs" 
-                        className="mt-3 sm:mt-4 text-xs"
+                        size="sm" 
+                        className="mt-3 sm:mt-4 text-xs sm:text-sm py-2 px-3"
                         disabled={mcqItem.userSelectedOption === undefined}
                       >
                         Show Answer
@@ -129,7 +129,7 @@ export default function SummarizerResultsDisplay({
                     )}
                     {mcqItem.answerRevealed && (
                       <div className={cn(
-                          "mt-3 sm:mt-4 p-2 sm:p-3 rounded-md text-xs sm:text-sm",
+                          "mt-3 sm:mt-4 p-2 sm:p-3 rounded-md text-sm sm:text-base leading-relaxed",
                           isCorrect ? "bg-green-100 dark:bg-green-900/60 border border-green-300 dark:border-green-700 text-green-800 dark:text-green-200" 
                                     : "bg-red-100 dark:bg-red-900/60 border border-red-300 dark:border-red-700 text-red-800 dark:text-red-200"
                         )}
@@ -139,8 +139,8 @@ export default function SummarizerResultsDisplay({
                           {isCorrect ? "Correct! 🎉" : `Incorrect. The correct answer was: ${mcqItem.options[mcqItem.correctAnswerIndex]}`}
                         </div>
                         {mcqItem.explanation && (
-                          <div className="mt-1.5 sm:mt-2 flex items-start">
-                             <Lightbulb className="mr-1.5 h-3.5 w-3.5 sm:h-4 sm:w-4 mt-0.5 text-yellow-600 dark:text-yellow-400 shrink-0" />
+                          <div className="mt-1.5 sm:mt-2 flex items-start prose prose-sm dark:prose-invert max-w-none">
+                             <Lightbulb className="mr-1.5 h-4 w-4 sm:h-5 sm:w-5 mt-0.5 text-yellow-600 dark:text-yellow-400 shrink-0" />
                              <p className="opacity-90">{mcqItem.explanation}</p>
                           </div>
                         )}
@@ -154,7 +154,7 @@ export default function SummarizerResultsDisplay({
         </TabsContent>
       </Tabs>
       <div className="mt-6 sm:mt-8 text-center p-3 sm:p-4 border-t bg-card rounded-b-lg">
-        <p className="text-sm sm:text-md font-semibold text-accent">✨ Understanding is power! Use these insights to supercharge your learning. You're doing great! 💪</p>
+        <p className="text-md sm:text-lg font-semibold text-accent leading-relaxed">✨ Understanding is power! Use these insights to supercharge your learning. You're doing great! 💪</p>
       </div>
     </div>
   );
