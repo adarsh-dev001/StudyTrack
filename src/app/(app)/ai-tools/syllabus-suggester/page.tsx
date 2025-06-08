@@ -27,29 +27,20 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import OnboardingForm from '@/components/onboarding/onboarding-form';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/ui/skeleton';
+import { TARGET_EXAMS as PREDEFINED_EXAMS_CONST, PREPARATION_LEVELS, DAILY_STUDY_HOURS_OPTIONS, LANGUAGE_MEDIUMS, STUDY_MODES, EXAM_SUBJECT_MAP } from '@/lib/constants';
+
 
 // Lazy load result display
 const SyllabusResultDisplay = React.lazy(() => import('@/components/ai-tools/syllabus-suggester/SyllabusResultDisplay'));
 const SyllabusResultDisplayFallback = React.lazy(() => import('@/components/ai-tools/syllabus-suggester/SyllabusResultDisplayFallback'));
 
 
-const commonSubjects = [
-  { id: 'physics', label: 'Physics' },
-  { id: 'chemistry', label: 'Chemistry' },
-  { id: 'biology', label: 'Biology (Botany & Zoology)' },
-  { id: 'mathematics', label: 'Mathematics' },
-  { id: 'history', label: 'History' },
-  { id: 'geography', label: 'Geography' },
-  { id: 'polity', label: 'Polity (Civics/Political Science)' },
-  { id: 'economy', label: 'Economy' },
-  { id: 'general_science', label: 'General Science' },
-  { id: 'english', label: 'English' },
-  { id: 'current_affairs', label: 'Current Affairs' },
-  { id: 'quantitative_aptitude', label: 'Quantitative Aptitude' },
-  { id: 'reasoning_ability', label: 'Reasoning Ability' },
-  { id: 'optional_subject_1', label: 'Optional Subject 1 (e.g., for UPSC)' },
-  { id: 'optional_subject_2', label: 'Optional Subject 2 (e.g., for UPSC)' },
-] as const;
+const commonSubjects = Object.values(EXAM_SUBJECT_MAP).flat().reduce((acc, subject) => {
+    if (!acc.find(s => s.id === subject.id)) {
+        acc.push(subject);
+    }
+    return acc;
+}, [] as {id: string, name: string}[]).sort((a,b) => a.name.localeCompare(b.name));
 
 
 const syllabusFormSchema = z.object({
@@ -63,23 +54,12 @@ const syllabusFormSchema = z.object({
   }).refine(date => date > new Date(), { message: "Target date must be in the future." }),
   preparationLevel: z.enum(['beginner', 'intermediate', 'advanced'], { required_error: "Preparation level is required."}),
   studyMode: z.string().optional(),
-  weakTopics: z.string().optional().transform(val => val ? val.split(',').map(s => s.trim()).filter(s => s.length > 0) : []),
+  weakTopics: z.array(z.string()).optional().transform(val => val ? val.map(s => s.trim()).filter(s => s.length > 0) : []),
   preferredLanguage: z.string().optional(),
   goals: z.string().max(300, {message: "Goals should be concise (max 300 chars)."}).optional(),
 });
 
 type SyllabusFormData = z.infer<typeof syllabusFormSchema>;
-
-const predefinedExams = [
-  { value: 'NEET', label: 'NEET (Medical Entrance)' },
-  { value: 'JEE', label: 'JEE (Engineering Entrance)' },
-  { value: 'UPSC', label: 'UPSC (Civil Services)' },
-  { value: 'CAT', label: 'CAT (MBA Entrance)' },
-  { value: 'GATE', label: 'GATE (Engineering PG)' },
-  { value: 'SSC', label: 'SSC (CGL, CHSL, etc.)' },
-  { value: 'Banking', label: 'Banking (PO, Clerk, RBI)' },
-  { value: 'Other', label: 'Other (Specify)' },
-];
 
 function OnboardingFormFallback() {
   return (
@@ -136,19 +116,23 @@ export default function SyllabusSuggesterPage() {
             if (profileSnap.exists()) {
                 const data = profileSnap.data() as UserProfileData;
                 setUserProfile(data);
-                if (!data.onboardingCompleted) {
+                if (!data.onboardingCompleted && !data.quickOnboardingCompleted) {
                   setShowOnboardingModal(true);
                 } else {
                   setShowOnboardingModal(false);
+                  // Pre-fill form if not already dirty
                   if (!form.formState.isDirty) {
+                     const dailyHoursMatch = DAILY_STUDY_HOURS_OPTIONS.find(opt => data.dailyStudyHours?.includes(opt.value.split('-')[0]));
+                     const prepLevelMatch = PREPARATION_LEVELS.find(pl => data.subjectDetails?.[0]?.preparationLevel === pl.value);
+
                      form.reset({
                         examType: data.targetExams && data.targetExams.length > 0 
                                     ? (data.targetExams[0] === 'other' && data.otherExamName ? data.otherExamName : data.targetExams[0]) 
                                     : '',
-                        subjects: data.subjectDetails?.map(sd => sd.subjectId) || [], 
-                        timeAvailablePerDay: data.dailyStudyHours ? parseFloat(data.dailyStudyHours.split('-')[0]) : 4,
-                        targetDate: data.examAttemptYear ? new Date(parseInt(data.examAttemptYear), 5, 1) : addDays(new Date(), 90),
-                        preparationLevel: (data.subjectDetails && data.subjectDetails.length > 0 ? data.subjectDetails[0].preparationLevel : 'intermediate') as 'beginner' | 'intermediate' | 'advanced',
+                        subjects: data.subjectDetails?.map(sd => sd.subjectId).filter(id => commonSubjects.some(cs => cs.id === id)) || [],
+                        timeAvailablePerDay: dailyHoursMatch ? parseFloat(dailyHoursMatch.value.split('-')[0]) : 4,
+                        targetDate: data.examAttemptYear ? new Date(parseInt(data.examAttemptYear), 5, 1) : addDays(new Date(), 90), // Default to June 1st of exam year
+                        preparationLevel: (prepLevelMatch?.value || 'intermediate') as 'beginner' | 'intermediate' | 'advanced',
                         studyMode: data.studyMode || 'self_study',
                         weakTopics: data.weakSubjects || [],
                         preferredLanguage: data.languageMedium || 'english',
@@ -158,7 +142,10 @@ export default function SyllabusSuggesterPage() {
                 }
             } else {
               setUserProfile(null);
-              setShowOnboardingModal(true);
+              // If no profile, and considering quick onboarding might store preferences,
+              // we might not want to *always* show full onboarding here.
+              // However, AI tools generally benefit from full profile.
+              setShowOnboardingModal(true); 
             }
             setIsLoadingProfile(false);
         }, (err) => {
@@ -167,15 +154,17 @@ export default function SyllabusSuggesterPage() {
             setIsLoadingProfile(false);
         });
     } else {
-        setIsLoadingProfile(false);
+        setIsLoadingProfile(false); // No user, no profile loading
+        // For guests, we might fetch from anonymousProfiles if that was implemented here
     }
      return () => {
       if (unsubscribeProfile) unsubscribeProfile();
     };
-  }, [currentUser?.uid, form, toast]);
+  }, [currentUser?.uid, form, toast]); // form is in dependency array for form.formState.isDirty & form.reset
 
   const handleOnboardingSuccess = () => {
     setShowOnboardingModal(false);
+    // Trigger profile re-fetch or rely on onSnapshot
   };
 
 
@@ -231,7 +220,7 @@ export default function SyllabusSuggesterPage() {
     return (
       <Dialog open={showOnboardingModal} onOpenChange={(isOpen) => {
           if (!currentUser) return;
-          if (!isOpen && userProfile && !userProfile.onboardingCompleted) {
+          if (!isOpen && userProfile && !userProfile.onboardingCompleted && !userProfile.quickOnboardingCompleted) {
              setShowOnboardingModal(true); return;
           }
           setShowOnboardingModal(isOpen);
@@ -252,6 +241,16 @@ export default function SyllabusSuggesterPage() {
       </Dialog>
     );
   }
+  
+  // Predefined exams from constants
+  const predefinedExams = PREDEFINED_EXAMS_CONST.map(exam => ({
+    value: exam.value, // Use the value (e.g., 'NEET', 'JEE')
+    label: exam.label  // Use the label (e.g., 'NEET (Medical Entrance)')
+  }));
+  // For 'Other' input field, we derive the actual value from form.watch
+  const watchedExamType = form.watch('examType');
+  const isOtherExamSelected = predefinedExams.find(ex => ex.value === watchedExamType)?.label === 'Other (Specify)';
+
 
   return (
     <div className="w-full space-y-6">
@@ -292,16 +291,17 @@ export default function SyllabusSuggesterPage() {
                         ))}
                       </SelectContent>
                     </Select>
-                    {form.watch('examType') === "Other" && (
+                    {isOtherExamSelected && (
                         <Input
                             placeholder="Specify other exam type"
-                            onChange={(e) => field.onChange(e.target.value)}
+                            onChange={(e) => field.onChange(e.target.value)} // Still update field.value
                             className="mt-2 text-sm sm:text-base"
-                            value={field.value === 'Other' || predefinedExams.find(ex => ex.value === field.value)?.label === 'Other (Specify)' ? (field.value === 'Other' ? '' : field.value) : (predefinedExams.find(ex=>ex.value === field.value) ? field.value : '')} 
+                            // Value for this input should be handled carefully if field.value is used for Select
+                            // If field.value holds the ID 'Other', this input allows user to type the actual name
                         />
                     )}
                     <FormDescription className="text-xs sm:text-sm">
-                      Choose the competitive exam you are targeting.
+                      Choose the competitive exam you are targeting. If 'Other', type the name above.
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
@@ -337,7 +337,7 @@ export default function SyllabusSuggesterPage() {
                           />
                         </FormControl>
                         <FormLabel className="text-xs sm:text-sm font-normal">
-                          {item.label}
+                          {item.name}
                         </FormLabel>
                       </FormItem>
                     ))}
@@ -422,9 +422,9 @@ export default function SyllabusSuggesterPage() {
                       <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl><SelectTrigger className="text-sm sm:text-base"><SelectValue placeholder="Select your level" /></SelectTrigger></FormControl>
                         <SelectContent>
-                          <SelectItem value="beginner" className="text-sm sm:text-base">Beginner (Just Started)</SelectItem>
-                          <SelectItem value="intermediate" className="text-sm sm:text-base">Intermediate (Covered Basics)</SelectItem>
-                          <SelectItem value="advanced" className="text-sm sm:text-base">Advanced (Syllabus Done, Revising)</SelectItem>
+                          {(PREPARATION_LEVELS || []).map(level => (
+                            <SelectItem key={level.value} value={level.value} className="text-sm sm:text-base">{level.label}</SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                       <FormMessage />
@@ -440,10 +440,7 @@ export default function SyllabusSuggesterPage() {
                       <Select onValueChange={field.onChange} value={field.value || ''}>
                         <FormControl><SelectTrigger className="text-sm sm:text-base"><SelectValue placeholder="e.g., Self-study" /></SelectTrigger></FormControl>
                         <SelectContent>
-                          <SelectItem value="self_study" className="text-sm sm:text-base">Self-study</SelectItem>
-                          <SelectItem value="coaching" className="text-sm sm:text-base">Coaching</SelectItem>
-                          <SelectItem value="hybrid" className="text-sm sm:text-base">Hybrid (Self + Coaching)</SelectItem>
-                          <SelectItem value="online" className="text-sm sm:text-base">Online Courses</SelectItem>
+                          {(STUDY_MODES || []).map(m => <SelectItem key={m.value} value={m.value} className="text-sm sm:text-base">{m.label}</SelectItem>)}
                         </SelectContent>
                       </Select>
                       <FormMessage />
@@ -463,7 +460,7 @@ export default function SyllabusSuggesterPage() {
                         placeholder="List topics you find challenging, separated by commas (e.g., Organic Chemistry, Modern Physics)"
                         className="min-h-[70px] resize-y text-sm sm:text-base"
                         value={Array.isArray(field.value) ? field.value.join(', ') : field.value || ''}
-                        onChange={(e) => field.onChange(e.target.value)}
+                        onChange={(e) => field.onChange(e.target.value.split(',').map(s=>s.trim()).filter(s=>s))}
                       />
                     </FormControl>
                     <FormDescription className="text-xs sm:text-sm">Helps AI tailor the plan to your needs.</FormDescription>
@@ -480,9 +477,9 @@ export default function SyllabusSuggesterPage() {
                      <Select onValueChange={field.onChange} value={field.value || ''}>
                       <FormControl><SelectTrigger className="text-sm sm:text-base"><SelectValue placeholder="Select language" /></SelectTrigger></FormControl>
                       <SelectContent>
-                        <SelectItem value="english" className="text-sm sm:text-base">English</SelectItem>
-                        <SelectItem value="hindi" className="text-sm sm:text-base">Hindi</SelectItem>
-                        <SelectItem value="other_regional" className="text-sm sm:text-base">Other Regional Language</SelectItem>
+                        {(LANGUAGE_MEDIUMS || []).map(lang => (
+                          <SelectItem key={lang.value} value={lang.value} className="text-sm sm:text-base">{lang.label}</SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                     <FormDescription className="text-xs sm:text-sm">If relevant for study material suggestions.</FormDescription>
@@ -501,6 +498,7 @@ export default function SyllabusSuggesterPage() {
                         placeholder="e.g., Cover 70% syllabus in 3 months, Achieve 95th percentile in mocks..."
                         className="min-h-[70px] resize-y text-sm sm:text-base"
                         {...field}
+                        value={field.value || ''}
                       />
                     </FormControl>
                     <FormDescription className="text-xs sm:text-sm">What are your broader objectives for this preparation period?</FormDescription>
@@ -559,4 +557,3 @@ export default function SyllabusSuggesterPage() {
     </div>
   );
 }
-

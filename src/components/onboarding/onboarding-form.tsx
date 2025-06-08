@@ -11,13 +11,15 @@ import { Progress } from '@/components/ui/progress';
 import { Loader2, Sparkles, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { db, auth } from '@/lib/firebase';
-import { doc, setDoc } from 'firebase/firestore';
+import { doc, setDoc, getDoc } from 'firebase/firestore'; // Added getDoc
 import { updateProfile } from 'firebase/auth';
 import type { UserProfileData } from '@/lib/profile-types';
 import { subjectDetailSchema } from '@/lib/profile-types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { EXAM_SUBJECT_MAP } from '@/lib/constants';
 import { useAuth } from '@/contexts/auth-context';
+import { DEFAULT_THEME_ID } from '@/lib/themes'; // Added DEFAULT_THEME_ID
+
 
 const Step1PersonalInfo = React.lazy(() => import('./Step1PersonalInfo'));
 const Step2TargetExam = React.lazy(() => import('./Step2TargetExam'));
@@ -55,7 +57,7 @@ const step4BaseSchema = z.object({
   socialVisibilityPublic: z.boolean().optional(),
   weakSubjects: z.array(z.string()).optional(),
   strongSubjects: z.array(z.string()).optional(),
-  preferredLearningStyles: z.array(z.string()).min(1, "Select at least one learning style."), // Removed .optional()
+  preferredLearningStyles: z.array(z.string()).min(1, "Select at least one learning style."),
 });
 
 const mergedBaseSchema = step1BaseSchema
@@ -73,14 +75,20 @@ const fullOnboardingSchema = mergedBaseSchema.refine(data => {
   path: ['otherExamName'],
 }).refine(data => {
     if (data.targetExams && data.targetExams.length > 0) {
+      // If targetExams is selected, subjectDetails should not be empty.
       if (!data.subjectDetails || data.subjectDetails.length === 0) {
         return false; 
       }
-      return data.subjectDetails.every(detail => subjectDetailSchema.safeParse(detail).success);
+      // Each subjectDetail must be valid
+      return data.subjectDetails.every(detail => {
+        // Check if preparationLevel and preferredLearningMethods are filled for each subject
+        return detail.preparationLevel && detail.preparationLevel.length > 0 &&
+               detail.preferredLearningMethods && detail.preferredLearningMethods.length > 0;
+      });
     }
-    return true; 
+    return true; // If no targetExams, subjectDetails can be empty or undefined
 }, {
-    message: "Please complete all required fields for each subject relevant to your chosen exam(s).",
+    message: "Please complete all required fields (preparation level, learning methods) for each subject relevant to your chosen exam(s).",
     path: ['subjectDetails'], 
 });
 
@@ -162,8 +170,48 @@ function OnboardingFormComponent({ userId, onComplete }: OnboardingFormProps) {
     },
   });
 
-  const { handleSubmit, trigger, getValues, control, setValue, formState: { errors } } = methods;
+  const { handleSubmit, trigger, getValues, control, setValue, formState: { errors, dirtyFields } } = methods;
   const watchedTargetExams = useWatch({ control, name: 'targetExams' });
+
+  // Effect to load existing profile data on mount
+  useEffect(() => {
+    if (actualUserId) {
+      const profileRef = doc(db, 'users', actualUserId, 'userProfile', 'profile');
+      getDoc(profileRef).then(docSnap => {
+        if (docSnap.exists()) {
+          const profileData = docSnap.data() as UserProfileData;
+          // Only reset if no fields are dirty, to avoid overwriting user's current form input
+          if (Object.keys(dirtyFields).length === 0) {
+            methods.reset({
+              fullName: profileData.fullName || auth.currentUser?.displayName || '',
+              age: profileData.age === undefined ? null : profileData.age,
+              location: profileData.location || '',
+              languageMedium: profileData.languageMedium || '',
+              studyMode: profileData.studyMode || '',
+              examPhase: profileData.examPhase || '',
+              previousAttempts: profileData.previousAttempts || '',
+              targetExams: profileData.targetExams || [],
+              otherExamName: profileData.otherExamName || '',
+              examAttemptYear: profileData.examAttemptYear || '',
+              subjectDetails: profileData.subjectDetails || [],
+              dailyStudyHours: profileData.dailyStudyHours || '',
+              preferredStudyTime: profileData.preferredStudyTime || [],
+              distractionStruggles: profileData.distractionStruggles || '',
+              motivationType: profileData.motivationType || '',
+              socialVisibilityPublic: profileData.socialVisibilityPublic || false,
+              weakSubjects: profileData.weakSubjects || [],
+              strongSubjects: profileData.strongSubjects || [],
+              preferredLearningStyles: profileData.preferredLearningStyles || [],
+            });
+          }
+        }
+      }).catch(error => {
+        console.error("Error fetching profile for onboarding prefill:", error);
+        toast({ title: "Error", description: "Could not load existing profile data.", variant: "destructive"});
+      });
+    }
+  }, [actualUserId, methods, dirtyFields, toast]);
+
 
   useEffect(() => {
     const primaryExam = watchedTargetExams?.[0]; 
@@ -205,11 +253,23 @@ function OnboardingFormComponent({ userId, onComplete }: OnboardingFormProps) {
         const targetExamsValue = getValues('targetExams');
         if (targetExamsValue && targetExamsValue.length > 0) {
             if (!subjectDetailsValue || subjectDetailsValue.length === 0) {
-                methods.setError("subjectDetails", { type: "manual", message: "Please provide details for the subjects related to your chosen exam(s)." });
+                methods.setError("subjectDetails", { type: "manual", message: "Please provide details for the subjects relevant to your chosen exam(s)." });
                 isValid = false;
             } else {
                 const subjectDetailsValid = await trigger(['subjectDetails']);
                 isValid = isValid && subjectDetailsValid;
+
+                // Check each subjectDetail for required fields
+                subjectDetailsValue.forEach((detail, index) => {
+                    if (!detail.preparationLevel || detail.preparationLevel.trim() === '') {
+                        methods.setError(`subjectDetails.${index}.preparationLevel`, { type: 'manual', message: 'Level is required.' });
+                        isValid = false;
+                    }
+                    if (!detail.preferredLearningMethods || detail.preferredLearningMethods.length === 0) {
+                        methods.setError(`subjectDetails.${index}.preferredLearningMethods`, { type: 'manual', message: 'Select at least one method.'});
+                        isValid = false;
+                    }
+                });
             }
         } else {
             methods.clearErrors("subjectDetails");
@@ -225,7 +285,7 @@ function OnboardingFormComponent({ userId, onComplete }: OnboardingFormProps) {
         title: "Hold Up!",
         description: "Please fill out all required fields correctly before proceeding.",
         variant: "destructive",
-        duration: 2000,
+        duration: 3000,
       });
     }
   };
@@ -254,13 +314,27 @@ function OnboardingFormComponent({ userId, onComplete }: OnboardingFormProps) {
     }
     finalData.subjectDetails = finalData.subjectDetails || [];
 
-    const profilePayload: Partial<UserProfileData> = {
-      ...finalData,
-      onboardingCompleted: true, 
+    // Fetch existing profile to merge, ensuring coins, xp, etc., are not overwritten
+    const existingProfileSnap = await getDoc(userProfileRef);
+    const existingProfileData = existingProfileSnap.exists() ? existingProfileSnap.data() as UserProfileData : {};
+
+
+    const profilePayload: UserProfileData = {
+      ...existingProfileData, // Start with existing data
+      ...finalData,           // Override with new form data
+      onboardingCompleted: true,
+      email: auth.currentUser?.email || existingProfileData.email || '', // Ensure email is preserved
+      coins: existingProfileData.coins || 0, // Preserve existing coins
+      xp: existingProfileData.xp || 0,       // Preserve existing XP
+      earnedBadgeIds: existingProfileData.earnedBadgeIds || [], // Preserve existing badges
+      purchasedItemIds: existingProfileData.purchasedItemIds || [],
+      activeThemeId: existingProfileData.activeThemeId === undefined ? DEFAULT_THEME_ID : existingProfileData.activeThemeId,
+      dailyChallengeStatus: existingProfileData.dailyChallengeStatus || {},
+      lastInteractionDates: existingProfileData.lastInteractionDates || [],
     };
 
     try {
-      await setDoc(userProfileRef, profilePayload, { merge: true });
+      await setDoc(userProfileRef, profilePayload, { merge: true }); // Use merge: true
       if (auth.currentUser && data.fullName && data.fullName !== auth.currentUser.displayName) {
         await updateProfile(auth.currentUser, { displayName: data.fullName });
       }
@@ -337,5 +411,3 @@ function OnboardingFormComponent({ userId, onComplete }: OnboardingFormProps) {
 }
 
 export default React.memo(OnboardingFormComponent);
-
-    

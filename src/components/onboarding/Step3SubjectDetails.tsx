@@ -2,13 +2,12 @@
 'use client';
 
 import React from 'react';
-import { useFormContext, useFieldArray } from 'react-hook-form';
+import { useFormContext, useFieldArray, useWatch } from 'react-hook-form'; // Added useWatch
 import { FormField, FormItem, FormLabel, FormControl, FormMessage, FormDescription } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-// ScrollArea import removed
 import { EXAM_SUBJECT_MAP, PREPARATION_LEVELS, PREFERRED_LEARNING_METHODS_PER_SUBJECT } from '@/lib/constants';
 import type { OnboardingFormData } from './onboarding-form';
 import { cn } from '@/lib/utils';
@@ -21,34 +20,33 @@ function Step3SubjectDetailsComponent({ selectedExam }: Step3SubjectDetailsProps
   const { control, getValues, setValue, formState: { errors } } = useFormContext<OnboardingFormData>();
   
   const subjectsForSelectedExam = React.useMemo(() => {
-    if (!selectedExam) return EXAM_SUBJECT_MAP['other'] || []; 
-    return EXAM_SUBJECT_MAP[selectedExam] || EXAM_SUBJECT_MAP['other'] || [];
+    if (!selectedExam) return EXAM_SUBJECT_MAP['other'] || []; // Default to 'other' if no exam selected (e.g., initial state)
+    return EXAM_SUBJECT_MAP[selectedExam.toLowerCase()] || EXAM_SUBJECT_MAP['other'] || [];
   }, [selectedExam]);
 
-  const { fields } = useFieldArray({
+  const { fields, replace } = useFieldArray({ // using replace for easier dynamic updates
     control,
     name: "subjectDetails",
   });
 
   React.useEffect(() => {
-    const currentSubjectDetails = getValues('subjectDetails') || [];
-    const newSubjectDetails = (subjectsForSelectedExam || []).map(examSubject => {
-      const existingDetail = currentSubjectDetails.find(sd => sd.subjectId === examSubject.id);
+    const currentSubjectDetailsArray = getValues('subjectDetails') || [];
+    
+    const newSubjectDetailsArray = subjectsForSelectedExam.map(examSubject => {
+      const existingDetail = currentSubjectDetailsArray.find(sd => sd.subjectId === examSubject.id);
       return existingDetail || {
         subjectId: examSubject.id,
         subjectName: examSubject.name,
-        preparationLevel: '',
+        preparationLevel: '', // Default empty, user must select
         targetScore: '',
-        preferredLearningMethods: [],
+        preferredLearningMethods: [], // Default empty, user must select
       };
     });
 
-    if (JSON.stringify(currentSubjectDetails.map(sd => sd.subjectId).sort()) !== JSON.stringify(newSubjectDetails.map(nsd => nsd.subjectId).sort()) ||
-        currentSubjectDetails.length !== newSubjectDetails.length) {
-        setValue('subjectDetails', newSubjectDetails, { shouldValidate: true, shouldDirty: true });
-    }
+    // Use replace to update the field array. This correctly handles additions/removals.
+    replace(newSubjectDetailsArray);
 
-  }, [subjectsForSelectedExam, setValue, getValues]);
+  }, [subjectsForSelectedExam, replace, getValues]);
 
 
   return (
@@ -60,12 +58,11 @@ function Step3SubjectDetailsComponent({ selectedExam }: Step3SubjectDetailsProps
 
       {fields.length === 0 && (
         <p className="text-muted-foreground text-sm">
-          Please select your target exam in the previous step to see relevant subjects, or add custom subjects if you chose 'Other'.
+          Please select your target exam in the previous step to see relevant subjects. If you chose 'Other', relevant subjects will appear here.
         </p>
       )}
 
-      {/* ScrollArea removed from here */}
-      <div className="space-y-4 md:space-y-6"> {/* This div will now naturally expand */}
+      <div className="space-y-4 md:space-y-6">
         {fields.map((field, index) => (
           <Card key={field.id} className="bg-card/50">
             <CardHeader className="pb-3 pt-4 px-4">
@@ -112,7 +109,7 @@ function Step3SubjectDetailsComponent({ selectedExam }: Step3SubjectDetailsProps
                         <FormItem key={method.id} className="flex flex-row items-center space-x-1.5 space-y-0">
                           <FormControl>
                             <Checkbox
-                              checked={controllerField.value?.includes(method.id)}
+                              checked={(controllerField.value || []).includes(method.id)}
                               onCheckedChange={(checked) => {
                                 const currentSelection = controllerField.value || [];
                                 return checked
@@ -135,7 +132,7 @@ function Step3SubjectDetailsComponent({ selectedExam }: Step3SubjectDetailsProps
         ))}
       </div>
       {/* @ts-ignore TODO: Fix this type error, related to Zod an array validation */}
-      {errors.subjectDetails && !errors.subjectDetails.root && !errors.subjectDetails.message && (
+      {errors.subjectDetails && !errors.subjectDetails.root && !Array.isArray(errors.subjectDetails) && !errors.subjectDetails.message && (
         <p className="text-sm font-medium text-destructive">Please provide details for all listed subjects.</p>
       )}
        {/* @ts-ignore */}
