@@ -1,6 +1,6 @@
 
 import type React from 'react';
-import { getPostBySlug, type PostMeta } from '@/lib/blog';
+import { getPostBySlug, getPostSlugs, type PostMeta } from '@/lib/blog'; // Added getPostSlugs
 import { notFound } from 'next/navigation';
 import { format } from 'date-fns';
 import type { MDXRemoteSerializeResult } from 'next-mdx-remote';
@@ -13,6 +13,14 @@ import { ChevronLeft } from 'lucide-react';
 interface BlogPostData {
   mdxSource: MDXRemoteSerializeResult;
   metadata: PostMeta;
+}
+
+// This function tells Next.js which dynamic paths to pre-render at build time.
+export async function generateStaticParams() {
+  const slugs = getPostSlugs(); // Assumes getPostSlugs returns an array of strings: ['slug1', 'slug2']
+  return slugs.map((slug) => ({
+    slug: slug,
+  }));
 }
 
 export async function generateMetadata({ params }: { params: { slug: string } }) {
