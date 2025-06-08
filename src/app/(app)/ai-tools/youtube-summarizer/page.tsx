@@ -10,7 +10,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Loader2, Wand2, Sparkles, Youtube, FileText, Download, BookText } from 'lucide-react';
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Loader2, Wand2, Sparkles, Youtube, FileText, Download, BookText, AlertTriangle } from 'lucide-react';
 import {
   processYouTubeVideo,
   type ProcessYouTubeVideoInput,
@@ -31,14 +32,14 @@ import { Skeleton } from '@/components/ui/skeleton';
 const YouTubeSummarizerResultsDisplay = React.lazy(() => import('@/components/ai-tools/youtube-summarizer/YouTubeSummarizerResultsDisplay'));
 const YouTubeSummarizerResultsDisplayFallback = React.lazy(() => import('@/components/ai-tools/youtube-summarizer/YouTubeSummarizerResultsDisplayFallback'));
 
+// Local form schema, not using .omit() from the imported AI flow schema
 const youtubeSummarizerFormSchema = z.object({
-  youtubeUrl: z.string().url({ message: "Please enter a valid YouTube URL." }).optional().describe('The URL of the YouTube video.'),
+  youtubeUrl: z.string().url({ message: "Please enter a valid YouTube URL." }).optional(),
   videoTranscript: z
     .string()
     .min(100, { message: "Transcript must be at least 100 characters." })
-    .max(30000, { message: "Transcript is too long (max 30,000 characters)." })
-    .describe('The transcript of the YouTube video.'),
-  customTitle: z.string().optional().describe('Optional: A custom title for the video if you want to override or provide one.'),
+    .max(30000, { message: "Transcript is too long (max 30,000 characters)." }),
+  customTitle: z.string().optional(),
 });
 
 type YouTubeSummarizerFormData = z.infer<typeof youtubeSummarizerFormSchema>;
@@ -72,6 +73,7 @@ export default function YouTubeSummarizerPage() {
   const [analysisResult, setAnalysisResult] = useState<ProcessYouTubeVideoOutput | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isFetchingTranscript, setIsFetchingTranscript] = useState(false);
+  const [fetchTranscriptError, setFetchTranscriptError] = useState<string | null>(null);
   const [mcqAnswers, setMcqAnswers] = useState<Record<number, MCQWithUserAnswer>>({});
   const { toast } = useToast();
   const resultsRef = useRef<HTMLDivElement>(null);
@@ -147,7 +149,8 @@ export default function YouTubeSummarizerPage() {
     }
 
     setIsFetchingTranscript(true);
-    setAnalysisResult(null); 
+    setAnalysisResult(null);
+    setFetchTranscriptError(null);
 
     try {
       const response = await fetch('/api/youtube-transcript', {
@@ -164,10 +167,9 @@ export default function YouTubeSummarizerPage() {
             serverError = errorResult.error;
           }
         } catch (e) {
-          // Error response wasn't JSON, likely HTML. Log it for debugging.
           const textError = await response.text();
-          console.error("Non-JSON error response from /api/youtube-transcript:", textError.substring(0, 500)); // Log first 500 chars
-          serverError = "Failed to fetch transcript. Server returned an unexpected response.";
+          console.error("Non-JSON error response from /api/youtube-transcript:", textError.substring(0, 500));
+          serverError = "Failed to fetch transcript. Server returned an unexpected response. Please paste it manually.";
         }
         throw new Error(serverError);
       }
@@ -178,9 +180,11 @@ export default function YouTubeSummarizerPage() {
 
     } catch (error: any) {
       console.error('Error fetching transcript:', error);
+      const errorMessage = error.message || 'Could not fetch transcript. Please paste it manually.';
+      setFetchTranscriptError(errorMessage);
       toast({
         title: 'Transcript Fetch Error',
-        description: error.message || 'Could not fetch transcript. Please paste it manually.',
+        description: errorMessage,
         variant: 'destructive',
       });
     } finally {
@@ -192,17 +196,18 @@ export default function YouTubeSummarizerPage() {
   const onSubmit: SubmitHandler<YouTubeSummarizerFormData> = async (data) => {
     setIsLoading(true);
     setAnalysisResult(null);
+    setFetchTranscriptError(null); // Clear any previous fetch errors
     setMcqAnswers({});
 
     const aiInput: ProcessYouTubeVideoInput = {
-      ...data,
       youtubeUrl: data.youtubeUrl || undefined,
+      videoTranscript: data.videoTranscript,
       customTitle: data.customTitle || undefined,
       userName: userFullProfile?.fullName || currentUser?.displayName || undefined,
       examContext: userFullProfile?.targetExams && userFullProfile.targetExams.length > 0
                    ? (userFullProfile.targetExams[0] === 'other' && userFullProfile.otherExamName ? userFullProfile.otherExamName : userFullProfile.targetExams[0])
                    : undefined,
-      language: 'English', // Assuming English for now, could be a form field
+      language: 'English', 
     };
 
     try {
@@ -256,6 +261,15 @@ export default function YouTubeSummarizerPage() {
       await recordPlatformInteraction(currentUser.uid);
     }
   };
+
+  useEffect(() => {
+    const subscription = form.watch((value, { name }) => {
+      if (name === 'youtubeUrl' || name === 'videoTranscript') {
+        setFetchTranscriptError(null);
+      }
+    });
+    return () => subscription.unsubscribe();
+  }, [form]);
 
   if (isLoadingProfile && currentUser) {
     return (
@@ -348,6 +362,17 @@ export default function YouTubeSummarizerPage() {
                   </FormItem>
                 )}
               />
+
+              {fetchTranscriptError && (
+                <Alert variant="destructive" className="mt-2">
+                  <AlertTriangle className="h-4 w-4" />
+                  <AlertTitle>Transcript Fetch Failed</AlertTitle>
+                  <AlertDescription>
+                    {fetchTranscriptError} You can still paste the transcript manually below.
+                  </AlertDescription>
+                </Alert>
+              )}
+
               <FormField
                 control={form.control}
                 name="customTitle"
@@ -424,4 +449,5 @@ export default function YouTubeSummarizerPage() {
     </div>
   );
 }
+
     
