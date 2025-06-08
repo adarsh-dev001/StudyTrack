@@ -26,17 +26,41 @@ export interface BlogPostPageData {
 }
 
 function normalizeImagePath(imagePath?: string): string | undefined {
-  if (typeof imagePath === 'string') {
-    let normalizedPath = imagePath;
-    if (normalizedPath.startsWith('public/')) {
-      normalizedPath = normalizedPath.substring('public'.length);
-    }
-    if (!normalizedPath.startsWith('/') && !normalizedPath.startsWith('http')) {
-      normalizedPath = '/' + normalizedPath;
-    }
-    return normalizedPath.trim() === '/' ? undefined : normalizedPath; // Avoid just "/"
+  if (typeof imagePath !== 'string' || imagePath.trim() === "") {
+    return undefined; // Explicitly return undefined for non-strings or empty/whitespace-only strings
   }
-  return undefined;
+
+  let normalizedPath = imagePath.trim();
+
+  // Handle protocol-relative URLs by prepending https:
+  if (normalizedPath.startsWith('//')) {
+    return 'https:' + normalizedPath;
+  }
+
+  // If it's already a full HTTP/HTTPS URL, return as is
+  if (normalizedPath.startsWith('http://') || normalizedPath.startsWith('https://')) {
+    return normalizedPath;
+  }
+
+  // Remove 'public/' prefix if present, as next/image serves from public root
+  if (normalizedPath.startsWith('public/')) {
+    normalizedPath = normalizedPath.substring('public'.length);
+  }
+
+  // Ensure local paths start with a single '/'
+  if (!normalizedPath.startsWith('/')) {
+    normalizedPath = '/' + normalizedPath;
+  }
+
+  // Avoid returning just "/" if all else was stripped
+  if (normalizedPath === '/') {
+    return undefined;
+  }
+
+  // Sanitize multiple slashes, e.g. ///image.jpg -> /image.jpg
+  normalizedPath = normalizedPath.replace(/\/\/+/g, '/');
+
+  return normalizedPath;
 }
 
 export function getPostSlugs() {
