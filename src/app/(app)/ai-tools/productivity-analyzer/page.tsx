@@ -321,7 +321,7 @@ export default function ProductivityAnalyzerPage() {
                     <FormItem>
                       <FormLabel className="text-sm sm:text-base">Total Study Hours (Weekly) ⏳</FormLabel>
                       <FormControl>
-                        <Input type="number" placeholder="e.g., 20" {...field} className="text-sm sm:text-base"/>
+                        <Input type="number" placeholder="e.g., 20" {...field} value={isNaN(field.value as number) ? '' : field.value} className="text-sm sm:text-base"/>
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -334,7 +334,7 @@ export default function ProductivityAnalyzerPage() {
                     <FormItem>
                       <FormLabel className="text-sm sm:text-base">Total Topics Completed (Weekly) ✅</FormLabel>
                       <FormControl>
-                        <Input type="number" placeholder="e.g., 5" {...field} className="text-sm sm:text-base"/>
+                        <Input type="number" placeholder="e.g., 5" {...field} value={isNaN(field.value as number) ? '' : field.value} className="text-sm sm:text-base"/>
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -349,19 +349,19 @@ export default function ProductivityAnalyzerPage() {
                 </CardHeader>
                 <CardContent className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-x-3 sm:gap-x-4 gap-y-2 sm:gap-y-3 p-3 sm:p-4">
                     <FormField control={form.control} name="subjectPhysicsHours" render={({ field }) => (
-                        <FormItem><FormLabel className="text-xs sm:text-sm">Physics</FormLabel><FormControl><Input type="number" placeholder="e.g., 5" {...field} value={field.value || ''} className="text-xs sm:text-sm h-9 sm:h-10"/></FormControl><FormMessage /></FormItem>
+                        <FormItem><FormLabel className="text-xs sm:text-sm">Physics</FormLabel><FormControl><Input type="number" placeholder="e.g., 5" {...field} value={isNaN(field.value as number) ? '' : field.value || ''} className="text-xs sm:text-sm h-9 sm:h-10"/></FormControl><FormMessage /></FormItem>
                     )} />
                     <FormField control={form.control} name="subjectChemistryHours" render={({ field }) => (
-                        <FormItem><FormLabel className="text-xs sm:text-sm">Chemistry</FormLabel><FormControl><Input type="number" placeholder="e.g., 4" {...field} value={field.value || ''} className="text-xs sm:text-sm h-9 sm:h-10"/></FormControl><FormMessage /></FormItem>
+                        <FormItem><FormLabel className="text-xs sm:text-sm">Chemistry</FormLabel><FormControl><Input type="number" placeholder="e.g., 4" {...field} value={isNaN(field.value as number) ? '' : field.value || ''} className="text-xs sm:text-sm h-9 sm:h-10"/></FormControl><FormMessage /></FormItem>
                     )} />
                     <FormField control={form.control} name="subjectBiologyHours" render={({ field }) => (
-                       <FormItem><FormLabel className="text-xs sm:text-sm">Biology</FormLabel><FormControl><Input type="number" placeholder="e.g., 3" {...field} value={field.value || ''} className="text-xs sm:text-sm h-9 sm:h-10"/></FormControl><FormMessage /></FormItem>
+                       <FormItem><FormLabel className="text-xs sm:text-sm">Biology</FormLabel><FormControl><Input type="number" placeholder="e.g., 3" {...field} value={isNaN(field.value as number) ? '' : field.value || ''} className="text-xs sm:text-sm h-9 sm:h-10"/></FormControl><FormMessage /></FormItem>
                     )} />
                     <FormField control={form.control} name="subjectMathHours" render={({ field }) => (
-                        <FormItem><FormLabel className="text-xs sm:text-sm">Mathematics</FormLabel><FormControl><Input type="number" placeholder="e.g., 4" {...field} value={field.value || ''} className="text-xs sm:text-sm h-9 sm:h-10"/></FormControl><FormMessage /></FormItem>
+                        <FormItem><FormLabel className="text-xs sm:text-sm">Mathematics</FormLabel><FormControl><Input type="number" placeholder="e.g., 4" {...field} value={isNaN(field.value as number) ? '' : field.value || ''} className="text-xs sm:text-sm h-9 sm:h-10"/></FormControl><FormMessage /></FormItem>
                     )} />
                     <FormField control={form.control} name="subjectOtherHours" render={({ field }) => (
-                        <FormItem><FormLabel className="text-xs sm:text-sm">Other Subjects</FormLabel><FormControl><Input type="number" placeholder="e.g., 2" {...field} value={field.value || ''} className="text-xs sm:text-sm h-9 sm:h-10"/></FormControl><FormMessage /></FormItem>
+                        <FormItem><FormLabel className="text-xs sm:text-sm">Other Subjects</FormLabel><FormControl><Input type="number" placeholder="e.g., 2" {...field} value={isNaN(field.value as number) ? '' : field.value || ''} className="text-xs sm:text-sm h-9 sm:h-10"/></FormControl><FormMessage /></FormItem>
                     )} />
                 </CardContent>
               </Card>
@@ -374,7 +374,7 @@ export default function ProductivityAnalyzerPage() {
                     <FormItem>
                       <FormLabel className="text-sm sm:text-base">Current Study Streak (Days) 🔥</FormLabel>
                       <FormControl>
-                        <Input type="number" placeholder="e.g., 7" {...field} className="text-sm sm:text-base"/>
+                        <Input type="number" placeholder="e.g., 7" {...field} value={isNaN(field.value as number) ? '' : field.value} className="text-sm sm:text-base"/>
                       </FormControl>
                       <FormDescription className="text-xs sm:text-sm">How many consecutive days have you studied?</FormDescription>
                       <FormMessage />
@@ -388,7 +388,7 @@ export default function ProductivityAnalyzerPage() {
                     <FormItem>
                       <FormLabel className="text-sm sm:text-base">Weekly Goals Completed 🎯</FormLabel>
                       <FormControl>
-                        <Input type="number" placeholder="e.g., 3 of 5" {...field} className="text-sm sm:text-base"/>
+                        <Input type="number" placeholder="e.g., 3 of 5" {...field} value={isNaN(field.value as number) ? '' : field.value} className="text-sm sm:text-base"/>
                       </FormControl>
                       <FormDescription className="text-xs sm:text-sm">How many of your set weekly goals did you achieve?</FormDescription>
                       <FormMessage />

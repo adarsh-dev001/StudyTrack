@@ -356,7 +356,14 @@ export default function SyllabusSuggesterPage() {
                     <FormItem>
                       <FormLabel className="text-sm sm:text-base">Daily Study Time (Hours) <span className="text-destructive">*</span> ⏳</FormLabel>
                       <FormControl>
-                        <Input type="number" step="0.5" placeholder="e.g., 4.5" {...field} className="text-sm sm:text-base"/>
+                        <Input
+                          type="number"
+                          step="0.5"
+                          placeholder="e.g., 4.5"
+                          {...field}
+                          value={isNaN(field.value as number) ? '' : field.value}
+                          className="text-sm sm:text-base"
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>

@@ -409,7 +409,7 @@ export default function SmartQuizPage() {
                     <FormItem>
                       <FormLabel className="text-sm sm:text-base">Number of Questions (3-10) <span className="text-destructive">*</span></FormLabel>
                       <FormControl>
-                        <Input type="number" min="3" max="10" placeholder="e.g., 5" {...field} className="text-sm sm:text-base w-full sm:w-32 h-10 sm:h-11" />
+                        <Input type="number" min="3" max="10" placeholder="e.g., 5" {...field} value={isNaN(field.value as number) ? '' : field.value} className="text-sm sm:text-base w-full sm:w-32 h-10 sm:h-11" />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -475,3 +475,4 @@ export default function SmartQuizPage() {
     </div>
   );
 }
+
