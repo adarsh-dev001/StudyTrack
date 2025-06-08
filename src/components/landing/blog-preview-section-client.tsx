@@ -25,6 +25,12 @@ interface BlogPreviewSectionClientProps {
     recentPosts: PostMeta[];
 }
 
+const PLACEHOLDER_IMAGE_PREVIEW = "https://placehold.co/600x338.png";
+
+function isValidImagePath(path?: string): path is string {
+    return typeof path === 'string' && path.trim() !== '' && (path.startsWith('/') || path.startsWith('http'));
+}
+
 function BlogPreviewSectionClientComponent({ recentPosts }: BlogPreviewSectionClientProps) {
   return (
     <motion.section
@@ -58,45 +64,50 @@ function BlogPreviewSectionClientComponent({ recentPosts }: BlogPreviewSectionCl
             whileInView="visible"
             viewport={{ once: true, amount: 0.1 }}
           >
-            {recentPosts.map((post, index) => (
-              <motion.div key={post.slug} variants={cardVariants} whileHover={{ y: -5, transition: { duration: 0.2 }}}>
-                <Card className="flex flex-col h-full overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-300 transform">
-                  <Link href={`/blog/${post.slug}`} className="block aspect-[16/9] relative w-full overflow-hidden bg-muted">
-                    <Image
-                      src={(post.featuredImage && post.featuredImage.trim() !== '') ? post.featuredImage : "https://placehold.co/600x338.png"}
-                      alt={post.title}
-                      fill
-                      sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                      style={{ objectFit: 'cover' }}
-                      className="hover:scale-105 transition-transform duration-300"
-                      data-ai-hint="article highlight"
-                      priority={index < 2}
-                    />
-                  </Link>
-                  <CardHeader className="p-4 sm:p-5">
-                    <CardTitle className="font-headline text-lg sm:text-xl hover:text-primary transition-colors">
-                      <Link href={`/blog/${post.slug}`}>
-                        {post.title}
-                      </Link>
-                    </CardTitle>
-                    <div className="text-xs text-muted-foreground space-x-1.5 sm:space-x-2 flex items-center pt-1">
-                        <span className="flex items-center"><CalendarDays className="mr-1 h-3 w-3" /> {format(new Date(post.date), 'MMM d, yyyy')}</span>
-                        <span className="flex items-center"><Tag className="mr-1 h-3 w-3" /> {post.category}</span>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="flex-grow p-4 sm:p-5 pt-0">
-                    <CardDescription className="text-xs sm:text-sm">{post.metaDescription.substring(0, 120)}{post.metaDescription.length > 120 ? '...' : ''}</CardDescription>
-                  </CardContent>
-                  <CardFooter className="p-4 sm:p-5">
-                    <Button variant="link" asChild className="p-0 h-auto text-primary hover:underline text-xs sm:text-sm">
-                      <Link href={`/blog/${post.slug}`}>
-                        Read More <ArrowRight className="ml-1.5 sm:ml-2 h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                      </Link>
-                    </Button>
-                  </CardFooter>
-                </Card>
-              </motion.div>
-            ))}
+            {recentPosts.map((post, index) => {
+              const imageSrc = isValidImagePath(post.featuredImage) ? post.featuredImage : PLACEHOLDER_IMAGE_PREVIEW;
+              const isExternalImage = imageSrc.startsWith('http');
+              return (
+                <motion.div key={post.slug} variants={cardVariants} whileHover={{ y: -5, transition: { duration: 0.2 }}}>
+                  <Card className="flex flex-col h-full overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-300 transform">
+                    <Link href={`/blog/${post.slug}`} className="block aspect-[16/9] relative w-full overflow-hidden bg-muted">
+                      <Image
+                        src={imageSrc}
+                        alt={post.title}
+                        fill
+                        sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                        style={{ objectFit: 'cover' }}
+                        className="hover:scale-105 transition-transform duration-300"
+                        data-ai-hint={isExternalImage ? 'external content' : 'article highlight'}
+                        priority={index < 2}
+                        unoptimized={isExternalImage && !imageSrc.includes('placehold.co')}
+                      />
+                    </Link>
+                    <CardHeader className="p-4 sm:p-5">
+                      <CardTitle className="font-headline text-lg sm:text-xl hover:text-primary transition-colors">
+                        <Link href={`/blog/${post.slug}`}>
+                          {post.title}
+                        </Link>
+                      </CardTitle>
+                      <div className="text-xs text-muted-foreground space-x-1.5 sm:space-x-2 flex items-center pt-1">
+                          <span className="flex items-center"><CalendarDays className="mr-1 h-3 w-3" /> {format(new Date(post.date), 'MMM d, yyyy')}</span>
+                          <span className="flex items-center"><Tag className="mr-1 h-3 w-3" /> {post.category}</span>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="flex-grow p-4 sm:p-5 pt-0">
+                      <CardDescription className="text-xs sm:text-sm">{post.metaDescription.substring(0, 120)}{post.metaDescription.length > 120 ? '...' : ''}</CardDescription>
+                    </CardContent>
+                    <CardFooter className="p-4 sm:p-5">
+                      <Button variant="link" asChild className="p-0 h-auto text-primary hover:underline text-xs sm:text-sm">
+                        <Link href={`/blog/${post.slug}`}>
+                          Read More <ArrowRight className="ml-1.5 sm:ml-2 h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                        </Link>
+                      </Button>
+                    </CardFooter>
+                  </Card>
+                </motion.div>
+              );
+            })}
           </motion.div>
         )}
 

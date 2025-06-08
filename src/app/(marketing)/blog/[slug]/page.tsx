@@ -1,6 +1,6 @@
 
 import type React from 'react';
-import { getPostBySlug, getPostSlugs, type PostMeta } from '@/lib/blog'; // Added getPostSlugs
+import { getPostBySlug, getPostSlugs, type PostMeta } from '@/lib/blog'; 
 import { notFound } from 'next/navigation';
 import { format } from 'date-fns';
 import type { MDXRemoteSerializeResult } from 'next-mdx-remote';
@@ -15,9 +15,16 @@ interface BlogPostData {
   metadata: PostMeta;
 }
 
+const PLACEHOLDER_IMAGE_ARTICLE = "https://placehold.co/800x450.png";
+const PLACEHOLDER_OG_IMAGE = "https://placehold.co/1200x630.png";
+
+function isValidImagePath(path?: string): path is string {
+    return typeof path === 'string' && path.trim() !== '' && (path.startsWith('/') || path.startsWith('http'));
+}
+
 // This function tells Next.js which dynamic paths to pre-render at build time.
 export async function generateStaticParams() {
-  const slugs = getPostSlugs(); // Assumes getPostSlugs returns an array of strings: ['slug1', 'slug2']
+  const slugs = getPostSlugs();
   return slugs.map((slug) => ({
     slug: slug,
   }));
@@ -30,6 +37,8 @@ export async function generateMetadata({ params }: { params: { slug: string } })
       title: 'Post Not Found - StudyTrack Blog',
     };
   }
+  const ogImageSrc = isValidImagePath(postData.metadata.featuredImage) ? postData.metadata.featuredImage : PLACEHOLDER_OG_IMAGE;
+
   return {
     title: `${postData.metadata.title} - StudyTrack Blog`,
     description: postData.metadata.metaDescription,
@@ -42,7 +51,7 @@ export async function generateMetadata({ params }: { params: { slug: string } })
         publishedTime: postData.metadata.date,
         authors: [postData.metadata.author],
         tags: [postData.metadata.category],
-        images: (postData.metadata.featuredImage && postData.metadata.featuredImage.trim() !== '') ? [{ url: postData.metadata.featuredImage }] : [{ url: 'https://placehold.co/1200x630.png' }],
+        images: [{ url: ogImageSrc }],
     },
   };
 }
@@ -54,7 +63,8 @@ export default async function BlogPostPage({ params }: { params: { slug: string 
     notFound();
   }
 
-  const imageSrc = (postData.metadata.featuredImage && postData.metadata.featuredImage.trim() !== '') ? postData.metadata.featuredImage : "https://placehold.co/800x450.png";
+  const imageSrc = isValidImagePath(postData.metadata.featuredImage) ? postData.metadata.featuredImage : PLACEHOLDER_IMAGE_ARTICLE;
+  const isExternalImage = imageSrc.startsWith('http');
 
   return (
     <div className="container mx-auto px-4 py-6 sm:py-8 md:px-6 lg:px-8 max-w-3xl">
@@ -75,8 +85,9 @@ export default async function BlogPostPage({ params }: { params: { slug: string 
               fill
               sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
               style={{ objectFit: 'cover' }}
-              data-ai-hint="article banner"
+              data-ai-hint={isExternalImage ? 'external content' : "article banner"}
               priority
+              unoptimized={isExternalImage && !imageSrc.includes('placehold.co')}
             />
           </div>
           <h1 className="font-headline text-2xl font-bold tracking-tight text-foreground sm:text-3xl md:text-4xl mb-2 sm:mb-3">
