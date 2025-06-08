@@ -11,7 +11,7 @@ import { Loader2, ArrowRight, CheckCircle } from 'lucide-react';
 import { useAuth } from '@/contexts/auth-context';
 import { db } from '@/lib/firebase';
 import { doc, setDoc, getDoc, updateDoc } from 'firebase/firestore';
-import type { UserProfileData } from '@/lib/profile-types'; // Assuming this path is correct
+import type { UserProfileData } from '@/lib/profile-types'; 
 import { DEFAULT_THEME_ID } from '@/lib/themes';
 import { useToast } from '@/hooks/use-toast';
 
@@ -39,31 +39,31 @@ const TOTAL_QUESTIONS = questions.length;
 
 export default function QuickOnboardingPage() {
   const router = useRouter();
-  const { currentUser } = useAuth();
+  const { currentUser, loading: authLoading } = useAuth(); // Added authLoading
   const { toast } = useToast();
   const [currentStep, setCurrentStep] = useState(1);
   const [answers, setAnswers] = useState<Partial<OnboardingAnswers>>({});
   const [isLoading, setIsLoading] = useState(false);
+  const [initialCheckDone, setInitialCheckDone] = useState(false);
 
   useEffect(() => {
-    // Redirect to dashboard if user is not logged in, or if they have already completed full onboarding
-    // This is a simple check; a more robust system might check a specific 'quickOnboardingCompleted' flag
-    if (!currentUser) {
-      router.push('/login');
-    } else {
-      const checkProfile = async () => {
-        const profileRef = doc(db, 'users', currentUser.uid, 'userProfile', 'profile');
-        const profileSnap = await getDoc(profileRef);
-        if (profileSnap.exists() && profileSnap.data()?.onboardingCompleted) {
-          // If they completed the full onboarding, no need for this quick one.
-          // router.push('/dashboard');
-        } else if (profileSnap.exists() && profileSnap.data()?.quickOnboardingCompleted) {
-            // router.push('/dashboard');
-        }
-      };
-      checkProfile();
+    // This effect now only runs after authLoading is false and initialCheckDone is false
+    if (!authLoading && !initialCheckDone) {
+      setInitialCheckDone(true); // Mark that the initial check has been performed
+      if (currentUser) {
+        const checkProfile = async () => {
+          const profileRef = doc(db, 'users', currentUser.uid, 'userProfile', 'profile');
+          const profileSnap = await getDoc(profileRef);
+          if (profileSnap.exists() && (profileSnap.data()?.onboardingCompleted || profileSnap.data()?.quickOnboardingCompleted)) {
+            // If user is logged in and has completed any onboarding, send them away from quick onboarding.
+            // router.push('/dashboard'); // Or /ai-tools, depending on desired flow for already onboarded users.
+          }
+        };
+        checkProfile();
+      }
+      // If currentUser is null, we allow them to proceed with quick onboarding as a guest.
     }
-  }, [currentUser, router]);
+  }, [currentUser, authLoading, router, initialCheckDone]);
 
 
   const handleSelectAnswer = (questionAnswerKey: keyof OnboardingAnswers, answer: string) => {
@@ -97,10 +97,10 @@ export default function QuickOnboardingPage() {
     }
 
     setIsLoading(true);
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1500));
+    // Simulate API call or processing
+    await new Promise(resolve => setTimeout(resolve, 1000));
 
-    if (currentUser) {
+    if (currentUser) { // Only save to Firestore if user is logged in
       const userProfileRef = doc(db, 'users', currentUser.uid, 'userProfile', 'profile');
       try {
         const profileSnap = await getDoc(userProfileRef);
@@ -110,9 +110,8 @@ export default function QuickOnboardingPage() {
           targetExams: answers.targetExam ? [answers.targetExam.toLowerCase().replace(/\s+/g, '_')] : currentData.targetExams || [],
           weakSubjects: answers.strugglingSubject && answers.strugglingSubject !== "None/Other" ? [answers.strugglingSubject] : currentData.weakSubjects || [],
           dailyStudyHours: answers.studyTimePerDay || currentData.dailyStudyHours || '',
-          quickOnboardingCompleted: true, // Add this flag
-          onboardingCompleted: currentData.onboardingCompleted || false, // Preserve full onboarding status
-          // Ensure other essential fields are present or default
+          quickOnboardingCompleted: true,
+          onboardingCompleted: currentData.onboardingCompleted || false,
           email: currentUser.email || '',
           coins: currentData.coins || 0,
           xp: currentData.xp || 0,
@@ -121,20 +120,18 @@ export default function QuickOnboardingPage() {
           activeThemeId: currentData.activeThemeId === undefined ? DEFAULT_THEME_ID : currentData.activeThemeId,
           dailyChallengeStatus: currentData.dailyChallengeStatus || {},
           lastInteractionDates: currentData.lastInteractionDates || [],
-
         };
         if (answers.targetExam === "Other") {
-            profileUpdate.otherExamName = "User Specified"; // Placeholder, could be another input
+            profileUpdate.otherExamName = "User Specified"; 
         }
-
 
         await setDoc(userProfileRef, profileUpdate, { merge: true });
         toast({
-          title: "Profile Generated!",
-          description: "Your personalized study experience is ready.",
+          title: "Profile Updated!",
+          description: "Your preferences have been saved.",
         });
       } catch (error) {
-        console.error("Error saving quick onboarding data:", error);
+        console.error("Error saving quick onboarding data for logged in user:", error);
         toast({
           title: "Error",
           description: "Could not save your preferences. Please try again.",
@@ -143,10 +140,17 @@ export default function QuickOnboardingPage() {
         setIsLoading(false);
         return;
       }
+    } else {
+      // For guests, we might store this in localStorage/sessionStorage if AI tools need it.
+      // For now, we're just letting them pass through.
+      toast({
+        title: "Preferences Noted!",
+        description: "Let's explore the AI tools.",
+      });
     }
 
     setIsLoading(false);
-    router.push('/dashboard'); // Navigate to dashboard (or AI Tutor / Wow Moment screen)
+    router.push('/ai-tools'); // Navigate to AI Tools Hub
   };
 
   const currentQuestion = questions[currentStep - 1];
@@ -173,18 +177,15 @@ export default function QuickOnboardingPage() {
   const paginate = (newDirection: number) => {
     setDirection(newDirection);
     if (newDirection > 0) handleNext();
-    // else handlePrev(); // If you add a prev button
   };
 
-
-  if (!currentUser) {
+  if (authLoading && !initialCheckDone) { // Show loader only during initial auth check
     return (
       <div className="flex min-h-screen items-center justify-center p-4 bg-gradient-to-br from-sky-100 via-indigo-50 to-purple-100 dark:from-sky-900 dark:via-indigo-950 dark:to-purple-900">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
       </div>
     );
   }
-
 
   return (
     <div className="flex min-h-screen items-center justify-center p-4 bg-gradient-to-br from-sky-100 via-indigo-50 to-purple-100 dark:from-sky-900 dark:via-indigo-950 dark:to-purple-900">
@@ -211,7 +212,7 @@ export default function QuickOnboardingPage() {
                 x: { type: "spring", stiffness: 300, damping: 30 },
                 opacity: { duration: 0.2 },
               }}
-              className="absolute w-[calc(100%-2.5rem)] sm:w-[calc(100%-3rem)]" // Adjust width for padding
+              className="absolute w-[calc(100%-2.5rem)] sm:w-[calc(100%-3rem)]" 
             >
               <h3 className="text-lg sm:text-xl font-semibold mb-4 sm:mb-6 text-center">{currentQuestion.text}</h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
@@ -253,7 +254,7 @@ export default function QuickOnboardingPage() {
               ) : (
                 <CheckCircle className="mr-2 h-5 w-5" />
               )}
-              {isLoading ? 'Generating Profile...' : 'Generate My Profile'}
+              {isLoading ? (currentUser ? 'Saving Profile...' : 'Proceeding...') : (currentUser ? 'Save & Explore Tools' : 'Explore AI Tools')}
             </Button>
           )}
         </CardFooter>
@@ -261,5 +262,3 @@ export default function QuickOnboardingPage() {
     </div>
   );
 }
-
-    

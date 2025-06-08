@@ -27,7 +27,7 @@ const itemVariants = {
 function HeroSectionComponent() {
   return (
     <section className="w-full py-16 md:py-24 lg:py-32 xl:py-40 bg-gradient-to-br from-primary/10 via-background to-background">
-      <motion.div 
+      <motion.div
         className="container mx-auto px-4 md:px-6"
         variants={containerVariants}
         initial="hidden"
@@ -35,19 +35,19 @@ function HeroSectionComponent() {
       >
         <div className="grid gap-8 lg:grid-cols-2 lg:items-center xl:gap-12">
           <div className="flex flex-col justify-center space-y-6 text-center lg:text-left">
-            <motion.h1 
+            <motion.h1
               className="font-headline text-4xl font-bold tracking-tighter sm:text-5xl md:text-6xl lg:text-7xl text-foreground"
               variants={itemVariants}
             >
               Study Smarter, Not Harder — <br className="hidden sm:inline"/>Powered by <span className="text-primary">AI & Gamification</span>
             </motion.h1>
-            <motion.p 
+            <motion.p
               className="max-w-[600px] text-muted-foreground text-md sm:text-lg md:text-xl xl:text-2xl mx-auto lg:mx-0"
               variants={itemVariants}
             >
               Ace your exams with XP rewards, AI tools, and a personalized planner — all in one platform.
             </motion.p>
-            <motion.div 
+            <motion.div
               className="flex flex-col gap-3 sm:flex-row sm:justify-center lg:justify-start"
               variants={itemVariants}
             >
@@ -58,14 +58,14 @@ function HeroSectionComponent() {
                 </Link>
               </Button>
               <Button variant="outline" size="lg" asChild className="text-base sm:text-lg py-3 px-6">
-                <Link href="/ai-tools">
+                <Link href="/quick-onboarding"> {/* Updated href here */}
                   Try AI Tools Now
                   <Zap className="ml-2 h-5 w-5 text-accent" />
                 </Link>
               </Button>
             </motion.div>
           </div>
-          <motion.div 
+          <motion.div
             className="relative mx-auto w-full max-w-lg aspect-[4/3] overflow-hidden rounded-xl lg:max-w-xl mt-8 lg:mt-0"
             variants={itemVariants}
             initial={{ opacity: 0, scale: 0.8 }}
