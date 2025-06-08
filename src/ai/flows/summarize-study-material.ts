@@ -46,7 +46,7 @@ export async function summarizeStudyMaterial(
 
 const summarizeStudyMaterialPrompt = ai.definePrompt({
   name: 'summarizeStudyMaterialPrompt',
-  model: 'openai/gpt-3.5-turbo', // Specify OpenAI model here
+  // model: 'openai/gpt-3.5-turbo', // Comment out or change if OpenAI plugin is removed
   input: {schema: SummarizeStudyMaterialInputSchema},
   output: {schema: SummarizeStudyMaterialOutputSchema},
   prompt: `You are an AI study assistant for students preparing for competitive exams.
@@ -104,7 +104,7 @@ const summarizeStudyMaterialFlow = ai.defineFlow(
     // Validate that options array length matches correctAnswerIndex bounds
     output.multipleChoiceQuestions.forEach(mcq => {
       if (mcq.correctAnswerIndex < 0 || mcq.correctAnswerIndex >= mcq.options.length) {
-        throw new Error(`Invalid correctAnswerIndex for question: "${mcq.questionText}". Index ${mcq.correctAnswerIndex} is out of bounds for ${mcq.options.length} options.`);
+        throw new Error(\`Invalid correctAnswerIndex for question: "\${mcq.questionText}". Index \${mcq.correctAnswerIndex} is out of bounds for \${mcq.options.length} options.\`);
       }
     });
     return output;
