@@ -4,46 +4,26 @@
  * @fileOverview AI-powered YouTube video content processing.
  *
  * - processYouTubeVideo - Function to generate study materials from a video transcript.
- * - ProcessYouTubeVideoInput - Input type for the flow.
- * - ProcessYouTubeVideoOutput - Output type for the flow.
  */
 
 import { ai } from '@/ai/genkit';
-import { z } from 'zod';
-import { MCQSchema } from '@/ai/schemas/quiz-tool-schemas'; // Reusing MCQ schema
+// Import schemas and types from the dedicated schema file
+import {
+  ProcessYouTubeVideoInputSchema,
+  ProcessYouTubeVideoOutputSchema,
+  type ProcessYouTubeVideoInput, // Type-only import
+  type ProcessYouTubeVideoOutput, // Type-only import
+} from '@/ai/schemas/youtube-processing-schemas';
 
-export const ProcessYouTubeVideoInputSchema = z.object({
-  youtubeUrl: z.string().url({ message: "Please enter a valid YouTube URL." }).optional().describe('The URL of the YouTube video (currently for context, not direct fetching).'),
-  videoTranscript: z
-    .string()
-    .min(100, { message: "Transcript must be at least 100 characters." })
-    .max(30000, { message: "Transcript is too long (max 30,000 characters)." }) // Increased limit
-    .describe('The transcript of the YouTube video.'),
-  customTitle: z.string().optional().describe('Optional: A custom title for the video if you want to override or provide one.'),
-  userName: z.string().optional().describe("User's name for personalization."),
-  examContext: z.string().optional().describe("User's exam context (e.g., NEET, UPSC) to tailor content focus and quiz difficulty."),
-  language: z.string().optional().default('English').describe("The language of the transcript, to aid in processing."),
-});
-export type ProcessYouTubeVideoInput = z.infer<typeof ProcessYouTubeVideoInputSchema>;
-
-export const ProcessYouTubeVideoOutputSchema = z.object({
-  videoTitle: z.string().describe("The AI-generated or confirmed title of the video."),
-  summary: z.string().describe('A concise summary of the video content, approximately 150-250 words.'),
-  structuredNotes: z.string().describe('Well-structured notes from the video, formatted in Markdown with headings, subheadings, bullet points, and bolded keywords. These notes should be comprehensive yet digestible.'),
-  keyConcepts: z.array(z.string()).min(3).max(10).describe("An array of 3-10 key concepts, terms, or important takeaways extracted from the video."),
-  multipleChoiceQuestions: z.array(MCQSchema).min(2).max(5).describe("An array of 2-5 multiple-choice questions based on the video content, complete with options, correct answer index, and explanations.")
-});
-export type ProcessYouTubeVideoOutput = z.infer<typeof ProcessYouTubeVideoOutputSchema>;
-
-
+// Only export the async function
 export async function processYouTubeVideo(input: ProcessYouTubeVideoInput): Promise<ProcessYouTubeVideoOutput> {
   return processYouTubeVideoFlow(input);
 }
 
 const processVideoPrompt = ai.definePrompt({
   name: 'processYouTubeVideoPrompt',
-  input: { schema: ProcessYouTubeVideoInputSchema },
-  output: { schema: ProcessYouTubeVideoOutputSchema },
+  input: { schema: ProcessYouTubeVideoInputSchema }, // Use imported schema
+  output: { schema: ProcessYouTubeVideoOutputSchema }, // Use imported schema
   prompt: `You are an expert AI Study Assistant specializing in transforming video transcripts into comprehensive learning materials for students preparing for exams like NEET, UPSC, JEE, etc.
 
 Context:
@@ -85,7 +65,7 @@ Based on the provided video transcript, generate the following educational mater
 5.  **Multiple Choice Questions (MCQs)**:
     *   Generate 2 to 5 MCQs based *only* on the information present in the provided transcript.
     *   Each MCQ must have:
-        *   A clear \`question\` text.
+        *   A clear \`questionText\` text.
         *   An array of 4 distinct \`options\`.
         *   The 0-based \`correctAnswerIndex\` for the options array.
         *   A brief \`explanation\` justifying the correct answer and, if relevant, why other options are incorrect.
@@ -96,7 +76,7 @@ Content Generation Guidelines:
 - Authenticity & Validity: All generated content must accurately reflect the provided \`videoTranscript\`. Do not introduce external information.
 - Structure & Formatting (within JSON string values, especially for 'structuredNotes'):
     - Adhere strictly to Markdown for notes. Use clear, engaging, and well-structured language.
-    - For \`summary\`, \`keyConcepts\`, and MCQ \`question\`/\`explanation\`: Use concise language. You MAY use **bold** or *italics* for emphasis.
+    - For \`summary\`, \`keyConcepts\`, and MCQ \`questionText\`/\`explanation\`: Use concise language. You MAY use **bold** or *italics* for emphasis.
     - Relevant emojis (e.g., 💡, ✅, 🎯, 🤔, 🎬, 🔑) MAY be used sparingly to enhance engagement.
 - Tone: Maintain a helpful, educational, and encouraging tone.
 ---
@@ -112,8 +92,8 @@ Generate the study materials now.
 const processYouTubeVideoFlow = ai.defineFlow(
   {
     name: 'processYouTubeVideoFlow',
-    inputSchema: ProcessYouTubeVideoInputSchema,
-    outputSchema: ProcessYouTubeVideoOutputSchema,
+    inputSchema: ProcessYouTubeVideoInputSchema, // Use imported schema
+    outputSchema: ProcessYouTubeVideoOutputSchema, // Use imported schema
   },
   async (input) => {
     const { output } = await processVideoPrompt(input);
@@ -123,14 +103,11 @@ const processYouTubeVideoFlow = ai.defineFlow(
     // Validate MCQ correctAnswerIndex
     output.multipleChoiceQuestions.forEach((mcq, index) => {
       if (mcq.correctAnswerIndex < 0 || mcq.correctAnswerIndex >= mcq.options.length) {
-        console.error(`Invalid correctAnswerIndex for MCQ ${index + 1}: "${mcq.question}". Index: ${mcq.correctAnswerIndex}, Options: ${mcq.options.length}`);
+        console.error(`Invalid correctAnswerIndex for MCQ ${index + 1}: "${mcq.questionText}". Index: ${mcq.correctAnswerIndex}, Options: ${mcq.options.length}`);
         // Fallback or throw specific error
         mcq.correctAnswerIndex = 0; // Fallback to first option, or handle error more gracefully
-        // Consider throwing an error here if strict validation is needed, or trying to regenerate.
       }
     });
     return output;
   }
 );
-
-    

@@ -14,9 +14,13 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Loader2, Wand2, Sparkles, Youtube, FileText, Download, BookText, AlertTriangle } from 'lucide-react';
 import {
   processYouTubeVideo,
+  // Types are now imported from the schema file
   type ProcessYouTubeVideoInput,
   type ProcessYouTubeVideoOutput,
 } from '@/ai/flows/process-youtube-video-flow';
+// Import schemas and types from the dedicated schema file for form validation
+import { ProcessYouTubeVideoInputSchema as PageLevelInputSchema } from '@/ai/schemas/youtube-processing-schemas';
+
 import type { MCQ } from '@/ai/flows/summarize-study-material';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/auth-context';
@@ -32,15 +36,13 @@ import { Skeleton } from '@/components/ui/skeleton';
 const YouTubeSummarizerResultsDisplay = React.lazy(() => import('@/components/ai-tools/youtube-summarizer/YouTubeSummarizerResultsDisplay'));
 const YouTubeSummarizerResultsDisplayFallback = React.lazy(() => import('@/components/ai-tools/youtube-summarizer/YouTubeSummarizerResultsDisplayFallback'));
 
-// Local form schema
-const youtubeSummarizerFormSchema = z.object({
-  youtubeUrl: z.string().url({ message: "Please enter a valid YouTube URL." }).optional(),
-  videoTranscript: z
-    .string()
-    .min(100, { message: "Transcript must be at least 100 characters." })
-    .max(30000, { message: "Transcript is too long (max 30,000 characters)." }),
-  customTitle: z.string().optional(),
+// Local form schema using only fields relevant to the form
+const youtubeSummarizerFormSchema = PageLevelInputSchema.pick({
+  youtubeUrl: true,
+  videoTranscript: true,
+  customTitle: true,
 });
+
 
 type YouTubeSummarizerFormData = z.infer<typeof youtubeSummarizerFormSchema>;
 
@@ -149,8 +151,8 @@ export default function YouTubeSummarizerPage() {
     }
 
     setIsFetchingTranscript(true);
-    setAnalysisResult(null);
-    setFetchTranscriptError(null);
+    setAnalysisResult(null); // Clear previous AI results
+    setFetchTranscriptError(null); // Clear previous fetch errors
 
     try {
       const response = await fetch('/api/youtube-transcript', {
@@ -167,8 +169,10 @@ export default function YouTubeSummarizerPage() {
             serverErrorMsg = errorResult.error;
           }
         } catch (e) {
+          // If response is not JSON (e.g., HTML error page)
           const textError = await response.text();
-          console.error("Non-JSON error response from /api/youtube-transcript:", textError.substring(0, 500));
+          console.warn("Non-JSON error response from /api/youtube-transcript:", textError.substring(0,500));
+          // serverErrorMsg is already set to a generic message for non-ok responses
         }
         setFetchTranscriptError(serverErrorMsg);
         toast({ title: 'Transcript Fetch Failed', description: serverErrorMsg, variant: 'destructive' });
@@ -457,3 +461,4 @@ export default function YouTubeSummarizerPage() {
     </div>
   );
 }
+
