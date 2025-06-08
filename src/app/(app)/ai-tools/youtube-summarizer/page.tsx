@@ -32,7 +32,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 const YouTubeSummarizerResultsDisplay = React.lazy(() => import('@/components/ai-tools/youtube-summarizer/YouTubeSummarizerResultsDisplay'));
 const YouTubeSummarizerResultsDisplayFallback = React.lazy(() => import('@/components/ai-tools/youtube-summarizer/YouTubeSummarizerResultsDisplayFallback'));
 
-// Local form schema, not using .omit() from the imported AI flow schema
+// Local form schema
 const youtubeSummarizerFormSchema = z.object({
   youtubeUrl: z.string().url({ message: "Please enter a valid YouTube URL." }).optional(),
   videoTranscript: z
@@ -160,28 +160,31 @@ export default function YouTubeSummarizerPage() {
       });
 
       if (!response.ok) {
-        let serverError = `Failed to fetch transcript. Server responded with status: ${response.status}`;
+        let serverErrorMsg = `Failed to fetch transcript. Server responded with status: ${response.status}`;
         try {
           const errorResult = await response.json();
           if (errorResult.error) {
-            serverError = errorResult.error;
+            serverErrorMsg = errorResult.error;
           }
         } catch (e) {
           const textError = await response.text();
           console.error("Non-JSON error response from /api/youtube-transcript:", textError.substring(0, 500));
-          serverError = "Failed to fetch transcript. Server returned an unexpected response. Please paste it manually.";
         }
-        throw new Error(serverError);
+        setFetchTranscriptError(serverErrorMsg);
+        toast({ title: 'Transcript Fetch Failed', description: serverErrorMsg, variant: 'destructive' });
+        setIsFetchingTranscript(false);
+        return;
       }
 
       const result = await response.json();
       form.setValue('videoTranscript', result.transcript, { shouldValidate: true });
       toast({ title: "Transcript Fetched!", description: "Transcript has been loaded into the textarea." });
+      setFetchTranscriptError(null); 
 
     } catch (error: any) {
       console.error('Error fetching transcript:', error);
       const errorMessage = error.message || 'Could not fetch transcript. Please paste it manually.';
-      setFetchTranscriptError(errorMessage);
+      setFetchTranscriptError(errorMessage); 
       toast({
         title: 'Transcript Fetch Error',
         description: errorMessage,
@@ -196,7 +199,7 @@ export default function YouTubeSummarizerPage() {
   const onSubmit: SubmitHandler<YouTubeSummarizerFormData> = async (data) => {
     setIsLoading(true);
     setAnalysisResult(null);
-    setFetchTranscriptError(null); // Clear any previous fetch errors
+    setFetchTranscriptError(null); 
     setMcqAnswers({});
 
     const aiInput: ProcessYouTubeVideoInput = {
@@ -264,12 +267,12 @@ export default function YouTubeSummarizerPage() {
 
   useEffect(() => {
     const subscription = form.watch((value, { name }) => {
-      if (name === 'youtubeUrl' || name === 'videoTranscript') {
+      if ((name === 'youtubeUrl' || name === 'videoTranscript') && fetchTranscriptError) {
         setFetchTranscriptError(null);
       }
     });
     return () => subscription.unsubscribe();
-  }, [form]);
+  }, [form, fetchTranscriptError]);
 
   if (isLoadingProfile && currentUser) {
     return (
@@ -364,11 +367,16 @@ export default function YouTubeSummarizerPage() {
               />
 
               {fetchTranscriptError && (
-                <Alert variant="destructive" className="mt-2">
+                <Alert variant="warning" className="mt-3">
                   <AlertTriangle className="h-4 w-4" />
-                  <AlertTitle>Transcript Fetch Failed</AlertTitle>
+                  <AlertTitle className="font-semibold">
+                    {fetchTranscriptError.includes("No transcript found") ? "Transcript Not Available via Fetch" : "Transcript Fetch Failed"}
+                  </AlertTitle>
                   <AlertDescription>
-                    {fetchTranscriptError} You can still paste the transcript manually below.
+                    <p>{fetchTranscriptError}</p>
+                    <p className="mt-1">
+                      If you have the transcript, you can <strong className="text-foreground">paste it manually</strong> into the textarea below to proceed.
+                    </p>
                   </AlertDescription>
                 </Alert>
               )}
@@ -449,5 +457,3 @@ export default function YouTubeSummarizerPage() {
     </div>
   );
 }
-
-    
