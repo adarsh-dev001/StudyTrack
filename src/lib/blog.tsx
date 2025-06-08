@@ -27,6 +27,7 @@ export interface BlogPostPageData {
 
 function normalizeImagePath(imagePathInput?: string): string | undefined {
   if (typeof imagePathInput !== 'string' || imagePathInput.trim() === "") {
+    // console.warn(`[Blog Util] normalizeImagePath: Received empty or invalid input: "${imagePathInput}"`);
     return undefined;
   }
 
@@ -34,25 +35,24 @@ function normalizeImagePath(imagePathInput?: string): string | undefined {
 
   // Handle protocol-relative URLs
   if (normalizedPath.startsWith('//')) {
-    return 'https:' + normalizedPath;
+    return 'https://' + normalizedPath;
   }
 
   // Handle absolute URLs
   if (normalizedPath.startsWith('http://') || normalizedPath.startsWith('https://')) {
     try {
-      // Validate if it's a parsable URL
-      new URL(normalizedPath);
+      new URL(normalizedPath); // Validate if it's a parsable URL
       return normalizedPath;
     } catch (e) {
-      console.warn(`[Blog Util] Invalid external URL format in frontmatter: "${normalizedPath}"`);
-      return undefined; // Not a valid URL
+      console.warn(`[Blog Util] normalizeImagePath: Invalid external URL format: "${normalizedPath}"`);
+      return undefined;
     }
   }
 
   // Handle local paths
   // Remove 'public/' prefix if present, as next/image serves from public root
   if (normalizedPath.startsWith('public/')) {
-    normalizedPath = normalizedPath.substring('public'.length);
+    normalizedPath = normalizedPath.substring('public/'.length);
   }
 
   // Ensure local paths start with a single '/'
@@ -64,19 +64,18 @@ function normalizeImagePath(imagePathInput?: string): string | undefined {
   normalizedPath = normalizedPath.replace(/\/\/+/g, '/');
   
   // Avoid returning just "/" if all else was stripped or if it's an invalid relative path
-  if (normalizedPath === '/' || (normalizedPath.startsWith('/') && normalizedPath.length < 2)) {
-    console.warn(`[Blog Util] Invalid local image path in frontmatter (resulted in '${normalizedPath}'): "${imagePathInput}"`);
+  if (normalizedPath === '/' && imagePathInput !== '/' && imagePathInput !== 'public/') {
+    console.warn(`[Blog Util] normalizeImagePath: Path normalization resulted in just "/". Original input: "${imagePathInput}". Returning undefined.`);
     return undefined;
   }
   
   // Basic check for common image extensions for local paths.
-  // If no extension or it's an unusual path, it might be problematic for next/image.
-  if (normalizedPath.startsWith('/') && !/\.[a-zA-Z0-9]{2,4}(\?.*)?$/.test(normalizedPath)) {
-    console.warn(`[Blog Util] Local image path "${normalizedPath}" (from "${imagePathInput}") does not seem to have a standard image extension. This might cause issues with next/image.`);
-    // Depending on strictness, you could return undefined here.
-    // For now, we'll let it pass, but this warning is important.
+  if (normalizedPath.startsWith('/') && !/\.(jpeg|jpg|gif|png|webp)(\?.*)?$/i.test(normalizedPath)) {
+    console.warn(`[Blog Util] normalizeImagePath: Local image path "${normalizedPath}" (from "${imagePathInput}") does not seem to have a standard image extension.`);
+    // For now, we will still return the path, as it might be valid in some contexts or for SVGs handled differently.
+    // Consider returning undefined here if you want to be stricter.
   }
-
+  
   return normalizedPath;
 }
 
@@ -118,16 +117,19 @@ export async function getPostBySlug(slug: string): Promise<BlogPostPageData | nu
         parseFrontmatter: false,
       },
     });
+    
+    // Destructure to separate featuredImage from the rest of the frontmatter
+    const { featuredImage: rawFeaturedImage, ...otherFrontmatterData } = frontmatterData;
 
     const metadata: PostMeta = {
+      ...otherFrontmatterData, // Spread other data first
       slug: realSlug,
       title: frontmatterData.title as string,
       date: (frontmatterData.date || new Date().toISOString()) as string,
       category: (frontmatterData.category || 'Uncategorized') as string,
       metaDescription: (frontmatterData.metaDescription || '') as string,
       author: (frontmatterData.author || 'Anonymous') as string,
-      featuredImage: normalizeImagePath(frontmatterData.featuredImage as string | undefined),
-      ...frontmatterData,
+      featuredImage: normalizeImagePath(rawFeaturedImage as string | undefined), // Apply normalization
     };
 
     return {
@@ -154,22 +156,25 @@ export async function getAllPostsMeta(): Promise<PostMeta[]> {
     }
     try {
       const fileContents = fs.readFileSync(fullPath, 'utf8');
-      const { data } = matter(fileContents);
+      const { data } = matter(fileContents); // data is the frontmatter object
 
       if (!data.title) {
         console.warn(`[Blog Util] Post with slug '${slug}' is missing a title. It will be excluded.`);
         return null;
       }
+      
+      // Destructure to separate featuredImage from the rest of the frontmatter
+      const { featuredImage: rawFeaturedImage, ...otherFrontmatterData } = data;
 
       return {
+        ...otherFrontmatterData, // Spread other data first
         slug,
         title: data.title as string,
         date: (data.date || new Date().toISOString()) as string,
         category: (data.category || 'Uncategorized') as string,
         metaDescription: (data.metaDescription || '') as string,
         author: (data.author || 'Anonymous') as string,
-        featuredImage: normalizeImagePath(data.featuredImage as string | undefined),
-        ...data,
+        featuredImage: normalizeImagePath(rawFeaturedImage as string | undefined), // Apply normalization and ensure it's the final value
       } as PostMeta;
     } catch (e: any) {
       console.error(`[Blog Util] Error processing frontmatter for MDX file ${fullPath}:`, e.message);
