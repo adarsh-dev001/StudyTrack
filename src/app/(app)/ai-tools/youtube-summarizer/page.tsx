@@ -4,19 +4,20 @@
 import React, { useState, useEffect, useRef, Suspense } from 'react';
 import { useForm, type SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod'; // Ensure z is imported
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Loader2, Wand2, Sparkles, Youtube, FileText } from 'lucide-react';
-import { 
-  processYouTubeVideo, 
-  type ProcessYouTubeVideoInput, 
+import { Loader2, Wand2, Sparkles, Youtube, FileText, Download, BookText } from 'lucide-react';
+import {
+  processYouTubeVideo,
+  type ProcessYouTubeVideoInput, // Still needed for AI call
   type ProcessYouTubeVideoOutput,
-  ProcessYouTubeVideoInputSchema
+  // ProcessYouTubeVideoInputSchema // No longer directly used for form schema creation here
 } from '@/ai/flows/process-youtube-video-flow';
-import type { MCQ } from '@/ai/flows/summarize-study-material'; // Reusing MCQ type
+import type { MCQ } from '@/ai/flows/summarize-study-material';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/auth-context';
 import { recordPlatformInteraction } from '@/lib/activity-utils';
@@ -28,16 +29,20 @@ import OnboardingForm from '@/components/onboarding/onboarding-form';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/ui/skeleton';
 
-// Lazy load result display
 const YouTubeSummarizerResultsDisplay = React.lazy(() => import('@/components/ai-tools/youtube-summarizer/YouTubeSummarizerResultsDisplay'));
 const YouTubeSummarizerResultsDisplayFallback = React.lazy(() => import('@/components/ai-tools/youtube-summarizer/YouTubeSummarizerResultsDisplayFallback'));
 
-
-const youtubeSummarizerFormSchema = ProcessYouTubeVideoInputSchema.omit({ 
-  userName: true, 
-  examContext: true, 
-  language: true 
+// Define the schema specifically for this form, omitting fields handled internally.
+const youtubeSummarizerFormSchema = z.object({
+  youtubeUrl: z.string().url({ message: "Please enter a valid YouTube URL." }).optional().describe('The URL of the YouTube video (currently for context, not direct fetching).'),
+  videoTranscript: z
+    .string()
+    .min(100, { message: "Transcript must be at least 100 characters." })
+    .max(30000, { message: "Transcript is too long (max 30,000 characters)." })
+    .describe('The transcript of the YouTube video.'),
+  customTitle: z.string().optional().describe('Optional: A custom title for the video if you want to override or provide one.'),
 });
+
 type YouTubeSummarizerFormData = z.infer<typeof youtubeSummarizerFormSchema>;
 
 interface MCQWithUserAnswer extends MCQ {
@@ -68,10 +73,11 @@ export default function YouTubeSummarizerPage() {
   const { currentUser } = useAuth();
   const [analysisResult, setAnalysisResult] = useState<ProcessYouTubeVideoOutput | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isFetchingTranscript, setIsFetchingTranscript] = useState(false);
   const [mcqAnswers, setMcqAnswers] = useState<Record<number, MCQWithUserAnswer>>({});
   const { toast } = useToast();
   const resultsRef = useRef<HTMLDivElement>(null);
-  
+
   const [isLoadingProfile, setIsLoadingProfile] = useState(true);
   const [userFullProfile, setUserFullProfile] = useState<UserProfileData | null>(null);
   const [showOnboardingModal, setShowOnboardingModal] = useState(false);
@@ -81,7 +87,7 @@ export default function YouTubeSummarizerPage() {
       resultsRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
   }, [analysisResult]);
-  
+
   useEffect(() => {
     let unsubscribeProfile: Unsubscribe | undefined;
     if (currentUser?.uid) {
@@ -98,7 +104,7 @@ export default function YouTubeSummarizerPage() {
           }
         } else {
           setUserFullProfile(null);
-          setShowOnboardingModal(true); 
+          setShowOnboardingModal(true);
         }
         setIsLoadingProfile(false);
       }, (err) => {
@@ -107,7 +113,7 @@ export default function YouTubeSummarizerPage() {
         setIsLoadingProfile(false);
       });
     } else {
-      setIsLoadingProfile(false); // No user, no profile loading needed
+      setIsLoadingProfile(false);
     }
     return () => {
       if (unsubscribeProfile) unsubscribeProfile();
@@ -116,7 +122,6 @@ export default function YouTubeSummarizerPage() {
 
   const handleOnboardingSuccess = () => {
     setShowOnboardingModal(false);
-    // Re-fetch profile data after onboarding to ensure UI reflects completion
     if (currentUser?.uid) {
       const profileDocRef = doc(db, 'users', currentUser.uid, 'userProfile', 'profile');
       getDoc(profileDocRef).then(profileSnap => {
@@ -136,6 +141,44 @@ export default function YouTubeSummarizerPage() {
     },
   });
 
+  const handleFetchTranscript = async () => {
+    const videoUrl = form.getValues('youtubeUrl');
+    if (!videoUrl) {
+      toast({ title: "Missing URL", description: "Please enter a YouTube video URL first.", variant: "destructive" });
+      return;
+    }
+
+    setIsFetchingTranscript(true);
+    setAnalysisResult(null); // Clear previous results
+
+    try {
+      const response = await fetch('/api/youtube-transcript', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ videoUrl }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to fetch transcript.');
+      }
+
+      form.setValue('videoTranscript', result.transcript, { shouldValidate: true });
+      toast({ title: "Transcript Fetched!", description: "Transcript has been loaded into the textarea." });
+
+    } catch (error: any) {
+      console.error('Error fetching transcript:', error);
+      toast({
+        title: 'Transcript Fetch Error',
+        description: error.message || 'Could not fetch transcript. Please paste it manually.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsFetchingTranscript(false);
+    }
+  };
+
 
   const onSubmit: SubmitHandler<YouTubeSummarizerFormData> = async (data) => {
     setIsLoading(true);
@@ -144,13 +187,13 @@ export default function YouTubeSummarizerPage() {
 
     const aiInput: ProcessYouTubeVideoInput = {
       ...data,
-      youtubeUrl: data.youtubeUrl || undefined, // Ensure optional fields are truly optional for AI
+      youtubeUrl: data.youtubeUrl || undefined,
       customTitle: data.customTitle || undefined,
       userName: userFullProfile?.fullName || currentUser?.displayName || undefined,
-      examContext: userFullProfile?.targetExams && userFullProfile.targetExams.length > 0 
-                   ? (userFullProfile.targetExams[0] === 'other' && userFullProfile.otherExamName ? userFullProfile.otherExamName : userFullProfile.targetExams[0]) 
+      examContext: userFullProfile?.targetExams && userFullProfile.targetExams.length > 0
+                   ? (userFullProfile.targetExams[0] === 'other' && userFullProfile.otherExamName ? userFullProfile.otherExamName : userFullProfile.targetExams[0])
                    : undefined,
-      language: 'English', // Assuming English for now, can be made dynamic later
+      language: 'English',
     };
 
     try {
@@ -205,7 +248,7 @@ export default function YouTubeSummarizerPage() {
     }
   };
 
-  if (isLoadingProfile && currentUser) { // Only show this if a user is logged in and profile is loading
+  if (isLoadingProfile && currentUser) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[calc(100vh-200px)] text-center p-6">
         <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
@@ -213,13 +256,11 @@ export default function YouTubeSummarizerPage() {
       </div>
     );
   }
-  
-  // Contextual Onboarding Modal for logged-in users
+
   if (currentUser && !userFullProfile?.onboardingCompleted && !isLoadingProfile) {
     return (
       <Dialog open={true} onOpenChange={(isOpen) => {
           if (!isOpen) {
-             // If user tries to close modal without completing, keep it open or guide them
              toast({ title: "Profile Setup Required", description: "Please complete your profile to use AI tools.", variant: "default"});
           }
         }}>
@@ -240,7 +281,6 @@ export default function YouTubeSummarizerPage() {
     );
   }
 
-  // Gate for logged-in users who haven't completed onboarding (should be caught by modal above, but as fallback)
   if (currentUser && userFullProfile && !userFullProfile.onboardingCompleted) {
     return (
         <div className="flex flex-col items-center justify-center min-h-[calc(100vh-200px)] text-center p-6">
@@ -257,10 +297,7 @@ export default function YouTubeSummarizerPage() {
           <Youtube className="mr-2 sm:mr-3 h-7 w-7 sm:h-8 sm:w-8 text-primary" /> YouTube Video Summarizer
         </h1>
         <p className="text-md sm:text-lg text-muted-foreground leading-relaxed">
-          Paste a YouTube URL and its transcript to generate notes, summary, key points, and a quiz.
-        </p>
-         <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">
-          Note: Transcript fetching from URL is coming soon! For now, please paste the transcript manually.
+          Paste a YouTube URL to fetch its transcript, or paste transcript directly, then generate notes, summary, key points, and a quiz.
         </p>
       </div>
 
@@ -270,7 +307,7 @@ export default function YouTubeSummarizerPage() {
             <CardHeader className="p-4 sm:p-6">
               <CardTitle className="text-lg sm:text-xl">Video Details & Transcript 📝</CardTitle>
               <CardDescription className="text-xs sm:text-sm">
-                  Provide the video URL (for AI context) and paste the full transcript below.
+                  Provide the video URL to fetch transcript, or paste the full transcript below.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4 sm:space-y-6 p-4 sm:p-6">
@@ -279,12 +316,24 @@ export default function YouTubeSummarizerPage() {
                 name="youtubeUrl"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-sm sm:text-base">YouTube Video URL (Optional)</FormLabel>
-                    <FormControl>
-                      <Input placeholder="e.g., https://www.youtube.com/watch?v=dQw4w9WgXcQ" {...field} className="text-sm sm:text-base" />
-                    </FormControl>
+                    <FormLabel className="text-sm sm:text-base">YouTube Video URL</FormLabel>
+                    <div className="flex items-center gap-2">
+                        <FormControl>
+                        <Input placeholder="e.g., https://www.youtube.com/watch?v=dQw4w9WgXcQ" {...field} className="text-sm sm:text-base flex-grow" />
+                        </FormControl>
+                        <Button 
+                            type="button" 
+                            onClick={handleFetchTranscript} 
+                            disabled={isFetchingTranscript || !field.value}
+                            variant="outline"
+                            className="shrink-0 text-xs sm:text-sm py-2 px-3"
+                        >
+                            {isFetchingTranscript ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin"/> : <Download className="mr-1.5 h-4 w-4"/>}
+                            Fetch Transcript
+                        </Button>
+                    </div>
                     <FormDescription className="text-xs sm:text-sm">
-                      Provide the URL for better AI context. Direct transcript fetching is not yet active.
+                      Attempt to fetch transcript (if available). Otherwise, paste manually below.
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
@@ -328,7 +377,7 @@ export default function YouTubeSummarizerPage() {
               />
             </CardContent>
             <CardFooter className="p-4 sm:p-6">
-              <Button type="submit" disabled={isLoading} size="default" className="w-full sm:w-auto text-sm sm:text-base py-2.5 px-5">
+              <Button type="submit" disabled={isLoading || isFetchingTranscript} size="default" className="w-full sm:w-auto text-sm sm:text-base py-2.5 px-5">
                 {isLoading ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 sm:h-5 sm:w-5 animate-spin" />
@@ -336,7 +385,7 @@ export default function YouTubeSummarizerPage() {
                   </>
                 ) : (
                   <>
-                    <Sparkles className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />
+                    <BookText className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />
                     Generate from Transcript
                   </>
                 )}
@@ -345,10 +394,10 @@ export default function YouTubeSummarizerPage() {
           </form>
         </Form>
       </Card>
-      
+
       <div ref={resultsRef}>
         {(isLoading && form.formState.isSubmitted) && (
-            <Suspense fallback={null}> 
+            <Suspense fallback={null}>
                 <YouTubeSummarizerResultsDisplayFallback />
             </Suspense>
         )}
@@ -366,5 +415,4 @@ export default function YouTubeSummarizerPage() {
     </div>
   );
 }
-
     
