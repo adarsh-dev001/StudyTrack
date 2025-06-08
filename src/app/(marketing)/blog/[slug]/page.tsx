@@ -42,7 +42,7 @@ export async function generateMetadata({ params }: { params: { slug: string } })
         publishedTime: postData.metadata.date,
         authors: [postData.metadata.author],
         tags: [postData.metadata.category],
-        images: postData.metadata.featuredImage ? [{ url: postData.metadata.featuredImage }] : [{ url: 'https://placehold.co/1200x630.png' }],
+        images: (postData.metadata.featuredImage && postData.metadata.featuredImage.trim() !== '') ? [{ url: postData.metadata.featuredImage }] : [{ url: 'https://placehold.co/1200x630.png' }],
     },
   };
 }
@@ -53,6 +53,8 @@ export default async function BlogPostPage({ params }: { params: { slug: string 
   if (!postData) {
     notFound();
   }
+
+  const imageSrc = (postData.metadata.featuredImage && postData.metadata.featuredImage.trim() !== '') ? postData.metadata.featuredImage : "https://placehold.co/800x450.png";
 
   return (
     <div className="container mx-auto px-4 py-6 sm:py-8 md:px-6 lg:px-8 max-w-3xl">
@@ -68,7 +70,7 @@ export default async function BlogPostPage({ params }: { params: { slug: string 
         <header className="mb-6 sm:mb-8">
           <div className="relative w-full aspect-[16/9] rounded-lg overflow-hidden mb-4 sm:mb-6 shadow-lg bg-muted">
             <Image
-              src={postData.metadata.featuredImage || "https://placehold.co/800x450.png"}
+              src={imageSrc}
               alt={postData.metadata.title}
               fill
               sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"

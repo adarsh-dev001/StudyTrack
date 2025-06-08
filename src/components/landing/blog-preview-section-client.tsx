@@ -63,7 +63,7 @@ function BlogPreviewSectionClientComponent({ recentPosts }: BlogPreviewSectionCl
                 <Card className="flex flex-col h-full overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-300 transform">
                   <Link href={`/blog/${post.slug}`} className="block aspect-[16/9] relative w-full overflow-hidden bg-muted">
                     <Image
-                      src={post.featuredImage || "https://placehold.co/600x338.png"}
+                      src={(post.featuredImage && post.featuredImage.trim() !== '') ? post.featuredImage : "https://placehold.co/600x338.png"}
                       alt={post.title}
                       fill
                       sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"

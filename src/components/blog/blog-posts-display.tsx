@@ -61,11 +61,11 @@ function BlogPostsDisplayClientComponent({ posts, categories }: BlogPostsDisplay
             <Card key={post.slug} className="flex flex-col overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-300">
               <Link href={`/blog/${post.slug}`} className="block aspect-[16/9] relative w-full overflow-hidden bg-muted">
                 <Image 
-                  src={post.featuredImage || "https://placehold.co/600x338.png"}
+                  src={(post.featuredImage && post.featuredImage.trim() !== '') ? post.featuredImage : "https://placehold.co/600x338.png"}
                   alt={post.title}
                   fill
-                  style={{ objectFit: 'cover' }}
                   sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                  style={{ objectFit: 'cover' }}
                   className="hover:scale-105 transition-transform duration-300"
                   data-ai-hint="article highlight"
                   priority={index < 3} // Prioritize the first 3 images
