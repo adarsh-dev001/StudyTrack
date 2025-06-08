@@ -61,7 +61,7 @@ function BlogPreviewSectionClientComponent({ recentPosts }: BlogPreviewSectionCl
             {recentPosts.map((post, index) => (
               <motion.div key={post.slug} variants={cardVariants} whileHover={{ y: -5, transition: { duration: 0.2 }}}>
                 <Card className="flex flex-col h-full overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-300 transform">
-                  <Link href={`/blog/${post.slug}`} className="block aspect-[16/9] relative w-full overflow-hidden">
+                  <Link href={`/blog/${post.slug}`} className="block aspect-[16/9] relative w-full overflow-hidden bg-muted">
                     <Image
                       src={post.featuredImage || "https://placehold.co/600x338.png"}
                       alt={post.title}

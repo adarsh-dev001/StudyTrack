@@ -42,7 +42,7 @@ export async function generateMetadata({ params }: { params: { slug: string } })
         publishedTime: postData.metadata.date,
         authors: [postData.metadata.author],
         tags: [postData.metadata.category],
-        images: postData.metadata.featuredImage ? [{ url: postData.metadata.featuredImage }] : [],
+        images: postData.metadata.featuredImage ? [{ url: postData.metadata.featuredImage }] : [{ url: 'https://placehold.co/1200x630.png' }],
     },
   };
 }
@@ -66,32 +66,17 @@ export default async function BlogPostPage({ params }: { params: { slug: string 
       </div>
       <article>
         <header className="mb-6 sm:mb-8">
-          {postData.metadata.featuredImage && (
-            <div className="relative w-full aspect-[16/9] rounded-lg overflow-hidden mb-4 sm:mb-6 shadow-lg">
-              <Image
-                src={postData.metadata.featuredImage}
-                alt={postData.metadata.title}
-                fill
-                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                style={{ objectFit: 'cover' }}
-                data-ai-hint="article banner"
-                priority // Added priority
-              />
-            </div>
-          )}
-          {!postData.metadata.featuredImage && (
-             <div className="relative w-full aspect-[16/9] rounded-lg overflow-hidden mb-4 sm:mb-6 shadow-lg bg-muted">
-              <Image
-                src="https://placehold.co/800x450.png"
-                alt="Placeholder Image"
-                fill
-                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                style={{ objectFit: 'cover' }}
-                data-ai-hint="article banner placeholder"
-                priority // Added priority for placeholder if it's the main image
-              />
-            </div>
-          )}
+          <div className="relative w-full aspect-[16/9] rounded-lg overflow-hidden mb-4 sm:mb-6 shadow-lg bg-muted">
+            <Image
+              src={postData.metadata.featuredImage || "https://placehold.co/800x450.png"}
+              alt={postData.metadata.title}
+              fill
+              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+              style={{ objectFit: 'cover' }}
+              data-ai-hint="article banner"
+              priority
+            />
+          </div>
           <h1 className="font-headline text-2xl font-bold tracking-tight text-foreground sm:text-3xl md:text-4xl mb-2 sm:mb-3">
             {postData.metadata.title}
           </h1>

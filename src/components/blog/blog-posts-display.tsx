@@ -59,7 +59,7 @@ function BlogPostsDisplayClientComponent({ posts, categories }: BlogPostsDisplay
         <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
           {filteredPosts.map((post, index) => (
             <Card key={post.slug} className="flex flex-col overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-300">
-              <Link href={`/blog/${post.slug}`} className="block aspect-[16/9] relative w-full overflow-hidden">
+              <Link href={`/blog/${post.slug}`} className="block aspect-[16/9] relative w-full overflow-hidden bg-muted">
                 <Image 
                   src={post.featuredImage || "https://placehold.co/600x338.png"}
                   alt={post.title}
