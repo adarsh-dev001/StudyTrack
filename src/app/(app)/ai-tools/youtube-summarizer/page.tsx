@@ -4,7 +4,7 @@
 import React, { useState, useEffect, useRef, Suspense } from 'react';
 import { useForm, type SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod'; // Ensure z is imported
+import { z } from 'zod';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
@@ -13,9 +13,8 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { Loader2, Wand2, Sparkles, Youtube, FileText, Download, BookText } from 'lucide-react';
 import {
   processYouTubeVideo,
-  type ProcessYouTubeVideoInput, // Still needed for AI call
+  type ProcessYouTubeVideoInput,
   type ProcessYouTubeVideoOutput,
-  // ProcessYouTubeVideoInputSchema // No longer directly used for form schema creation here
 } from '@/ai/flows/process-youtube-video-flow';
 import type { MCQ } from '@/ai/flows/summarize-study-material';
 import { useToast } from '@/hooks/use-toast';
@@ -32,9 +31,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 const YouTubeSummarizerResultsDisplay = React.lazy(() => import('@/components/ai-tools/youtube-summarizer/YouTubeSummarizerResultsDisplay'));
 const YouTubeSummarizerResultsDisplayFallback = React.lazy(() => import('@/components/ai-tools/youtube-summarizer/YouTubeSummarizerResultsDisplayFallback'));
 
-// Define the schema specifically for this form, omitting fields handled internally.
 const youtubeSummarizerFormSchema = z.object({
-  youtubeUrl: z.string().url({ message: "Please enter a valid YouTube URL." }).optional().describe('The URL of the YouTube video (currently for context, not direct fetching).'),
+  youtubeUrl: z.string().url({ message: "Please enter a valid YouTube URL." }).optional().describe('The URL of the YouTube video.'),
   videoTranscript: z
     .string()
     .min(100, { message: "Transcript must be at least 100 characters." })
@@ -149,7 +147,7 @@ export default function YouTubeSummarizerPage() {
     }
 
     setIsFetchingTranscript(true);
-    setAnalysisResult(null); // Clear previous results
+    setAnalysisResult(null); 
 
     try {
       const response = await fetch('/api/youtube-transcript', {
@@ -158,12 +156,23 @@ export default function YouTubeSummarizerPage() {
         body: JSON.stringify({ videoUrl }),
       });
 
-      const result = await response.json();
-
       if (!response.ok) {
-        throw new Error(result.error || 'Failed to fetch transcript.');
+        let serverError = `Failed to fetch transcript. Server responded with status: ${response.status}`;
+        try {
+          const errorResult = await response.json();
+          if (errorResult.error) {
+            serverError = errorResult.error;
+          }
+        } catch (e) {
+          // Error response wasn't JSON, likely HTML. Log it for debugging.
+          const textError = await response.text();
+          console.error("Non-JSON error response from /api/youtube-transcript:", textError.substring(0, 500)); // Log first 500 chars
+          serverError = "Failed to fetch transcript. Server returned an unexpected response.";
+        }
+        throw new Error(serverError);
       }
 
+      const result = await response.json();
       form.setValue('videoTranscript', result.transcript, { shouldValidate: true });
       toast({ title: "Transcript Fetched!", description: "Transcript has been loaded into the textarea." });
 
@@ -193,7 +202,7 @@ export default function YouTubeSummarizerPage() {
       examContext: userFullProfile?.targetExams && userFullProfile.targetExams.length > 0
                    ? (userFullProfile.targetExams[0] === 'other' && userFullProfile.otherExamName ? userFullProfile.otherExamName : userFullProfile.targetExams[0])
                    : undefined,
-      language: 'English',
+      language: 'English', // Assuming English for now, could be a form field
     };
 
     try {
@@ -307,7 +316,7 @@ export default function YouTubeSummarizerPage() {
             <CardHeader className="p-4 sm:p-6">
               <CardTitle className="text-lg sm:text-xl">Video Details & Transcript 📝</CardTitle>
               <CardDescription className="text-xs sm:text-sm">
-                  Provide the video URL to fetch transcript, or paste the full transcript below.
+                  Provide the video URL to attempt fetching its transcript, or paste the full transcript below.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4 sm:space-y-6 p-4 sm:p-6">
@@ -333,7 +342,7 @@ export default function YouTubeSummarizerPage() {
                         </Button>
                     </div>
                     <FormDescription className="text-xs sm:text-sm">
-                      Attempt to fetch transcript (if available). Otherwise, paste manually below.
+                      Attempt to fetch transcript (if available and public). Otherwise, paste manually below.
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
@@ -369,7 +378,7 @@ export default function YouTubeSummarizerPage() {
                       />
                     </FormControl>
                      <FormDescription className="text-xs sm:text-sm">
-                      Ensure the transcript is clean and accurate for best results.
+                      Ensure the transcript is clean and accurate for best results. Max 30,000 characters.
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
