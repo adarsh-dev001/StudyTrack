@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Label } from '@/components/ui/label'; // Import the basic Label component
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from "@/components/ui/checkbox";
 import { Calendar } from "@/components/ui/calendar";
@@ -107,14 +108,17 @@ export default function SyllabusSuggesterPage() {
   }, [watchedExamType]);
 
   useEffect(() => {
-    // When availableSubjectsForForm changes (due to examType change),
-    // filter the currently selected subjects to remove any that are no longer relevant.
     const currentSelectedSubjects = form.getValues('subjects') || [];
     const newRelevantSelectedSubjects = currentSelectedSubjects.filter(subjectId =>
       availableSubjectsForForm.some(availSub => availSub.id === subjectId)
     );
-    if (newRelevantSelectedSubjects.length !== currentSelectedSubjects.length) {
+    
+    if (newRelevantSelectedSubjects.length !== currentSelectedSubjects.length || (availableSubjectsForForm.length > 0 && newRelevantSelectedSubjects.length === 0 && currentSelectedSubjects.length > 0)) {
       form.setValue('subjects', newRelevantSelectedSubjects, { shouldValidate: true, shouldDirty: true });
+    } else if (availableSubjectsForForm.length > 0 && currentSelectedSubjects.length === 0) {
+        form.setValue('subjects', [], { shouldValidate: true, shouldDirty: true });
+    } else if (availableSubjectsForForm.length === 0) {
+        form.setValue('subjects', [], { shouldValidate: true, shouldDirty: true });
     }
   }, [availableSubjectsForForm, form]);
 
@@ -134,7 +138,7 @@ export default function SyllabusSuggesterPage() {
                   setShowOnboardingModal(false);
                   if (!form.formState.isDirty) {
                      const dailyHoursMatch = DAILY_STUDY_HOURS_OPTIONS.find(opt => data.dailyStudyHours?.includes(opt.value.split('-')[0]));
-                     const prepLevelMatch = PREPARATION_LEVELS.find(pl => data.subjectDetails?.[0]?.preparationLevel === pl.value || data.preparationLevel === pl.value); // Check general prep level too
+                     const prepLevelMatch = PREPARATION_LEVELS.find(pl => data.subjectDetails?.[0]?.preparationLevel === pl.value || data.preparationLevel === pl.value);
 
                      const initialExamType = data.targetExams && data.targetExams.length > 0 
                                     ? (data.targetExams[0] === 'other' && data.otherExamName ? data.otherExamName : data.targetExams[0]) 
@@ -290,7 +294,6 @@ export default function SyllabusSuggesterPage() {
                      <Select 
                         onValueChange={(value) => {
                             field.onChange(value);
-                            // Reset subjects when exam type changes to ensure valid selection
                             form.setValue('subjects', [], { shouldValidate: true }); 
                         }} 
                         value={field.value || ''}
@@ -308,12 +311,11 @@ export default function SyllabusSuggesterPage() {
                         ))}
                       </SelectContent>
                     </Select>
-                    {watchedExamType === 'other' && ( // Check against watched value
+                    {watchedExamType === 'other' && ( 
                         <Input
                             placeholder="Specify other exam type"
-                            onChange={(e) => field.onChange(e.target.value)}
+                            onChange={(e) => field.onChange(e.target.value)} // This might need to be handled differently if Select expects value to be one of predefinedExams keys
                             className="mt-2 text-sm sm:text-base"
-                            // This logic might need refinement if `field.value` for Select is strictly ID
                         />
                     )}
                     <FormDescription className="text-xs sm:text-sm">
@@ -344,6 +346,7 @@ export default function SyllabusSuggesterPage() {
                         >
                             <FormControl>
                             <Checkbox
+                                id={`subject-checkbox-${item.id}`}
                                 checked={field.value?.includes(item.id)}
                                 onCheckedChange={(checked) => {
                                 const currentSelection = field.value || [];
@@ -353,9 +356,9 @@ export default function SyllabusSuggesterPage() {
                                 }}
                             />
                             </FormControl>
-                            <FormLabel className="text-xs sm:text-sm font-normal">
-                            {item.name}
-                            </FormLabel>
+                            <Label htmlFor={`subject-checkbox-${item.id}`} className="font-normal text-xs sm:text-sm cursor-pointer">
+                                {item.name}
+                            </Label>
                         </FormItem>
                         ))}
                         </div>
@@ -550,7 +553,7 @@ export default function SyllabusSuggesterPage() {
 
       <div ref={syllabusResultRef}>
         {(isLoading && form.formState.isSubmitted) && (
-           <Suspense fallback={null}> {/* Fallback for the fallback itself, just in case */}
+           <Suspense fallback={null}> 
             <SyllabusResultDisplayFallback />
           </Suspense>
         )}
