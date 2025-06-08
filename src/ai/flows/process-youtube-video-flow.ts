@@ -43,32 +43,34 @@ Based on the provided video transcript, generate the following educational mater
 
 1.  **Video Title**:
     *   If a \`customTitle\` is provided, use it or refine it slightly if needed based on the transcript.
-    *   If no \`customTitle\` is provided, generate a concise and descriptive title based on the transcript content.
+    *   If no \`customTitle\` is provided, generate a concise and descriptive title based on the transcript content. Make it engaging.
 
 2.  **Summary**:
     *   Write a comprehensive yet concise summary of the video's main topics and arguments (around 150-250 words).
-    *   Highlight the core message or purpose of the video.
+    *   Highlight the core message or purpose of the video. Use clear, professional language.
 
 3.  **Structured Notes**:
     *   Create detailed, well-organized notes from the transcript.
     *   Use Markdown formatting extensively:
-        *   Use headings (e.g., \`## Heading\`) and subheadings (\`### Subheading\`) to structure the content logically.
-        *   Use bullet points (\`* \` or \`- \`) for lists of information, steps, or key details.
+        *   Employ headings (e.g., \`## Main Section\`) and subheadings (\`### Key Area\`) to structure the content logically and hierarchically.
+        *   Use bullet points (\`* \` or \`- \`) for lists of information, steps, or key details. Nested lists are encouraged for complex topics.
         *   Use bold (\`**text**\`) for important keywords, definitions, or terms.
-        *   Ensure the notes are easy to read and follow, breaking down complex information.
-    *   These notes should be more detailed than the summary and cover the main sections of the video.
+        *   Use italics (\`*text*\`) for emphasis or sub-definitions.
+        *   Ensure the notes are easy to read and follow, breaking down complex information into digestible chunks.
+        *   If the topic is educational (e.g., science, history), consider using thematic emojis (e.g., 🧬 for biology, ⚛️ for physics, 🏛️ for history) sparingly next to key terms or section titles to enhance visual appeal, if appropriate for the context.
+    *   These notes should be more detailed than the summary and cover the main sections of the video comprehensively.
 
 4.  **Key Concepts**:
     *   Extract 3 to 10 important keywords, technical terms, or key concepts discussed in the video.
-    *   List them as an array of strings.
+    *   List them as an array of strings. These should be concise and directly from the material.
 
 5.  **Multiple Choice Questions (MCQs)**:
     *   Generate 2 to 5 MCQs based *only* on the information present in the provided transcript.
     *   Each MCQ must have:
-        *   A clear \`questionText\` text.
+        *   A clear \`questionText\` (not 'question').
         *   An array of 4 distinct \`options\`.
         *   The 0-based \`correctAnswerIndex\` for the options array.
-        *   A brief \`explanation\` justifying the correct answer and, if relevant, why other options are incorrect.
+        *   A brief \`explanation\` justifying the correct answer and, if relevant, why other options are incorrect. The explanation should be clear and aid learning.
     *   The difficulty of MCQs should be appropriate for a student, considering the \`examContext\` if provided.
 
 ---
@@ -77,13 +79,13 @@ Content Generation Guidelines:
 - Structure & Formatting (within JSON string values, especially for 'structuredNotes'):
     - Adhere strictly to Markdown for notes. Use clear, engaging, and well-structured language.
     - For \`summary\`, \`keyConcepts\`, and MCQ \`questionText\`/\`explanation\`: Use concise language. You MAY use **bold** or *italics* for emphasis.
-    - Relevant emojis (e.g., 💡, ✅, 🎯, 🤔, 🎬, 🔑) MAY be used sparingly to enhance engagement.
+    - Relevant emojis (e.g., 💡, ✅, 🎯, 🤔, 🎬, 🔑) MAY be used sparingly and thematically to enhance engagement.
 - Tone: Maintain a helpful, educational, and encouraging tone.
 ---
 
 Output a single JSON object that strictly adheres to the ProcessYouTubeVideoOutputSchema.
-Example for structuredNotes:
-"## Main Topic 1\\n\\n- **Key Point 1.1**: Detail about this point.\\n- *Sub-point 1.1.1*: Further detail.\\n\\n## Main Topic 2\\n\\n- **Concept A**: Explanation of Concept A.\\n- **Concept B**: Explanation of Concept B."
+Example for structuredNotes field:
+"## Main Topic 1\\n\\n- **Key Point 1.1**: Detail about this point, could include a relevant emoji like 💡.\\n  - *Sub-point 1.1.1*: Further detail.\\n\\n## Main Topic 2 🏛️\\n\\n- **Concept A**: Explanation of Concept A.\\n- **Concept B**: Explanation of Concept B."
 
 Generate the study materials now.
 `,
@@ -111,3 +113,4 @@ const processYouTubeVideoFlow = ai.defineFlow(
     return output;
   }
 );
+    
