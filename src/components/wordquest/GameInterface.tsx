@@ -3,7 +3,7 @@
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card'; // Corrected import
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Progress } from '@/components/ui/progress';
 import { Timer, HelpCircle, SkipForward, Star, ArrowLeft, ImageIcon, ListChecks, Library, Flame, Skull, ThumbsUp, ThumbsDown, Volume2, Settings, KeyboardIcon, ArrowRightToLine, ChevronsRight, CheckCircle, XCircle } from 'lucide-react';
@@ -11,7 +11,7 @@ import type { GameMode, GameModeDetails, WordData } from './types';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 
-// Consistent Game Mode Details, ensuring Advanced matches Intermediate's expected UI type
+// Consistent Game Mode Details
 const gameModesDetails: Record<GameMode, GameModeDetails> = {
   basic: { title: 'Basic', description: 'Everyday Words - MCQs', icon: ListChecks, colorClass: 'border-green-500/30 bg-green-500/5 hover:shadow-green-500/10', iconColorClass: 'text-green-500' },
   intermediate: { title: 'Intermediate', description: 'Fill-in-the-blanks', icon: Library, colorClass: 'border-teal-500/30 bg-teal-500/5 hover:shadow-teal-500/10', iconColorClass: 'text-teal-500' },
@@ -21,13 +21,15 @@ const gameModesDetails: Record<GameMode, GameModeDetails> = {
 const MOCK_WORDS: Record<GameMode, WordData[]> = {
   basic: [
     { id: 'b1', word: 'Deep', clueType: 'definition', clue: 'adjective. Going far down from the top or surface.', options: ['Shallow', 'Deep', 'Narrow'], correctAnswer: 'Deep' },
-    { id: 'b2', word: 'Run', clueType: 'definition', clue: 'Move at a speed faster than a walk.', options: ['Walk', 'Sit', 'Run'], correctAnswer: 'Run' },
-    { id: 'b3', word: 'Big', clueType: 'definition', clue: 'Of considerable size or extent.', options: ['Small', 'Tiny', 'Big'], correctAnswer: 'Big' },
+    { id: 'b2', word: 'Run', clueType: 'definition', clue: 'verb. Move at a speed faster than a walk.', options: ['Walk', 'Sit', 'Run'], correctAnswer: 'Run' },
+    { id: 'b3', word: 'Happy', clueType: 'definition', clue: 'adjective. Feeling or showing pleasure or contentment.', options: ['Sad', 'Angry', 'Happy'], correctAnswer: 'Happy' },
+    { id: 'b4', word: 'Cold', clueType: 'definition', clue: 'adjective. Of or at a low or relatively low temperature.', options: ['Hot', 'Warm', 'Cold'], correctAnswer: 'Cold' },
   ],
   intermediate: [
     { id: 'i1', word: 'Blunt', clueType: 'definition', clue: 'adjective. Not sharp; direct in speaking.', correctAnswer: 'Blunt', hint: "Starts with B" },
     { id: 'i2', word: 'Elaborate', clueType: 'fill-in-the-blank', clue: 'Can you ___ on that point? (Means to add more detail)', correctAnswer: 'Elaborate', hint: "Involves adding more detail" },
     { id: 'i3', word: 'Gratitude', clueType: 'fill-in-the-blank', clue: "Showing thankfulness and appreciation. (Ends with 'ude') ", correctAnswer: 'Gratitude', hint: "A feeling of thankfulness"},
+    { id: 'i4', word: 'Vivid', clueType: 'definition', clue: "adjective. Producing powerful feelings or strong, clear images in the mind.", correctAnswer: 'Vivid', hint: "Think 'colorful description'"},
   ],
   advanced: [
     { id: 'a1', word: 'Ephemeral', clueType: 'definition', clue: 'Lasting for a very short time.', correctAnswer: 'Ephemeral', hint: "Think 'fleeting'" },
@@ -75,6 +77,16 @@ const feedbackVariants = {
   exit: { opacity: 0, scale: 0.8, y: -10, transition: { duration: 0.2 } }
 };
 
+// Fisher-Yates shuffle function
+function shuffleArray<T>(array: T[]): T[] {
+  const shuffled = [...array];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  return shuffled;
+}
+
 
 export default function GameInterface({ selectedMode, onGoBack }: GameInterfaceProps) {
   const [currentWordIndex, setCurrentWordIndex] = useState(0);
@@ -85,6 +97,7 @@ export default function GameInterface({ selectedMode, onGoBack }: GameInterfaceP
   const [gameOver, setGameOver] = useState(false);
   const [feedbackMessage, setFeedbackMessage] = useState<string | null>(null);
   const [shuffledOptions, setShuffledOptions] = useState<string[]>([]);
+  const [shuffledWords, setShuffledWords] = useState<WordData[]>([]); // For shuffled game questions
   const hiddenInputRef = useRef<HTMLInputElement>(null);
 
   const correctAnswerSoundRef = useRef<HTMLAudioElement | null>(null);
@@ -93,14 +106,14 @@ export default function GameInterface({ selectedMode, onGoBack }: GameInterfaceP
   useEffect(() => {
     if (typeof window !== 'undefined') {
       correctAnswerSoundRef.current = new Audio('/sounds/correct_answer.mp3');
-      wrongAnswerSoundRef.current = new Audio('/sounds/wrong_answer.mp3');
       correctAnswerSoundRef.current.preload = 'auto';
+      wrongAnswerSoundRef.current = new Audio('/sounds/wrong_answer.mp3');
       wrongAnswerSoundRef.current.preload = 'auto';
     }
   }, []);
 
   const wordsForMode = MOCK_WORDS[selectedMode] || MOCK_WORDS.basic;
-  const currentWordData = wordsForMode[currentWordIndex];
+  const currentWordData = shuffledWords[currentWordIndex]; // Use shuffledWords
 
   const resetTimer = useCallback(() => {
     let duration = MAX_TIME_PER_QUESTION;
@@ -110,31 +123,43 @@ export default function GameInterface({ selectedMode, onGoBack }: GameInterfaceP
   }, [selectedMode]);
 
   useEffect(() => {
+    // Shuffle words when mode changes or game starts/restarts
+    const baseWords = MOCK_WORDS[selectedMode] || MOCK_WORDS.basic;
+    setShuffledWords(shuffleArray(baseWords));
+    setCurrentWordIndex(0); // Reset index for new shuffled list
+    setScore(0);
+    setGameOver(false);
+    // Initial reset for the first question of the new/shuffled set
+    resetTimer();
+    setIsHintUsedForQuestion(false);
+    setUserInput('');
+    setFeedbackMessage(null);
+  }, [selectedMode, resetTimer]); // Dependency on selectedMode ensures shuffle on mode change
+
+  useEffect(() => {
     if (currentWordData && selectedMode === 'basic' && currentWordData.options) {
       setShuffledOptions([...currentWordData.options].sort(() => Math.random() - 0.5));
     }
     if ((selectedMode === 'intermediate' || selectedMode === 'advanced') && !gameOver) {
       hiddenInputRef.current?.focus();
     }
+    // This effect depends on currentWordData, which now comes from shuffledWords
+    // No need to reset timer here again as the parent effect does it on mode change/initial load.
   }, [currentWordData, selectedMode, gameOver]);
 
-  useEffect(() => {
-    resetTimer();
-    setIsHintUsedForQuestion(false);
-    setUserInput('');
-    setFeedbackMessage(null);
-     if ((selectedMode === 'intermediate' || selectedMode === 'advanced') && !gameOver) {
-      hiddenInputRef.current?.focus();
-    }
-  }, [currentWordIndex, selectedMode, resetTimer, gameOver]);
 
   const proceedToNextOrEnd = useCallback(() => {
-    if (currentWordIndex < wordsForMode.length - 1) {
+    if (currentWordIndex < shuffledWords.length - 1) { // Use shuffledWords.length
       setCurrentWordIndex(prev => prev + 1);
+       // Reset timer and input state for the *new* question from the shuffled list
+      resetTimer();
+      setIsHintUsedForQuestion(false);
+      setUserInput('');
+      setFeedbackMessage(null);
     } else {
       setGameOver(true);
     }
-  }, [currentWordIndex, wordsForMode.length]);
+  }, [currentWordIndex, shuffledWords.length, resetTimer]);
 
   const handleSubmitAnswer = useCallback(() => {
     if (!currentWordData || feedbackMessage) return;
@@ -161,8 +186,8 @@ export default function GameInterface({ selectedMode, onGoBack }: GameInterfaceP
   }, [currentWordData, userInput, selectedMode, feedbackMessage, proceedToNextOrEnd]);
 
   const handleOptionSelect = (option: string) => {
-    if (feedbackMessage) return;
-    setUserInput(option);
+    if (feedbackMessage || !currentWordData) return;
+    setUserInput(option); // Set user input for basic mode as well
     if (selectedMode === 'basic') {
         let isCorrect = option === currentWordData.correctAnswer;
         if (isCorrect) {
@@ -180,8 +205,8 @@ export default function GameInterface({ selectedMode, onGoBack }: GameInterfaceP
   };
 
   const handleSkip = useCallback(() => {
-    if (gameOver || feedbackMessage) return;
-    setFeedbackMessage(`Skipped! The answer was: ${currentWordData?.correctAnswer || 'N/A'}`);
+    if (gameOver || feedbackMessage || !currentWordData) return;
+    setFeedbackMessage(`Skipped! The answer was: ${currentWordData.correctAnswer}`);
     wrongAnswerSoundRef.current?.play().catch(e => console.error("Error playing wrong sound on skip:", e));
     setTimeout(() => {
       proceedToNextOrEnd();
@@ -208,7 +233,7 @@ export default function GameInterface({ selectedMode, onGoBack }: GameInterfaceP
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (gameOver || feedbackMessage) return;
+      if (gameOver || feedbackMessage || !currentWordData) return;
 
       if (event.key === 'Escape') {
         event.preventDefault();
@@ -222,7 +247,7 @@ export default function GameInterface({ selectedMode, onGoBack }: GameInterfaceP
           if (userInput.trim()) handleSubmitAnswer();
         } else if (event.key === 'Backspace') {
           setUserInput(prev => prev.slice(0, -1));
-        } else if (event.key.length === 1 && /^[a-zA-Z]$/.test(event.key) && userInput.length < (currentWordData?.correctAnswer.length || 20)) {
+        } else if (event.key.length === 1 && /^[a-zA-Z]$/.test(event.key) && userInput.length < currentWordData.correctAnswer.length) {
           setUserInput(prev => prev + event.key.toUpperCase());
         }
       }
@@ -268,7 +293,7 @@ export default function GameInterface({ selectedMode, onGoBack }: GameInterfaceP
               >
                 {score}
               </motion.p>
-            <p className="text-muted-foreground">You answered {score / 10} out of {wordsForMode.length} questions correctly.</p>
+            <p className="text-muted-foreground">You answered {score / 10} out of {shuffledWords.length} questions correctly.</p>
           </CardContent>
           <CardFooter className="flex flex-col sm:flex-row gap-2 justify-center">
             <Button onClick={onGoBack} variant="outline">Play Again</Button>
@@ -278,7 +303,7 @@ export default function GameInterface({ selectedMode, onGoBack }: GameInterfaceP
     );
   }
 
-  if (!currentWordData) {
+  if (!currentWordData) { // Check currentWordData from shuffledWords
     return <div className="text-center p-8">Loading word data... <Button onClick={onGoBack}>Back to Modes</Button></div>;
   }
 
@@ -385,7 +410,7 @@ export default function GameInterface({ selectedMode, onGoBack }: GameInterfaceP
                                 <span className="bg-indigo-700/80 px-1.5 py-0.5 rounded-sm text-xs mr-1.5">esc</span> Skip
                             </Button>
                         )}
-                        {selectedMode === 'basic' && ( // Thumbs for basic mode only
+                        {selectedMode === 'basic' && (
                            <>
                              <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-green-500"><ThumbsUp className="h-5 w-5"/></Button>
                              <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-red-500"><ThumbsDown className="h-5 w-5"/></Button>
@@ -393,9 +418,15 @@ export default function GameInterface({ selectedMode, onGoBack }: GameInterfaceP
                         )}
                         {(selectedMode === 'intermediate' || selectedMode === 'advanced') && (
                             <>
-                                <div className="flex items-center text-muted-foreground text-sm">
-                                    <HelpCircle className="h-4 w-4 mr-1" /> 0
-                                </div>
+                                <Button 
+                                    variant="ghost" 
+                                    size="sm" 
+                                    className="text-muted-foreground hover:text-foreground text-xs"
+                                    onClick={() => setIsHintUsedForQuestion(true)}
+                                    disabled={isHintUsedForQuestion || !currentWordData.hint}
+                                >
+                                    <HelpCircle className="h-4 w-4 mr-1" /> Hint {isHintUsedForQuestion && currentWordData.hint ? `(${currentWordData.hint})` : ''}
+                                </Button>
                                 <div className="flex items-center text-muted-foreground text-sm">
                                     <Flame className="h-4 w-4 mr-1" /> 0
                                 </div>
@@ -459,7 +490,7 @@ export default function GameInterface({ selectedMode, onGoBack }: GameInterfaceP
             </motion.div>
           ) : (selectedMode === 'intermediate' || selectedMode === 'advanced') ? (
             <div className="w-full max-w-md text-center space-y-6">
-              {currentWordData.hint && (
+              {currentWordData.hint && (isHintUsedForQuestion || selectedMode === 'intermediate') && ( // Show hint always for intermediate or if used for advanced
                 <motion.p
                   className="text-2xl sm:text-3xl font-semibold text-foreground/80"
                   initial={{ opacity: 0, y: -10 }}
@@ -510,3 +541,4 @@ export default function GameInterface({ selectedMode, onGoBack }: GameInterfaceP
     </div>
   );
 }
+
