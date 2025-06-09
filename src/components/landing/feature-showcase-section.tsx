@@ -1,3 +1,4 @@
+
 'use client';
 
 import React from 'react';
@@ -5,7 +6,7 @@ import { motion } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { ArrowRight, BrainCircuit, ListChecks, Timer, BarChart3, Flame, HelpCircle } from 'lucide-react';
+import { ArrowRight, BrainCircuit, ListChecks, Timer, BarChart3, Flame, HelpCircle, FileText, Puzzle } from 'lucide-react'; // Added FileText and Puzzle
 import type { LucideIcon } from 'lucide-react';
 
 interface FeatureShowcaseItem {
@@ -35,20 +36,20 @@ const features: FeatureShowcaseItem[] = [
     bgColorClass: 'bg-green-500/5 hover:bg-green-500/10',
   },
   {
-    icon: Timer,
-    title: 'Pomodoro Timer',
-    description: 'Boost focus and manage your time effectively with the integrated Pomodoro timer.',
-    learnMoreLink: '/pomodoro',
-    iconColorClass: 'text-orange-500',
-    bgColorClass: 'bg-orange-500/5 hover:bg-orange-500/10',
+    icon: FileText, // Changed from Timer
+    title: 'AI Notes Generator', // Changed from Pomodoro Timer
+    description: 'Transform text or PDFs into structured notes, summaries, and quizzes with AI.',
+    learnMoreLink: '/ai-tools/material-summarizer', // Link to material summarizer
+    iconColorClass: 'text-amber-500', // New color
+    bgColorClass: 'bg-amber-500/5 hover:bg-amber-500/10', // New color
   },
   {
-    icon: BarChart3,
-    title: 'Productivity Stats',
-    description: 'Visualize your progress with insightful charts on study hours and topics completed.',
-    learnMoreLink: '/analytics',
-    iconColorClass: 'text-purple-500',
-    bgColorClass: 'bg-purple-500/5 hover:bg-purple-500/10',
+    icon: HelpCircle, // Changed from BarChart3
+    title: 'SmartQuiz AI', // Changed from Productivity Stats
+    description: 'Generate custom quizzes on any topic, tailored to exam type and difficulty level.',
+    learnMoreLink: '/ai-tools/smart-quiz', // Link to smart quiz
+    iconColorClass: 'text-teal-500', // New color
+    bgColorClass: 'bg-teal-500/5 hover:bg-teal-500/10', // New color
   },
   {
     icon: Flame,
@@ -59,10 +60,10 @@ const features: FeatureShowcaseItem[] = [
     bgColorClass: 'bg-red-500/5 hover:bg-red-500/10',
   },
   {
-    icon: HelpCircle,
-    title: 'AI Doubt Solver',
-    description: 'Get instant, clear explanations for your academic questions from our AI tutor.',
-    learnMoreLink: '/ai-tools/doubt-solver',
+    icon: Puzzle, // Was HelpCircle, using Puzzle for AI Doubt Solver if HelpCircle is for SmartQuiz
+    title: 'WordQuest AI',
+    description: 'Sharpen your vocabulary with engaging word challenges and games powered by AI.',
+    learnMoreLink: '/wordquest', // Link to WordQuest AI
     iconColorClass: 'text-indigo-500',
     bgColorClass: 'bg-indigo-500/5 hover:bg-indigo-500/10',
   },
