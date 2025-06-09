@@ -10,7 +10,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Loader2, Wand2, Sparkles, UploadCloud, FileText } from 'lucide-react'; // Added FileText
+import { Loader2, Wand2, Sparkles, UploadCloud, FileText } from 'lucide-react';
 import { summarizeStudyMaterial, type SummarizeStudyMaterialOutput, type MCQ } from '@/ai/flows/summarize-study-material';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/auth-context';
@@ -24,12 +24,12 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/ui/skeleton';
 
 import * as pdfjsLib from 'pdfjs-dist';
-// Import the worker entry point
-import pdfjsWorker from 'pdfjs-dist/build/pdf.worker.entry';
 
+// Set the workerSrc for pdfjs-dist.
+// This needs to be done on the client side.
 if (typeof window !== 'undefined') {
-  // Set the workerSrc to the imported entry point
-  pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorker;
+  // pdf.worker.min.js should be manually copied to public/js/ from node_modules/pdfjs-dist/build/
+  pdfjsLib.GlobalWorkerOptions.workerSrc = `/js/pdf.worker.min.js`;
 }
 
 
@@ -428,3 +428,5 @@ export default function MaterialSummarizerPage() {
     </div>
   );
 }
+
+    
