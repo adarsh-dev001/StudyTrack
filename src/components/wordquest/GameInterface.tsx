@@ -3,7 +3,7 @@
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card'; // Corrected import
 import { Input } from '@/components/ui/input';
 import { Progress } from '@/components/ui/progress';
 import { Timer, HelpCircle, SkipForward, Star, ArrowLeft, ImageIcon, ListChecks, Library, Flame, Skull, ThumbsUp, ThumbsDown, Volume2, Settings, KeyboardIcon, ArrowRightToLine, ChevronsRight, CheckCircle, XCircle } from 'lucide-react';
@@ -91,7 +91,6 @@ export default function GameInterface({ selectedMode, onGoBack }: GameInterfaceP
   const wrongAnswerSoundRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
-    // Initialize Audio objects on the client side
     if (typeof window !== 'undefined') {
       correctAnswerSoundRef.current = new Audio('/sounds/correct_answer.mp3');
       wrongAnswerSoundRef.current = new Audio('/sounds/wrong_answer.mp3');
@@ -164,8 +163,6 @@ export default function GameInterface({ selectedMode, onGoBack }: GameInterfaceP
   const handleOptionSelect = (option: string) => {
     if (feedbackMessage) return;
     setUserInput(option);
-    // For basic mode, submit immediately after selection.
-    // We need to pass the selected option directly because state update might not be immediate.
     if (selectedMode === 'basic') {
         let isCorrect = option === currentWordData.correctAnswer;
         if (isCorrect) {
@@ -347,8 +344,9 @@ export default function GameInterface({ selectedMode, onGoBack }: GameInterfaceP
       </div>
 
       <div className="flex-grow grid grid-cols-1 md:grid-cols-2 min-h-[calc(100vh-150px)]">
+        {/* Left Panel - Clue */}
         <AnimatePresence mode="wait">
-          <motion.div
+        <motion.div
             key={`clue-panel-${currentWordIndex}`}
             custom="left"
             variants={panelVariants}
@@ -356,43 +354,65 @@ export default function GameInterface({ selectedMode, onGoBack }: GameInterfaceP
             animate="animate"
             exit="exit"
             className="bg-card text-card-foreground p-6 sm:p-8 md:p-10 lg:p-12 flex flex-col justify-between relative"
-          >
-            <div className="absolute top-4 left-4 text-sm text-muted-foreground flex items-center">
-              Your clue <ArrowRightToLine className="ml-1 h-4 w-4" />
+        >
+            <div> {/* Top section of left panel */}
+                <div className="absolute top-4 left-4 text-sm text-muted-foreground flex items-center">
+                    Your clue <ArrowRightToLine className="ml-1 h-4 w-4" />
+                </div>
             </div>
 
-            <div className="my-auto flex items-center justify-center h-full">
-              {renderClueContent()}
+            <div className="my-auto flex items-center justify-center h-full"> {/* Clue content centered */}
+                {selectedMode === 'basic' ? (
+                    <p className="text-xl md:text-2xl lg:text-3xl text-foreground font-medium leading-tight">{currentWordData.clue}</p>
+                ) : (selectedMode === 'intermediate' || selectedMode === 'advanced') ? (
+                    <p className="text-xl md:text-2xl lg:text-3xl text-foreground font-medium leading-tight">{currentWordData.clue}</p>
+                ): (
+                    renderClueContent()
+                )}
             </div>
 
-            <div className="mt-auto">
-              <div className="flex justify-between items-end">
-                <div className="flex items-center space-x-2 sm:space-x-3">
-                  <Button
-                      variant="default"
-                      size="sm"
-                      onClick={handleSkip}
-                      disabled={!!feedbackMessage || gameOver}
-                      className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs sm:text-sm px-3 py-1.5 h-auto"
-                  >
-                      <span className="bg-indigo-700/80 px-1.5 py-0.5 rounded-sm text-xs mr-1.5">esc</span> Skip
-                  </Button>
-                  <div className="flex items-center text-muted-foreground text-sm">
-                      <HelpCircle className="h-4 w-4 mr-1" /> 0
-                  </div>
-                  <div className="flex items-center text-muted-foreground text-sm">
-                      <Flame className="h-4 w-4 mr-1" /> 0
-                  </div>
+            <div className="mt-auto"> {/* Bottom section of left panel */}
+                <div className="flex justify-between items-end">
+                    <div className="flex items-center space-x-2 sm:space-x-3">
+                        {(selectedMode === 'intermediate' || selectedMode === 'advanced') && (
+                            <Button
+                                variant="default"
+                                size="sm"
+                                onClick={handleSkip}
+                                disabled={!!feedbackMessage || gameOver}
+                                className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs sm:text-sm px-3 py-1.5 h-auto"
+                            >
+                                <span className="bg-indigo-700/80 px-1.5 py-0.5 rounded-sm text-xs mr-1.5">esc</span> Skip
+                            </Button>
+                        )}
+                        {selectedMode === 'basic' && ( // Thumbs for basic mode only
+                           <>
+                             <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-green-500"><ThumbsUp className="h-5 w-5"/></Button>
+                             <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-red-500"><ThumbsDown className="h-5 w-5"/></Button>
+                           </>
+                        )}
+                        {(selectedMode === 'intermediate' || selectedMode === 'advanced') && (
+                            <>
+                                <div className="flex items-center text-muted-foreground text-sm">
+                                    <HelpCircle className="h-4 w-4 mr-1" /> 0
+                                </div>
+                                <div className="flex items-center text-muted-foreground text-sm">
+                                    <Flame className="h-4 w-4 mr-1" /> 0
+                                </div>
+                            </>
+                        )}
+                    </div>
+                    <div className="text-right">
+                        <div className="text-4xl sm:text-5xl font-bold tabular-nums text-foreground">{formatTimeForDisplay(timeLeft)}</div>
+                        <div className="text-xs text-muted-foreground">Time remaining <ChevronsRight className="inline h-3 w-3" /></div>
+                    </div>
                 </div>
-                <div className="text-right">
-                  <div className="text-4xl sm:text-5xl font-bold tabular-nums text-foreground">{formatTimeForDisplay(timeLeft)}</div>
-                  <div className="text-xs text-muted-foreground">Time remaining <ChevronsRight className="inline h-3 w-3" /></div>
-                </div>
-              </div>
             </div>
-          </motion.div>
+        </motion.div>
         </AnimatePresence>
 
+
+        {/* Right Panel - Options/Input */}
         <AnimatePresence mode="wait">
         <motion.div
            key={`input-panel-${currentWordIndex}`}
@@ -456,7 +476,7 @@ export default function GameInterface({ selectedMode, onGoBack }: GameInterfaceP
                 className="opacity-0 w-0 h-0 absolute"
                 onFocus={() => hiddenInputRef.current?.focus()}
                 value={userInput}
-                readOnly // Input is controlled by global keydown listener
+                readOnly 
               />
             </div>
           ) : (
