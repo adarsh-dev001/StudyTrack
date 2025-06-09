@@ -31,7 +31,7 @@ interface SummarizerResultsDisplayProps {
 
 const MAX_NOTES_LENGTH_DISPLAY = 1000; // Characters to show before truncation
 const INITIAL_COLLAPSED_MAX_HEIGHT = '300px'; // CSS max-height for collapsed view
-const EXPANDED_MAX_HEIGHT = 'none'; // Or a very large value like '2000px' if 'none' is problematic
+const EXPANDED_MAX_HEIGHT = '5000px'; // Large pixel value for expanded state
 
 export default function SummarizerResultsDisplay({
   analysisResult,
@@ -351,3 +351,4 @@ export default function SummarizerResultsDisplay({
     </div>
   );
 }
+
