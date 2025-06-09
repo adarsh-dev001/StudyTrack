@@ -1,12 +1,12 @@
 
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Progress } from '@/components/ui/progress';
-import { Timer, HelpCircle, SkipForward, Star, ArrowLeft, ImageIcon, ListChecks, Library, Flame, Skull, ThumbsUp, ThumbsDown, Volume2, Settings, KeyboardIcon, ArrowRightToLine } from 'lucide-react'; // Added more icons
+import { Timer, HelpCircle, SkipForward, Star, ArrowLeft, ImageIcon, ListChecks, Library, Flame, Skull, ThumbsUp, ThumbsDown, Volume2, Settings, KeyboardIcon, ArrowRightToLine, ChevronsRight } from 'lucide-react';
 import type { GameMode, GameModeDetails, WordData } from './types';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
@@ -25,13 +25,13 @@ const MOCK_WORDS: Record<GameMode, WordData[]> = {
     { id: 'j2', word: 'Ball', clueType: 'image', clue: 'https://placehold.co/300x200/0000FF/FFFFFF?text=Ball', correctAnswer: 'Ball' },
     { id: 'j3', word: 'Cat', clueType: 'image', clue: 'https://placehold.co/300x200/FFFF00/000000?text=Cat', correctAnswer: 'Cat' },
   ],
-  basic: [ // Adjusted to 3 options
-    { id: 'b1', word: 'Deep', clueType: 'definition', clue: 'adjective. Going far down from the surface or far inside.', options: ['Magazine', 'Deep', 'Japan'], correctAnswer: 'Deep' },
+  basic: [ 
+    { id: 'b1', word: 'Deep', clueType: 'definition', clue: 'adjective. Extending far down from the top or surface.', options: ['Shallow', 'Deep', 'Narrow'], correctAnswer: 'Deep' },
     { id: 'b2', word: 'Run', clueType: 'definition', clue: 'Move at a speed faster than a walk.', options: ['Walk', 'Sit', 'Run'], correctAnswer: 'Run' },
     { id: 'b3', word: 'Big', clueType: 'definition', clue: 'Of considerable size or extent.', options: ['Small', 'Tiny', 'Big'], correctAnswer: 'Big' },
   ],
   intermediate: [
-    { id: 'i1', word: 'Persistent', clueType: 'fill-in-the-blank', clue: 'She was ___ in her efforts to learn coding. (Starts with P)', correctAnswer: 'Persistent', hint: "Starts with P" },
+    { id: 'i1', word: 'Blunt', clueType: 'definition', clue: 'adjective. Not sharp; direct in speaking.', correctAnswer: 'Blunt', hint: "Starts with B" },
     { id: 'i2', word: 'Elaborate', clueType: 'fill-in-the-blank', clue: 'Can you ___ on that point? (Means to add more detail)', correctAnswer: 'Elaborate', hint: "Involves adding more detail" },
     { id: 'i3', word: 'Gratitude', clueType: 'fill-in-the-blank', clue: "Showing thankfulness and appreciation. (Ends with 'ude') ", correctAnswer: 'Gratitude', hint: "A feeling of thankfulness"},
   ],
@@ -46,7 +46,7 @@ const MOCK_WORDS: Record<GameMode, WordData[]> = {
     { id: 'e3', word: 'Supersede', clueType: 'definition', clue: 'Take the place of (a person or thing previously in authority or use); supplant.', correctAnswer: 'Supersede', hint: "To replace something older"},
   ],
 };
-const MAX_TIME_PER_QUESTION = 83; // 1:23 in seconds for Basic mode example
+const MAX_TIME_PER_QUESTION = 83; 
 
 interface GameInterfaceProps {
   selectedMode: GameMode;
@@ -58,49 +58,66 @@ export default function GameInterface({ selectedMode, onGoBack }: GameInterfaceP
   const [userInput, setUserInput] = useState('');
   const [score, setScore] = useState(0);
   const [timeLeft, setTimeLeft] = useState(MAX_TIME_PER_QUESTION);
-  const [isHintVisible, setIsHintVisible] = useState(false);
+  const [isHintUsedForQuestion, setIsHintUsedForQuestion] = useState(false);
   const [gameOver, setGameOver] = useState(false);
   const [feedbackMessage, setFeedbackMessage] = useState<string | null>(null);
   const [shuffledOptions, setShuffledOptions] = useState<string[]>([]);
+  const hiddenInputRef = useRef<HTMLInputElement>(null); // For intermediate/advanced typing
 
   const wordsForMode = MOCK_WORDS[selectedMode] || MOCK_WORDS.basic;
   const currentWordData = wordsForMode[currentWordIndex];
 
   const resetTimer = useCallback(() => {
-    let duration = MAX_TIME_PER_QUESTION;
+    let duration = MAX_TIME_PER_QUESTION; // Default for basic
     if (selectedMode === 'advanced' || selectedMode === 'expert') duration = 20;
-    else if (selectedMode === 'intermediate') duration = 45;
+    else if (selectedMode === 'intermediate') duration = 78; // 1:18 for intermediate
     else if (selectedMode === 'junior') duration = 60;
     setTimeLeft(duration);
   }, [selectedMode]);
 
   useEffect(() => {
-    if (currentWordData && (selectedMode === 'basic') && currentWordData.options) {
+    if (currentWordData && selectedMode === 'basic' && currentWordData.options) {
       setShuffledOptions([...currentWordData.options].sort(() => Math.random() - 0.5));
+    }
+    // Focus hidden input for typing modes
+    if (selectedMode === 'intermediate' || selectedMode === 'advanced' || selectedMode === 'expert' || selectedMode === 'junior') {
+      hiddenInputRef.current?.focus();
     }
   }, [currentWordData, selectedMode]);
 
   useEffect(() => {
     resetTimer();
-    setIsHintVisible(false);
+    setIsHintUsedForQuestion(false);
     setUserInput('');
     setFeedbackMessage(null);
-  }, [currentWordIndex, selectedMode, resetTimer]);
+     if ((selectedMode === 'intermediate' || selectedMode === 'advanced' || selectedMode === 'expert' || selectedMode === 'junior') && !gameOver) {
+      hiddenInputRef.current?.focus();
+    }
+  }, [currentWordIndex, selectedMode, resetTimer, gameOver]);
 
   useEffect(() => {
     if (gameOver) return;
     if (timeLeft <= 0) {
-      handleSkip();
+      handleSkip(); // Auto-skip if time runs out
       return;
     }
     const timerId = setInterval(() => {
       setTimeLeft(prev => prev - 1);
     }, 1000);
     return () => clearInterval(timerId);
-  }, [timeLeft, gameOver]);
+  }, [timeLeft, gameOver]); // Removed handleSkip from deps to avoid re-triggering
 
-  const handleSubmitAnswer = () => {
-    if (!currentWordData) return;
+  const proceedToNextOrEnd = useCallback(() => {
+    if (currentWordIndex < wordsForMode.length - 1) {
+      setCurrentWordIndex(prev => prev + 1);
+    } else {
+      setGameOver(true);
+    }
+  }, [currentWordIndex, wordsForMode.length]);
+
+  const handleSubmitAnswer = useCallback(() => {
+    if (!currentWordData || feedbackMessage) return; // Don't submit if already showing feedback
+
     let isCorrect = false;
     if (selectedMode === 'basic') {
       isCorrect = userInput === currentWordData.correctAnswer;
@@ -116,53 +133,81 @@ export default function GameInterface({ selectedMode, onGoBack }: GameInterfaceP
     }
 
     setTimeout(() => {
-      if (currentWordIndex < wordsForMode.length - 1) {
-        setCurrentWordIndex(prev => prev + 1);
-      } else {
-        setGameOver(true);
-      }
+      proceedToNextOrEnd();
     }, 1500);
-  };
+  }, [currentWordData, userInput, selectedMode, feedbackMessage, proceedToNextOrEnd]);
+
 
   const handleOptionSelect = (option: string) => {
-    setUserInput(option); // Set userInput for consistency, even though direct submit happens
-    if (currentWordData) {
-      const isCorrect = option === currentWordData.correctAnswer;
-      if (isCorrect) {
-        setScore(s => s + 10);
-        setFeedbackMessage('Correct! 🎉');
-      } else {
-        setFeedbackMessage(`Oops! Correct answer: ${currentWordData.correctAnswer}`);
-      }
-      setTimeout(() => {
-        if (currentWordIndex < wordsForMode.length - 1) {
-          setCurrentWordIndex(prev => prev + 1);
-        } else {
-          setGameOver(true);
-        }
-      }, 1500);
-    }
+    if (feedbackMessage) return;
+    setUserInput(option); 
+    handleSubmitAnswer(); // Directly submit for MCQ
   };
 
-  const handleSkip = () => {
-    if (gameOver) return;
+  const handleSkip = useCallback(() => {
+    if (gameOver || feedbackMessage) return;
     setFeedbackMessage(`Skipped! The answer was: ${currentWordData?.correctAnswer || 'N/A'}`);
     setTimeout(() => {
-      if (currentWordIndex < wordsForMode.length - 1) {
-        setCurrentWordIndex(prev => prev + 1);
-      } else {
-        setGameOver(true);
-      }
+      proceedToNextOrEnd();
     }, 1500);
-  };
+  }, [gameOver, feedbackMessage, currentWordData, proceedToNextOrEnd]);
 
-  const toggleHint = () => setIsHintVisible(prev => !prev);
+  const handleHint = () => {
+    if (currentWordData?.hint && !isHintUsedForQuestion) {
+        setIsHintUsedForQuestion(true);
+        // Potentially deduct points for using a hint, if that's a game mechanic
+    }
+  };
   
   const formatTimeForDisplay = (totalSeconds: number) => {
     const minutes = Math.floor(totalSeconds / 60);
     const seconds = totalSeconds % 60;
     return `${minutes}:${String(seconds).padStart(2, '0')}`;
   };
+
+  // Keyboard event listener for typing modes and global shortcuts
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (gameOver || feedbackMessage) return;
+
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        handleSkip();
+        return;
+      }
+
+      if (selectedMode === 'intermediate' || selectedMode === 'advanced' || selectedMode === 'expert' || selectedMode === 'junior') {
+        if (event.key === 'Enter') {
+          event.preventDefault();
+          if (userInput.trim()) handleSubmitAnswer();
+        } else if (event.key === 'Backspace') {
+          setUserInput(prev => prev.slice(0, -1));
+        } else if (event.key.length === 1 && userInput.length < (currentWordData?.correctAnswer.length || 20)) { 
+          // Allow typing if length is 1 (alphanumeric, symbols) and not exceeding word length
+          setUserInput(prev => prev + event.key);
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [gameOver, feedbackMessage, selectedMode, userInput, handleSubmitAnswer, handleSkip, currentWordData]);
+
+
+  // Auto-submit for intermediate when all blanks are filled
+  useEffect(() => {
+    if (
+      (selectedMode === 'intermediate' || selectedMode === 'advanced' || selectedMode === 'expert' || selectedMode === 'junior') &&
+      currentWordData &&
+      userInput.length === currentWordData.correctAnswer.length &&
+      !feedbackMessage // Only submit if not already showing feedback
+    ) {
+      handleSubmitAnswer();
+    }
+  }, [userInput, currentWordData, selectedMode, handleSubmitAnswer, feedbackMessage]);
+
 
   if (gameOver) {
     return (
@@ -184,7 +229,7 @@ export default function GameInterface({ selectedMode, onGoBack }: GameInterfaceP
   }
 
   if (!currentWordData) {
-    return <div className="text-center p-8">Loading word data or game finished... <Button onClick={onGoBack}>Back to Modes</Button></div>;
+    return <div className="text-center p-8">Loading word data... <Button onClick={onGoBack}>Back to Modes</Button></div>;
   }
 
   const renderClueContent = () => {
@@ -194,13 +239,34 @@ export default function GameInterface({ selectedMode, onGoBack }: GameInterfaceP
           <img src={currentWordData.clue} alt="Word Clue" className="rounded-md shadow-md max-w-xs mx-auto h-auto" data-ai-hint="game clue image" />
         );
       case 'definition':
-      case 'fill-in-the-blank':
+      case 'fill-in-the-blank': // Treat fill-in-the-blank clues similarly to definitions for display
       case 'meaning':
         return <p className="text-xl md:text-2xl lg:text-3xl text-foreground font-medium leading-tight">{currentWordData.clue}</p>;
       default:
         return <p className="text-muted-foreground">No clue available.</p>;
     }
   };
+  
+  const renderLetterBoxes = () => {
+    if (!currentWordData) return null;
+    const wordLength = currentWordData.correctAnswer.length;
+    return (
+      <div className="flex justify-center space-x-1.5 sm:space-x-2">
+        {Array.from({ length: wordLength }).map((_, index) => (
+          <div
+            key={index}
+            className={cn(
+              "flex items-center justify-center h-10 w-8 sm:h-12 sm:w-10 md:h-14 md:w-12 text-xl sm:text-2xl font-semibold border-2 rounded",
+              userInput[index] ? "border-primary text-primary bg-primary/10" : "border-muted-foreground/50 bg-muted/20"
+            )}
+          >
+            {userInput[index]?.toUpperCase() || ''}
+          </div>
+        ))}
+      </div>
+    );
+  };
+
 
   return (
     <div className="w-full h-full flex flex-col">
@@ -215,50 +281,69 @@ export default function GameInterface({ selectedMode, onGoBack }: GameInterfaceP
         </div>
       </div>
 
-      <div className="flex-grow grid grid-cols-1 md:grid-cols-3 min-h-[calc(100vh-150px)]"> {/* Adjust min-height as needed */}
-        {/* Left Panel: Clue and Timer */}
+      <div className="flex-grow grid grid-cols-1 md:grid-cols-2 min-h-[calc(100vh-150px)]"> {/* Main two-panel layout */}
+        {/* Left Panel: Clue and Game Info */}
         <motion.div 
-          key={`clue-${currentWordIndex}`}
+          key={`clue-panel-${currentWordIndex}`}
           initial={{ opacity: 0, x: -30 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.4, ease: "easeOut" }}
-          className="md:col-span-2 bg-card text-card-foreground p-6 sm:p-8 md:p-10 lg:p-12 flex flex-col justify-center items-center text-center relative"
+          className="bg-card text-card-foreground p-6 sm:p-8 md:p-10 lg:p-12 flex flex-col justify-between relative"
         >
           <div className="absolute top-4 left-4 text-sm text-muted-foreground flex items-center">
             Your clue <ArrowRightToLine className="ml-1 h-4 w-4" />
           </div>
           
-          <div className="my-auto">
+          <div className="my-auto flex items-center justify-center h-full">
             {renderClueContent()}
           </div>
 
-          <div className="absolute bottom-4 left-4 flex items-center space-x-3">
-            <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-green-500"><ThumbsUp className="h-5 w-5" /></Button>
-            <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-red-500"><ThumbsDown className="h-5 w-5" /></Button>
-          </div>
-          <div className="absolute bottom-4 right-4 text-center">
-            <div className="text-4xl sm:text-5xl font-bold tabular-nums text-foreground">{formatTimeForDisplay(timeLeft)}</div>
-            <div className="text-xs text-muted-foreground">Time remaining</div>
+          <div className="mt-auto"> {/* Bottom aligned content */}
+            <div className="flex justify-between items-end">
+              <div className="flex items-center space-x-2 sm:space-x-3">
+                 <Button 
+                    variant="default" 
+                    size="sm" 
+                    onClick={handleSkip} 
+                    disabled={!!feedbackMessage || gameOver}
+                    className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs sm:text-sm px-3 py-1.5 h-auto"
+                >
+                    <span className="bg-indigo-700/80 px-1.5 py-0.5 rounded-sm text-xs mr-1.5">esc</span> Skip
+                </Button>
+                <div className="flex items-center text-muted-foreground text-sm">
+                    <HelpCircle className="h-4 w-4 mr-1" /> 0 {/* Placeholder for hints used */}
+                </div>
+                <div className="flex items-center text-muted-foreground text-sm">
+                    <Flame className="h-4 w-4 mr-1" /> 0 {/* Placeholder for streak/lives */}
+                </div>
+              </div>
+              <div className="text-right">
+                <div className="text-4xl sm:text-5xl font-bold tabular-nums text-foreground">{formatTimeForDisplay(timeLeft)}</div>
+                <div className="text-xs text-muted-foreground">Time remaining <ChevronsRight className="inline h-3 w-3" /></div>
+              </div>
+            </div>
           </div>
         </motion.div>
 
         {/* Right Panel: Options or Input */}
         <motion.div 
-           key={`options-${currentWordIndex}`}
+           key={`input-panel-${currentWordIndex}`}
            initial={{ opacity: 0, x: 30 }}
            animate={{ opacity: 1, x: 0 }}
            transition={{ duration: 0.4, ease: "easeOut", delay: 0.1 }}
-          className="bg-muted/30 p-6 sm:p-8 flex flex-col justify-center"
+          className="bg-muted/30 p-6 sm:p-8 flex flex-col justify-center items-center"
         >
           {selectedMode === 'basic' && currentWordData.options ? (
-            <div className="space-y-3">
+            <div className="space-y-3 w-full max-w-sm">
               {shuffledOptions.map((option, index) => (
                 <Button
                   key={option}
                   variant="outline"
                   className={cn(
                     "w-full h-auto py-4 sm:py-5 text-base sm:text-lg justify-between items-center text-left whitespace-normal hover:bg-primary/10 hover:border-primary",
-                    userInput === option && "bg-primary/20 border-primary ring-2 ring-primary"
+                    userInput === option && !feedbackMessage && "bg-primary/20 border-primary ring-2 ring-primary", // Highlight selection before feedback
+                    feedbackMessage && option === currentWordData.correctAnswer && "bg-green-500/20 border-green-500 ring-2 ring-green-500", // Correct answer on feedback
+                    feedbackMessage && userInput === option && option !== currentWordData.correctAnswer && "bg-red-500/20 border-red-500 ring-2 ring-red-500" // Incorrect user selection on feedback
                   )}
                   onClick={() => handleOptionSelect(option)}
                   disabled={!!feedbackMessage}
@@ -270,28 +355,34 @@ export default function GameInterface({ selectedMode, onGoBack }: GameInterfaceP
                 </Button>
               ))}
             </div>
-          ) : (
-            // Fallback for non-basic or if options are missing (should not happen for basic if data is correct)
-            <form onSubmit={(e) => { e.preventDefault(); handleSubmitAnswer(); }} className="space-y-4">
-              <Input
+          ) : (selectedMode === 'intermediate' || selectedMode === 'advanced' || selectedMode === 'expert' || selectedMode === 'junior') ? (
+            <div className="w-full max-w-md text-center space-y-6">
+              {currentWordData.hint && (
+                <p className="text-2xl sm:text-3xl font-semibold text-foreground/80">
+                  {currentWordData.hint}
+                </p>
+              )}
+              {renderLetterBoxes()}
+              {/* Hidden input for capturing keyboard events */}
+              <input
+                ref={hiddenInputRef}
                 type="text"
-                placeholder="Type your answer..."
-                value={userInput}
-                onChange={(e) => setUserInput(e.target.value)}
-                className="text-lg h-12"
-                disabled={!!feedbackMessage}
+                className="opacity-0 w-0 h-0 absolute"
+                onFocus={() => hiddenInputRef.current?.focus()} // Keep focus
+                value={userInput} // Needed to ensure state drives the value if we were to show it
+                readOnly // We handle input via global keydown
               />
-              <Button type="submit" className="w-full h-12 text-lg" disabled={!userInput.trim() || !!feedbackMessage}>
-                Submit
-              </Button>
-            </form>
+            </div>
+          ) : (
+            <p className="text-muted-foreground">Game mode not fully configured for display.</p>
           )}
+
            {feedbackMessage && (
             <motion.div 
                 initial={{ opacity: 0, y: 10 }} 
                 animate={{ opacity: 1, y: 0 }} 
                 className={cn(
-                    "mt-4 p-3 rounded-md text-center font-semibold text-sm",
+                    "mt-6 p-3 rounded-md text-center font-semibold text-sm w-full max-w-sm",
                     feedbackMessage.includes('Correct') ? "bg-green-100 text-green-700 dark:bg-green-800/30 dark:text-green-300" 
                                                         : "bg-red-100 text-red-700 dark:bg-red-800/30 dark:text-red-300"
                 )}
