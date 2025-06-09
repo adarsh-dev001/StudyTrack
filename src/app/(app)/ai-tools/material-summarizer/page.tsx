@@ -23,10 +23,13 @@ import OnboardingForm from '@/components/onboarding/onboarding-form';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/ui/skeleton';
 
-import * as pdfjsLib from 'pdfjs-dist/build/pdf';
-import 'pdfjs-dist/web/pdf_viewer.css';
+import * as pdfjsLib from 'pdfjs-dist';
+// Import the worker entry point
+import pdfjsWorker from 'pdfjs-dist/build/pdf.worker.entry';
+
 if (typeof window !== 'undefined') {
-  pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
+  // Set the workerSrc to the imported entry point
+  pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorker;
 }
 
 
@@ -159,11 +162,11 @@ export default function MaterialSummarizerPage() {
           for (let i = 1; i <= pdf.numPages; i++) {
             const page = await pdf.getPage(i);
             const text = await page.getTextContent();
-            textContent += text.items.map((s: any) => s.str).join(' ') + '\n';
+            textContent += text.items.map((s: any) => s.str).join(' ') + '\\n';
           }
           form.setValue('material', textContent.trim());
           if (!form.getValues('topic')) {
-            form.setValue('topic', file.name.replace(/\.pdf$/i, ''));
+            form.setValue('topic', file.name.replace(/\\.pdf$/i, ''));
           }
           toast({ title: 'PDF Processed!', description: 'Text extracted and ready for summarization.' });
         }
