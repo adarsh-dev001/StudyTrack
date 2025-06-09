@@ -20,17 +20,17 @@ const gameModesDetails: Record<GameMode, GameModeDetails> = {
 };
 
 export interface ChallengeDataForGame {
-  id: string; 
+  id: string;
   word: string;
   clueType: 'definition' | 'fill-in-the-blank';
   clue: string;
-  options?: string[]; 
-  correctAnswer: string; 
-  hint?: string; 
+  options?: string[];
+  correctAnswer: string;
+  hint?: string;
 }
 
 
-const MAX_QUESTIONS_PER_SESSION = 3; 
+const MAX_QUESTIONS_PER_SESSION = 3;
 
 interface GameInterfaceProps {
   selectedMode: GameMode;
@@ -91,12 +91,20 @@ export default function GameInterface({ selectedMode, onGoBack }: GameInterfaceP
   const [gameOver, setGameOver] = useState(false);
   const [feedbackMessage, setFeedbackMessage] = useState<string | null>(null);
   const [isLoadingSession, setIsLoadingSession] = useState(true);
-  const [previousWordsForAI, setPreviousWordsForAI] = useState<string[]>([]); 
+  const [previousWordsForAI, setPreviousWordsForAI] = useState<string[]>([]);
 
   const { toast } = useToast();
   const hiddenInputRef = useRef<HTMLInputElement>(null);
   const correctAnswerSoundRef = useRef<HTMLAudioElement | null>(null);
   const wrongAnswerSoundRef = useRef<HTMLAudioElement | null>(null);
+
+  console.log('--- GameInterface Render ---');
+  console.log('isLoadingSession:', isLoadingSession);
+  console.log('gameOver:', gameOver);
+  console.log('currentChallengeData:', currentChallengeData);
+  console.log('currentQuestionNum:', currentQuestionNum);
+  console.log('feedbackMessage:', feedbackMessage);
+
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -117,6 +125,7 @@ export default function GameInterface({ selectedMode, onGoBack }: GameInterfaceP
   }, []);
 
   const fetchNewGameSession = useCallback(async () => {
+    console.log('[fetchNewGameSession] Starting to fetch new game session.');
     setIsLoadingSession(true);
     setFeedbackMessage(null);
     setUserInput('');
@@ -132,9 +141,10 @@ export default function GameInterface({ selectedMode, onGoBack }: GameInterfaceP
 
     try {
       const aiResult: WordQuestSessionOutput = await generateWordQuestSession(aiInput);
-      
+      console.log('[fetchNewGameSession] AI Result:', aiResult);
+
       if (!aiResult.challenges || aiResult.challenges.length === 0) {
-        console.error("AI returned no challenges, flow should have thrown an error.");
+        console.error("[fetchNewGameSession] AI returned no challenges.");
         toast({ title: "Game Error", description: "AI failed to provide any challenges. Please try again.", variant: "destructive" });
         setGameOver(true);
         setIsLoadingSession(false);
@@ -150,29 +160,32 @@ export default function GameInterface({ selectedMode, onGoBack }: GameInterfaceP
         correctAnswer: challenge.word,
         hint: challenge.hint,
       }));
-      
+      console.log('[fetchNewGameSession] Mapped AI challenges:', newSessionChallenges);
+
       if (newSessionChallenges.length === 0 || !newSessionChallenges[0] || !newSessionChallenges[0].word || !newSessionChallenges[0].clue) {
-        console.error("First challenge data is invalid after mapping:", newSessionChallenges[0]);
-        toast({ title: "Game Error", description: "Received invalid first challenge. Please try again.", variant: "destructive" });
+        console.error("[fetchNewGameSession] First challenge data is invalid after mapping:", newSessionChallenges[0]);
+        toast({ title: "Game Error", description: "Received invalid first challenge from AI. Please try again.", variant: "destructive" });
         setGameOver(true);
         setIsLoadingSession(false);
         return;
       }
-      
+
       setGameSessionChallenges(newSessionChallenges);
       setCurrentChallengeData(newSessionChallenges[0]);
-      setCurrentQuestionNum(0); 
-      setScore(0); 
-      setGameOver(false); 
+      console.log('[fetchNewGameSession] Set currentChallengeData to first challenge:', newSessionChallenges[0]);
+      setCurrentQuestionNum(0);
+      setScore(0);
+      setGameOver(false);
       setTimeLeft(getTimeLimitForMode(selectedMode));
-      setPreviousWordsForAI(prev => [...new Set([...prev, ...newSessionChallenges.map(c => c.word)])].slice(-50)); 
+      setPreviousWordsForAI(prev => [...new Set([...prev, ...newSessionChallenges.map(c => c.word)])].slice(-50));
 
     } catch (error: any) {
       console.error("Error fetching game session from AI:", error);
       toast({ title: "Error Generating Game", description: error.message || "Could not fetch challenges. Please try restarting.", variant: "destructive" });
-      setGameOver(true); 
+      setGameOver(true);
     } finally {
       setIsLoadingSession(false);
+      console.log('[fetchNewGameSession] Finished fetching. isLoadingSession:', false);
     }
   }, [selectedMode, previousWordsForAI, getTimeLimitForMode, toast]);
 
@@ -189,22 +202,26 @@ export default function GameInterface({ selectedMode, onGoBack }: GameInterfaceP
 
 
   const proceedToNextOrEnd = useCallback(() => {
+    console.log('[proceedToNextOrEnd] Called. Current question num:', currentQuestionNum);
     setFeedbackMessage(null);
     setUserInput('');
     setIsHintUsedForQuestion(false);
 
-    if (currentQuestionNum < gameSessionChallenges.length -1) {
+    if (currentQuestionNum < gameSessionChallenges.length - 1) {
       const nextQuestionIndex = currentQuestionNum + 1;
       setCurrentQuestionNum(nextQuestionIndex);
       setCurrentChallengeData(gameSessionChallenges[nextQuestionIndex]);
       setTimeLeft(getTimeLimitForMode(selectedMode));
+      console.log('[proceedToNextOrEnd] Moving to next question index:', nextQuestionIndex, gameSessionChallenges[nextQuestionIndex]);
     } else {
+      console.log('[proceedToNextOrEnd] Game over.');
       setGameOver(true);
     }
   }, [currentQuestionNum, gameSessionChallenges, selectedMode, getTimeLimitForMode]);
 
   const handleSubmitAnswer = useCallback(() => {
     if (!currentChallengeData || feedbackMessage || isLoadingSession) return;
+    console.log('[handleSubmitAnswer] User input:', userInput, 'Correct Answer:', currentChallengeData.correctAnswer);
 
     let isCorrect = false;
     if (selectedMode === 'basic') {
@@ -229,41 +246,44 @@ export default function GameInterface({ selectedMode, onGoBack }: GameInterfaceP
 
   const handleOptionSelect = (option: string) => {
     if (feedbackMessage || !currentChallengeData || isLoadingSession) return;
-    setUserInput(option); 
+    setUserInput(option);
     if (selectedMode === 'basic') {
-        let isCorrect = option === currentChallengeData.correctAnswer;
-        if (isCorrect) {
-            setScore(s => s + 10);
-            setFeedbackMessage('Correct! 🎉');
-            correctAnswerSoundRef.current?.play().catch(e => console.error("Error playing correct sound:", e));
-        } else {
-            setFeedbackMessage(`Oops! The correct answer was: ${currentChallengeData.correctAnswer}`);
-            wrongAnswerSoundRef.current?.play().catch(e => console.error("Error playing wrong sound:", e));
-        }
-        setTimeout(() => {
-            proceedToNextOrEnd();
-        }, 1500);
+      console.log('[handleOptionSelect] Option selected:', option);
+      let isCorrect = option === currentChallengeData.correctAnswer;
+      if (isCorrect) {
+        setScore(s => s + 10);
+        setFeedbackMessage('Correct! 🎉');
+        correctAnswerSoundRef.current?.play().catch(e => console.error("Error playing correct sound:", e));
+      } else {
+        setFeedbackMessage(`Oops! The correct answer was: ${currentChallengeData.correctAnswer}`);
+        wrongAnswerSoundRef.current?.play().catch(e => console.error("Error playing wrong sound:", e));
+      }
+      setTimeout(() => {
+        proceedToNextOrEnd();
+      }, 1500);
     }
   };
 
   const handleSkip = useCallback(() => {
     if (gameOver || feedbackMessage || !currentChallengeData || isLoadingSession) return;
+    console.log('[handleSkip] Skipping question.');
     setFeedbackMessage(`Skipped! The answer was: ${currentChallengeData.correctAnswer}`);
     wrongAnswerSoundRef.current?.play().catch(e => console.error("Error playing wrong sound on skip:", e));
     setTimeout(() => {
       proceedToNextOrEnd();
     }, 1500);
   }, [gameOver, feedbackMessage, currentChallengeData, isLoadingSession, proceedToNextOrEnd]);
-  
+
   const formatTimeForDisplay = (totalSeconds: number) => {
     const minutes = Math.floor(totalSeconds / 60);
     const seconds = totalSeconds % 60;
     return `${minutes}:${String(seconds).padStart(2, '0')}`;
   };
-  
-   useEffect(() => {
+
+  useEffect(() => {
     if (gameOver || isLoadingSession || feedbackMessage || !currentChallengeData) return;
     if (timeLeft <= 0) {
+      console.log('[TimerEffect] Time ran out, skipping.');
       handleSkip();
       return;
     }
@@ -308,9 +328,19 @@ export default function GameInterface({ selectedMode, onGoBack }: GameInterfaceP
       userInput.length === currentChallengeData.correctAnswer.length &&
       !feedbackMessage && !isLoadingSession
     ) {
+      console.log('[UserInputEffect] Input matches word length, submitting.');
       handleSubmitAnswer();
     }
   }, [userInput, currentChallengeData, selectedMode, handleSubmitAnswer, feedbackMessage, isLoadingSession]);
+
+  // Watchdog useEffect to catch unexpected states
+  useEffect(() => {
+    if (!isLoadingSession && !gameOver && !currentChallengeData) {
+      console.error("CRITICAL: Main game UI should render, but currentChallengeData is missing. Fetching new session.");
+      // Attempt to recover by fetching a new session. This might indicate a deeper state issue.
+      // fetchNewGameSession(); // Be cautious with this, could cause loops if not handled well.
+    }
+  }, [isLoadingSession, gameOver, currentChallengeData, fetchNewGameSession]);
 
 
   if (gameOver) {
@@ -345,8 +375,8 @@ export default function GameInterface({ selectedMode, onGoBack }: GameInterfaceP
       </motion.div>
     );
   }
-  
-  if (isLoadingSession || !currentChallengeData) {
+
+  if (isLoadingSession) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[calc(100vh-200px)] text-center p-6">
         <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
@@ -358,10 +388,12 @@ export default function GameInterface({ selectedMode, onGoBack }: GameInterfaceP
 
 
   const renderClueContent = () => {
+    if (!currentChallengeData) return <p className="text-xl md:text-2xl lg:text-3xl text-muted-foreground font-medium">Loading clue...</p>;
     return <p className="text-xl md:text-2xl lg:text-3xl text-foreground font-medium leading-tight">{currentChallengeData.clue}</p>;
   };
 
   const renderLetterBoxes = () => {
+    if (!currentChallengeData) return null;
     const wordLength = currentChallengeData.correctAnswer.length;
     return (
       <div className="flex justify-center space-x-1.5 sm:space-x-2">
@@ -384,7 +416,9 @@ export default function GameInterface({ selectedMode, onGoBack }: GameInterfaceP
   };
 
 
-  return (
+  if (!isLoadingSession && !gameOver && currentChallengeData) {
+    console.log("RENDERING MAIN GAME. Clue:", currentChallengeData.clue);
+    return (
     <div className="w-full h-full flex flex-col">
        <div className="flex justify-between items-center p-3 sm:p-4 border-b">
         <Button onClick={onGoBack} variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
@@ -411,17 +445,17 @@ export default function GameInterface({ selectedMode, onGoBack }: GameInterfaceP
             exit="exit"
             className="bg-card text-card-foreground p-6 sm:p-8 md:p-10 lg:p-12 flex flex-col justify-between relative"
         >
-            <div> 
+            <div>
                 <div className="absolute top-4 left-4 text-sm text-muted-foreground flex items-center">
                     Your clue <ArrowRightToLine className="ml-1 h-4 w-4" />
                 </div>
             </div>
 
-            <div className="my-auto flex items-center justify-center h-full"> 
+            <div className="my-auto flex items-center justify-center h-full">
                 {renderClueContent()}
             </div>
 
-            <div className="mt-auto"> 
+            <div className="mt-auto">
                 <div className="flex justify-between items-end">
                     <div className="flex items-center space-x-2 sm:space-x-3">
                         {(selectedMode === 'intermediate' || selectedMode === 'advanced') && (
@@ -443,9 +477,9 @@ export default function GameInterface({ selectedMode, onGoBack }: GameInterfaceP
                         )}
                         {(selectedMode === 'intermediate' || selectedMode === 'advanced') && currentChallengeData.hint && (
                             <>
-                                <Button 
-                                    variant="ghost" 
-                                    size="sm" 
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
                                     className="text-muted-foreground hover:text-foreground text-xs"
                                     onClick={() => setIsHintUsedForQuestion(true)}
                                     disabled={isHintUsedForQuestion || !currentChallengeData.hint}
@@ -484,7 +518,7 @@ export default function GameInterface({ selectedMode, onGoBack }: GameInterfaceP
             >
               {currentChallengeData.options.map((option, index) => (
                 <motion.div
-                  key={`${currentChallengeData.id}-opt-${index}`} 
+                  key={`${currentChallengeData.id}-opt-${index}`}
                   custom={index}
                   variants={optionVariants}
                   whileHover={{ scale: 1.03, transition: { duration: 0.15 } }}
@@ -511,7 +545,7 @@ export default function GameInterface({ selectedMode, onGoBack }: GameInterfaceP
             </motion.div>
           ) : (selectedMode === 'intermediate' || selectedMode === 'advanced') ? (
             <div className="w-full max-w-md text-center space-y-6">
-              {currentChallengeData.hint && (isHintUsedForQuestion || selectedMode === 'intermediate') && ( 
+              {currentChallengeData.hint && (isHintUsedForQuestion || selectedMode === 'intermediate') && (
                 <motion.p
                   className="text-2xl sm:text-3xl font-semibold text-foreground/80"
                   initial={{ opacity: 0, y: -10 }}
@@ -527,8 +561,8 @@ export default function GameInterface({ selectedMode, onGoBack }: GameInterfaceP
                 type="text"
                 className="opacity-0 w-0 h-0 absolute"
                 onFocus={() => hiddenInputRef.current?.focus()}
-                value={userInput} 
-                readOnly 
+                value={userInput}
+                readOnly
               />
             </div>
           ) : (
@@ -560,5 +594,17 @@ export default function GameInterface({ selectedMode, onGoBack }: GameInterfaceP
         </AnimatePresence>
       </div>
     </div>
-  );
+    );
+  } else {
+    console.log("NOT RENDERING MAIN GAME. State:", { isLoadingSession, gameOver, currentChallengeData });
+    // This case should ideally not be reached if loading/gameOver states are handled.
+    // It might indicate an issue with currentChallengeData not being set when it should be.
+    return (
+        <div className="flex flex-col items-center justify-center min-h-[calc(100vh-200px)] text-center p-6">
+            <p className="text-muted-foreground">An unexpected error occurred or game state is inconsistent.</p>
+            <Button onClick={onGoBack} variant="outline" className="mt-4">Back to Modes</Button>
+      </div>
+    );
+  }
 }
+
