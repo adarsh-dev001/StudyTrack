@@ -86,10 +86,13 @@ export default function SummarizerResultsDisplay({
     }
     setIsDownloadingPdf(true);
     try {
+      const cardBgValue = window.getComputedStyle(document.documentElement).getPropertyValue('--card').trim();
+      const formattedCardBg = `hsl(${cardBgValue})`;
+
       const canvas = await html2canvas(notesElement, { 
         scale: 2, // Increase scale for better resolution
         useCORS: true, 
-        backgroundColor: window.getComputedStyle(document.documentElement).getPropertyValue('--card').trim() || '#ffffff', // Use themed background
+        backgroundColor: formattedCardBg || '#ffffff', // Use themed background
       });
       const imgData = canvas.toDataURL('image/png');
       const pdf = new jsPDF({
