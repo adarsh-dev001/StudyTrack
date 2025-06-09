@@ -7,7 +7,7 @@ runConfig:
   concurrency: 100
   cpu: 2
   memoryMiB: 1024
-
+  firebase apphosting:backends:link planner123
 # Environment variables (including NEXT_PUBLIC_FIREBASE_... and any others like STORAGE_BUCKET)
 # should now be set directly in the Firebase App Hosting console's "Settings" tab.
 #
@@ -17,6 +17,6 @@ runConfig:
 #
 # env:
 #   - variable: MY_THIRD_PARTY_API_KEY
-#     secret: nameOfYourSecretInSecretManagerForThirdPartyKey
+#     secret:  nameOfYourSecretInSecretManagerForThirdPartyKey
 #     availability: # Typically RUNTIME for server-side secrets not needed at build
 #       - RUNTIME
