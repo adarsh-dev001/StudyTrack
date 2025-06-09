@@ -1,4 +1,3 @@
-
 'use client';
 
 import React from 'react';
@@ -26,7 +25,7 @@ const ctaList = [
 
 function FinalCtaSectionComponent() {
   return (
-    <section id="final-cta" className="w-full py-16 md:py-24 lg:py-32 bg-gradient-to-b from-background via-primary/5 to-primary/10">
+    <section id="final-cta" className="w-full py-16 md:py-24 lg:py-32 bg-gradient-to-b from-background via-sky-500/5 to-sky-500/10 dark:via-sky-800/5 dark:to-sky-800/10">
       <motion.div 
         className="container mx-auto px-4 md:px-6 text-center"
         variants={sectionVariants}
@@ -100,6 +99,3 @@ function FinalCtaSectionComponent() {
 }
 
 export default React.memo(FinalCtaSectionComponent);
-
-// Note: Renamed from cta-section.tsx for clarity, or if you prefer, update the content of cta-section.tsx
-// If renaming, ensure imports are updated in src/app/page.tsx

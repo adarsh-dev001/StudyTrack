@@ -1,4 +1,3 @@
-
 'use client';
 
 import React from 'react';
@@ -26,7 +25,7 @@ const itemVariants = {
 
 function HeroSectionComponent() {
   return (
-    <section className="w-full py-16 md:py-24 lg:py-32 xl:py-40 bg-gradient-to-br from-primary/10 via-background to-background">
+    <section className="w-full py-16 md:py-24 lg:py-32 xl:py-40 bg-gradient-to-br from-sky-100/50 via-background to-background dark:from-sky-900/20">
       <motion.div
         className="container mx-auto px-4 md:px-6"
         variants={containerVariants}
@@ -36,7 +35,7 @@ function HeroSectionComponent() {
         <div className="grid gap-8 lg:grid-cols-2 lg:items-center xl:gap-12">
           <div className="flex flex-col justify-center space-y-6 text-center lg:text-left">
             <motion.h1
-              className="font-headline text-4xl font-bold tracking-tighter sm:text-5xl md:text-6xl lg:text-7xl text-foreground"
+              className="font-headline text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl lg:text-7xl text-foreground"
               variants={itemVariants}
             >
               Study Smarter, Not Harder — <br className="hidden sm:inline"/>Powered by <span className="text-primary">AI & Gamification</span>
@@ -51,14 +50,14 @@ function HeroSectionComponent() {
               className="flex flex-col gap-3 sm:flex-row sm:justify-center lg:justify-start"
               variants={itemVariants}
             >
-              <Button size="lg" asChild className="shadow-lg bg-primary hover:bg-primary/90 text-primary-foreground transition-shadow text-base sm:text-lg py-3 px-6">
+              <Button size="xl" asChild className="shadow-lg bg-primary hover:bg-primary/90 text-primary-foreground transition-shadow text-base sm:text-lg py-3.5 px-7">
                 <Link href="/signup">
                   Get Started Free
                   <ArrowRight className="ml-2 h-5 w-5" />
                 </Link>
               </Button>
-              <Button variant="outline" size="lg" asChild className="text-base sm:text-lg py-3 px-6">
-                <Link href="/quick-onboarding"> {/* Updated href here */}
+              <Button variant="outline" size="xl" asChild className="text-base sm:text-lg py-3.5 px-7 border-border hover:bg-accent/10 hover:border-accent">
+                <Link href="/quick-onboarding"> 
                   Try AI Tools Now
                   <Zap className="ml-2 h-5 w-5 text-accent" />
                 </Link>

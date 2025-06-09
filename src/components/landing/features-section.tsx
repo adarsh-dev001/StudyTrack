@@ -1,4 +1,3 @@
-
 'use client';
 
 import React from 'react';
@@ -7,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { 
-  Brain, Gamepad, TrendingUp, HelpCircle, Lock, Sparkles, ListChecks, Award, BarChart, Settings2, ArrowRight
+  Brain, Gamepad, TrendingUp, HelpCircle, Lock, Sparkles, ListChecks, ArrowRight
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import Image from 'next/image';
@@ -68,19 +67,19 @@ const featureShowcaseData = [
   {
     id: 'quiz-generator',
     icon: HelpCircle,
-    title: 'SmartQuiz AI (Enhanced & Coming Soon)',
-    description: 'An advanced quiz generator is on its way! Features topic selection, difficulty/exam filters (NEET, UPSC, JEE), real-time scoring, detailed explanations, and leaderboard integration.',
+    title: 'SmartQuiz AI', // Updated title, removed Coming Soon
+    description: 'An advanced quiz generator! Features topic selection, difficulty/exam filters (NEET, UPSC, JEE), real-time scoring, and detailed explanations.',
     details: [
       'Topic-based quizzes with customizable difficulty.',
       'Exam-specific modes: NEET, UPSC, JEE & more.',
-      'Instant scoring, explanations, and progress tracking.',
+      'Instant scoring and detailed explanations for learning.',
     ],
     imageSrc: '/images/online-exam-software.jpg',
     imageAlt: 'Advanced Quiz Generator illustration',
     dataAiHint: 'quiz test assessment',
-    ctaText: 'Learn More (Coming Soon)',
-    ctaLink: '#',
-    isComingSoon: true,
+    ctaText: 'Create a Quiz', // Updated CTA
+    ctaLink: '/ai-tools/smart-quiz', // Updated Link
+    isComingSoon: false, // No longer coming soon
     align: 'right',
   },
   {
@@ -148,7 +147,7 @@ function FeaturesSectionComponent() {
               <motion.div 
                 key={feature.id} 
                 className={`grid gap-6 md:gap-10 lg:gap-16 items-center lg:grid-cols-2 ${feature.align === 'right' ? 'lg:grid-flow-col-dense' : ''}`}
-                variants={itemVariants} // Ensures each feature block animates in
+                variants={itemVariants} 
               >
                 <div className={`relative w-full aspect-[16/10] rounded-xl overflow-hidden shadow-2xl group ${feature.align === 'right' ? 'lg:col-start-2' : ''}`}>
                   <Image

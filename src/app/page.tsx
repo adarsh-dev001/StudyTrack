@@ -1,4 +1,3 @@
-
 // Removed 'use client';
 
 import React, { Suspense } from 'react';
@@ -8,11 +7,12 @@ import { Skeleton } from '@/components/ui/skeleton';
 
 // Direct imports for sections instead of React.lazy
 import HeroSection from '@/components/landing/hero-section';
+import FeatureShowcaseSection from '@/components/landing/feature-showcase-section'; // New import
 import FeaturesSection from '@/components/landing/features-section';
 import KeyFeaturesSummary from '@/components/landing/key-features-summary';
 import TestimonialsSection from '@/components/landing/testimonials-section';
 import FinalCtaSection from '@/components/landing/final-cta-section';
-import BlogPreviewSection from '@/components/landing/blog-preview-section'; // This is the Server Component
+import BlogPreviewSection from '@/components/landing/blog-preview-section'; 
 
 function LandingPageFallback() {
   return (
@@ -20,6 +20,9 @@ function LandingPageFallback() {
       {/* Hero Skeleton */}
       <Skeleton className="h-[450px] w-full rounded-xl" />
       
+      {/* Features Showcase Skeleton (New) */}
+      <Skeleton className="h-[350px] w-full rounded-xl" />
+
       {/* Features Skeletons (multiple) */}
       <Skeleton className="h-[300px] w-full rounded-xl" />
       <Skeleton className="h-[300px] w-full rounded-xl" />
@@ -41,13 +44,12 @@ export default function HomePage() {
   return (
     <div className="flex min-h-screen flex-col bg-background text-foreground">
       <Header />
-      {/* Removed motion.main wrapper. Framer Motion animations should be within individual Client Components if needed. */}
       <main className="flex-1">
-        {/* Suspense can still be used if BlogPreviewSection or other server components do async work */}
         <Suspense fallback={<LandingPageFallback />}>
           <HeroSection />
+          <FeatureShowcaseSection /> {/* Added the new section here */}
           <FeaturesSection />
-          <BlogPreviewSection /> {/* This Server Component can now fetch data correctly */}
+          <BlogPreviewSection /> 
           <KeyFeaturesSummary />
           <TestimonialsSection />
           <FinalCtaSection />
