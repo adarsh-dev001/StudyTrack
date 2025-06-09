@@ -6,7 +6,7 @@ import { motion } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { ArrowRight, BrainCircuit, ListChecks, Timer, BarChart3, Flame, HelpCircle, FileText, Puzzle } from 'lucide-react'; // Added FileText and Puzzle
+import { ArrowRight, BrainCircuit, ListChecks, Flame, HelpCircle, FileText, Puzzle } from 'lucide-react'; // Updated imports
 import type { LucideIcon } from 'lucide-react';
 
 interface FeatureShowcaseItem {
@@ -39,17 +39,17 @@ const features: FeatureShowcaseItem[] = [
     icon: FileText, // Changed from Timer
     title: 'AI Notes Generator', // Changed from Pomodoro Timer
     description: 'Transform text or PDFs into structured notes, summaries, and quizzes with AI.',
-    learnMoreLink: '/ai-tools/material-summarizer', // Link to material summarizer
-    iconColorClass: 'text-amber-500', // New color
-    bgColorClass: 'bg-amber-500/5 hover:bg-amber-500/10', // New color
+    learnMoreLink: '/ai-tools/material-summarizer',
+    iconColorClass: 'text-amber-500',
+    bgColorClass: 'bg-amber-500/5 hover:bg-amber-500/10',
   },
   {
     icon: HelpCircle, // Changed from BarChart3
     title: 'SmartQuiz AI', // Changed from Productivity Stats
     description: 'Generate custom quizzes on any topic, tailored to exam type and difficulty level.',
-    learnMoreLink: '/ai-tools/smart-quiz', // Link to smart quiz
-    iconColorClass: 'text-teal-500', // New color
-    bgColorClass: 'bg-teal-500/5 hover:bg-teal-500/10', // New color
+    learnMoreLink: '/ai-tools/smart-quiz',
+    iconColorClass: 'text-teal-500',
+    bgColorClass: 'bg-teal-500/5 hover:bg-teal-500/10',
   },
   {
     icon: Flame,
@@ -60,10 +60,10 @@ const features: FeatureShowcaseItem[] = [
     bgColorClass: 'bg-red-500/5 hover:bg-red-500/10',
   },
   {
-    icon: Puzzle, // Was HelpCircle, using Puzzle for AI Doubt Solver if HelpCircle is for SmartQuiz
-    title: 'WordQuest AI',
+    icon: Puzzle, // Changed from HelpCircle
+    title: 'WordQuest AI', // Changed from AI Doubt Solver
     description: 'Sharpen your vocabulary with engaging word challenges and games powered by AI.',
-    learnMoreLink: '/wordquest', // Link to WordQuest AI
+    learnMoreLink: '/wordquest',
     iconColorClass: 'text-indigo-500',
     bgColorClass: 'bg-indigo-500/5 hover:bg-indigo-500/10',
   },
