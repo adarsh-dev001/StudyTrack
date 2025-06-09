@@ -6,7 +6,7 @@ import { ChartContainer, ChartLegend, ChartTooltipContent } from "@/components/u
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from '@/contexts/auth-context';
 import { db } from '@/lib/firebase';
-import { collection, onSnapshot, query, where, type Unsubscribe, Timestamp } from 'firebase/firestore';
+import { collection, onSnapshot, query, where, type Unsubscribe, Timestamp, select } from 'firebase/firestore'; // Added select
 import { Loader2, PieChartIcon as PieIcon } from "lucide-react";
 import React, { useEffect, useRef, useState } from 'react';
 import { Cell, Pie, PieChart as RechartsPieChart } from "recharts";
@@ -94,13 +94,18 @@ export default function SubjectTimeDistributionChart({ selectedSubjectFilter = n
 
     setLoadingSubjectData(true);
     const tasksRef = collection(db, 'users', currentUser.uid, 'plannerTasks');
-    let q;
+    
+    const queryConstraints = [
+        where('status', '==', 'completed'),
+        select("subject", "duration", "status") // Select only necessary fields including the one used in where
+    ];
 
     if (selectedSubjectFilter && selectedSubjectFilter !== "all") {
-      q = query(tasksRef, where('subject', '==', selectedSubjectFilter), where('status', '==', 'completed'));
-    } else {
-      q = query(tasksRef, where('status', '==', 'completed'));
+      queryConstraints.push(where('subject', '==', selectedSubjectFilter));
     }
+    
+    const q = query(tasksRef, ...queryConstraints);
+
 
     if (unsubscribeRef.current) {
       unsubscribeRef.current();

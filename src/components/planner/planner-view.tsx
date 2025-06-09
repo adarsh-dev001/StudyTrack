@@ -37,7 +37,8 @@ import {
   deleteDoc,
   query,
   where,
-  onSnapshot
+  onSnapshot,
+  select, // Added select
 } from "firebase/firestore"
 import { Skeleton } from "@/components/ui/skeleton";
 import type { Task, Priority } from "./planner-types"; 
@@ -195,13 +196,15 @@ export function PlannerView({ selectedDate, selectedSubjectFilter, onDateChange,
 
     setIsLoadingTasks(true);
     const tasksCollectionRef = collection(db, "users", currentUser.uid, "plannerTasks");
-    let q;
+    let queryConstraints = [
+        select("title", "subject", "topic", "description", "duration", "priority", "status", "startHour", "day") // Select only necessary fields
+    ];
 
     if (selectedSubjectFilter && selectedSubjectFilter !== "all") {
-      q = query(tasksCollectionRef, where("subject", "==", selectedSubjectFilter));
-    } else {
-      q = query(tasksCollectionRef);
+      queryConstraints.push(where("subject", "==", selectedSubjectFilter));
     }
+    
+    const q = query(tasksCollectionRef, ...queryConstraints);
     
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
       const fetchedTasks: Task[] = [];
@@ -361,6 +364,8 @@ export function PlannerView({ selectedDate, selectedSubjectFilter, onDateChange,
     }
 
     const tasksForCurrentWeekView = tasks.filter(task => {
+        // Week view shows all tasks that fall under a specific day of the week (0-6)
+        // No date-specific filtering here, only day of week
         return true; 
     });
 
