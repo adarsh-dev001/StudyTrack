@@ -77,11 +77,11 @@ export default function MaterialSummarizerPage() {
 
   useEffect(() => {
     // Set the workerSrc for pdfjs-dist. This needs to be done on the client side.
-    // pdf.worker.min.js should be manually copied to public/js/ from node_modules/pdfjs-dist/build/
+    // User needs to copy pdf.worker.min.mjs to public/js/ from node_modules/pdfjs-dist/build/
     if (typeof window !== 'undefined') {
-      pdfjsLib.GlobalWorkerOptions.workerSrc = `/js/pdf.worker.min.js`;
+      pdfjsLib.GlobalWorkerOptions.workerSrc = `/js/pdf.worker.min.mjs`;
     }
-  }, []); // Empty dependency array ensures this runs once on mount
+  }, []); 
 
   useEffect(() => {
     if (analysisResult && resultsRef.current) {
