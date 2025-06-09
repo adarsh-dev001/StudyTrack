@@ -134,7 +134,7 @@ export default function SyllabusResultDisplay({ generatedSyllabus, overallFeedba
                 <h3 className="text-md sm:text-lg font-semibold text-accent mb-1.5 sm:mb-2 flex items-center">
                     <Brain className="mr-2 h-4 w-4 sm:h-5 sm:w-5 text-accent" /> AI Coach's Wisdom:
                 </h3>
-                <p className="text-xs sm:text-sm text-accent-foreground/90 dark:text-accent-foreground/80 leading-relaxed">
+                <p className="text-xs sm:text-sm text-foreground/90 dark:text-accent-foreground/80 leading-relaxed">
                     {formValues.userName && `Hello ${formValues.userName}! `}{overallFeedback}
                 </p>
                 <div className="mt-2 flex justify-end space-x-2">
@@ -252,3 +252,4 @@ export default function SyllabusResultDisplay({ generatedSyllabus, overallFeedba
     </Card>
   );
 }
+
