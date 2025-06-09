@@ -1,18 +1,20 @@
 
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Button } from '@/components/ui/button';
-import { Sparkles, ListChecks, HelpCircle, CheckCircle, XCircle, Lightbulb, ClipboardList, FileText, Download, Loader2, Brain, Share2, SaveAll, FileOutput, Printer } from 'lucide-react';
+import { Sparkles, ListChecks, HelpCircle, CheckCircle, XCircle, Lightbulb, ClipboardList, FileText, Download, Loader2, Brain, Share2, SaveAll, FileOutput, Printer, ChevronDown, ChevronUp } from 'lucide-react';
 import type { SummarizeStudyMaterialOutput, MCQ } from '@/ai/flows/summarize-study-material';
 import { cn } from '@/lib/utils';
 import { jsPDF } from 'jspdf';
 import html2canvas from 'html2canvas';
 import { useToast } from '@/hooks/use-toast';
+import { motion, AnimatePresence } from 'framer-motion';
+import { renderMarkdownToHtml } from '@/lib/markdown-utils';
 
 interface MCQWithUserAnswer extends MCQ {
   userSelectedOption?: number;
@@ -27,59 +29,9 @@ interface SummarizerResultsDisplayProps {
   handleShowAnswer: (questionIndex: number) => Promise<void>;
 }
 
-function renderBasicMarkdown(markdownText: string): string {
-  let html = markdownText;
-  // Headers - ensure proper class names and newlines
-  html = html.replace(/^# (.*$)/gim, '<h1 class="font-headline text-2xl font-bold mt-6 mb-3 border-b border-border/70 pb-1.5">$1</h1>');
-  html = html.replace(/^## (.*$)/gim, '<h2 class="font-headline text-xl font-semibold mt-5 mb-2 border-b border-border/70 pb-1">$1</h2>');
-  html = html.replace(/^### (.*$)/gim, '<h3 class="font-headline text-lg font-semibold mt-4 mb-1.5">$1</h3>');
-  html = html.replace(/^#### (.*$)/gim, '<h4 class="font-headline text-base font-semibold mt-3 mb-1">$1</h4>');
-  
-  // Bold
-  html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-  html = html.replace(/__(.*?)__/g, '<strong>$1</strong>');
-  // Italic
-  html = html.replace(/\*(.*?)\*/g, '<em>$1</em>');
-  html = html.replace(/_(.*?)_/g, '<em>$1</em>');
-
-  // Unordered lists - simplified approach for cleaner output within dangerouslySetInnerHTML
-  // Wrap list blocks properly and handle nested lists better.
-  html = html.replace(/^\s*([-*+]) +(.*)/gm, (match, bullet, content) => {
-    // This basic replacement is tricky for nested lists without a full parser.
-    // For now, ensuring each item becomes an <li> is the main goal.
-    // The ul/ol wrapping will be handled by a more general regex or post-processing.
-    return `<li>${content.trim()}</li>`;
-  });
-  // Wrap consecutive <li> elements in <ul>
-  html = html.replace(/(<li>.*?<\/li>\s*)+/g, (match) => {
-    return `<ul class="list-disc list-outside pl-5 my-2 space-y-1.5">${match}</ul>`;
-  });
-  
-  // Paragraphs and line breaks
-  // First, protect list structures from being broken by <br> tags
-  html = html.replace(/<\/ul>\n<ul>/g, '</ul><ul>'); // Consolidate adjacent lists
-  html = html.replace(/<\/li>\n<li>/g, '</li><li>'); // Consolidate list items
-  
-  // Convert newlines to <br />, but not inside list items or immediately after block elements
-  html = html.split('\n').map(line => {
-      if (line.match(/^\s*<li|^\s*<ul|^\s*<\/ul|^\s*<h[1-4]|^\s*<\/h[1-4]>/)) {
-          return line; // Don't add <br> for lines starting with list/heading tags
-      }
-      return line.trim() === '' ? '<br class="my-1.5"/>' : `<p class="my-2 leading-relaxed font-body">${line}</p>`;
-  }).join('').replace(/<\/p><p/g, '</p><br class="my-1.5"/><p'); // Ensure space between paragraphs
-
-  // Cleanup excessive breaks and breaks around block elements
-  html = html.replace(/<br \/>\s*<br \/>/g, '<br class="my-1.5"/>') 
-    .replace(/(<\/ul>)<br class="my-1.5"\/>/g, '$1') 
-    .replace(/<br class="my-1.5"\/>(<ul)/g, '$1')   
-    .replace(/(<\/h[1-4]>)<br class="my-1.5"\/>/g, '$1') 
-    .replace(/<br class="my-1.5"\/>(<h[1-4]>)/g, '$1')
-    .replace(/<\/p><br class="my-1.5"\/>(<h[1-4]>)/g, '</p>$1')
-    .replace(/(<\/h[1-4]>)<br class="my-1.5"\/>(<p)/g, '$1$2');
-    
-  return html;
-}
-
+const MAX_NOTES_LENGTH_DISPLAY = 1000; // Characters to show before truncation
+const INITIAL_COLLAPSED_MAX_HEIGHT = '300px'; // CSS max-height for collapsed view
+const EXPANDED_MAX_HEIGHT = 'none'; // Or a very large value like '2000px' if 'none' is problematic
 
 export default function SummarizerResultsDisplay({
   analysisResult,
@@ -91,17 +43,29 @@ export default function SummarizerResultsDisplay({
   const [isDownloadingPdf, setIsDownloadingPdf] = React.useState(false);
   const { toast } = useToast();
 
+  const [isNotesExpanded, setIsNotesExpanded] = React.useState(false);
+  const [showToggleNotesButton, setShowToggleNotesButton] = React.useState(false);
+
+  useEffect(() => {
+    if (analysisResult.structuredNotes.length > MAX_NOTES_LENGTH_DISPLAY) {
+      setShowToggleNotesButton(true);
+      setIsNotesExpanded(false); // Default to collapsed if long
+    } else {
+      setShowToggleNotesButton(false);
+      setIsNotesExpanded(true); // Always expanded if short
+    }
+  }, [analysisResult.structuredNotes]);
+
   const handleShare = async () => {
     const shareData = {
       title: `Study Notes: ${topic}`,
       text: `Check out these AI-generated study notes for "${topic}" from StudyTrack!\nSummary: ${analysisResult.summary.substring(0,100)}...`,
-      url: window.location.href, // Or a specific shareable link if you implement one
+      url: window.location.href, 
     };
     try {
       if (navigator.share) {
         await navigator.share(shareData);
       } else {
-        // Fallback for browsers that don't support navigator.share
         await navigator.clipboard.writeText(`${shareData.title}\n${shareData.url}`);
         toast({ title: "Link Copied!", description: "Link to these notes copied to clipboard." });
       }
@@ -117,8 +81,7 @@ export default function SummarizerResultsDisplay({
         const printWindow = window.open('', '_blank');
         if (printWindow) {
             printWindow.document.write(`<html><head><title>Print Notes - ${topic}</title>`);
-            // Optional: Add styles for printing
-            printWindow.document.write('<style> body { font-family: sans-serif; line-height: 1.6; } h1, h2, h3, h4 { margin-bottom: 0.5em; } ul { padding-left: 20px; } </style>');
+            printWindow.document.write('<style> body { font-family: sans-serif; line-height: 1.6; } h1, h2, h3, h4 { margin-bottom: 0.5em; } ul, ol { padding-left: 20px; margin-top: 0.5em; margin-bottom: 0.5em; } p { margin-top: 0.5em; margin-bottom: 0.5em;} </style>');
             printWindow.document.write('</head><body>');
             printWindow.document.write(notesElement.innerHTML);
             printWindow.document.write('</body></html>');
@@ -131,7 +94,6 @@ export default function SummarizerResultsDisplay({
         toast({ title: "Print Error", description: "Notes content not found for printing.", variant: "destructive" });
     }
   };
-
 
   const handleDownloadPdf = async () => {
     const notesElement = document.getElementById('structured-notes-content-for-pdf');
@@ -150,6 +112,8 @@ export default function SummarizerResultsDisplay({
         useCORS: true, 
         backgroundColor: formattedCardBg || '#ffffff',
         logging: false, 
+        windowWidth: notesElement.scrollWidth, // Use scrollWidth for full content width
+        windowHeight: notesElement.scrollHeight, // Use scrollHeight for full content height
       });
       const imgData = canvas.toDataURL('image/png');
       const pdf = new jsPDF({
@@ -159,13 +123,24 @@ export default function SummarizerResultsDisplay({
       });
 
       const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = pdf.internal.pageSize.getHeight();
       const imgProps= pdf.getImageProperties(imgData);
-      const aspectRatio = imgProps.width / imgProps.height;
       
-      let newImgWidth = pdfWidth - 20; 
-      let newImgHeight = newImgWidth / aspectRatio;
+      let imgWidth = pdfWidth - 20; // 10mm margin on each side
+      let imgHeight = (imgProps.height * imgWidth) / imgProps.width;
+      let heightLeft = imgHeight;
+      let position = 10; // Initial y position with 10mm margin
 
-      pdf.addImage(imgData, 'PNG', 10, 10, newImgWidth, newImgHeight);
+      pdf.addImage(imgData, 'PNG', 10, position, imgWidth, imgHeight);
+      heightLeft -= (pdfHeight - 20); // Subtract usable page height (with margins)
+
+      while (heightLeft > 0) {
+        position = heightLeft - imgHeight + 10; // Move to next page content start
+        pdf.addPage();
+        pdf.addImage(imgData, 'PNG', 10, position, imgWidth, imgHeight);
+        heightLeft -= (pdfHeight - 20);
+      }
+      
       pdf.save(`${topic.replace(/[^a-zA-Z0-9]/g, '_') || 'study_notes'}.pdf`);
       toast({ title: "PDF Downloaded!", description: "Your notes have been saved as a PDF." });
     } catch (error) {
@@ -213,10 +188,44 @@ export default function SummarizerResultsDisplay({
                   </Button>
               </div>
             </CardHeader>
-            <CardContent className="p-4 md:p-6 bg-background min-h-[300px]">
-              <div id="structured-notes-content-for-pdf" className="prose prose-base lg:prose-lg max-w-none dark:prose-invert text-foreground leading-relaxed dark:text-gray-100 font-body">
-                 <div dangerouslySetInnerHTML={{ __html: renderBasicMarkdown(analysisResult.structuredNotes) }} />
+            <CardContent className="p-4 md:p-6 bg-background min-h-[200px] relative">
+              {/* Hidden div for full content PDF generation */}
+              <div style={{ position: 'absolute', left: '-9999px', top: '-9999px', width: '800px' }}>
+                <div 
+                  id="structured-notes-content-for-pdf" 
+                  className="prose prose-base lg:prose-lg max-w-none dark:prose-invert text-foreground leading-relaxed dark:text-gray-100 font-body bg-card p-4"
+                  dangerouslySetInnerHTML={{ __html: renderMarkdownToHtml(analysisResult.structuredNotes) }}
+                />
               </div>
+
+              {/* Visible, collapsible content */}
+              <motion.div
+                animate={{ maxHeight: isNotesExpanded ? EXPANDED_MAX_HEIGHT : INITIAL_COLLAPSED_MAX_HEIGHT }}
+                transition={{ duration: 0.5, ease: "easeInOut" }}
+                className="overflow-hidden relative"
+              >
+                <div 
+                  className="prose prose-base lg:prose-lg max-w-none dark:prose-invert text-foreground leading-relaxed dark:text-gray-100 font-body"
+                  dangerouslySetInnerHTML={{ __html: renderMarkdownToHtml(analysisResult.structuredNotes) }}
+                />
+                {!isNotesExpanded && showToggleNotesButton && (
+                  <div className="absolute bottom-0 left-0 right-0 h-20 bg-gradient-to-t from-background via-background/80 to-transparent pointer-events-none" />
+                )}
+              </motion.div>
+              
+              {showToggleNotesButton && (
+                <div className="flex justify-center mt-3">
+                  <Button
+                    onClick={() => setIsNotesExpanded(!isNotesExpanded)}
+                    variant="outline"
+                    size="sm"
+                    className="bg-card hover:bg-muted shadow-md"
+                  >
+                    {isNotesExpanded ? <ChevronUp className="mr-1.5 h-4 w-4" /> : <ChevronDown className="mr-1.5 h-4 w-4" />}
+                    {isNotesExpanded ? "Show Less" : "Show More"}
+                  </Button>
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
@@ -342,5 +351,3 @@ export default function SummarizerResultsDisplay({
     </div>
   );
 }
-
-    
