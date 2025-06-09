@@ -10,7 +10,7 @@ import { Timer, HelpCircle, SkipForward, Star, ArrowLeft, ImageIcon, ListChecks,
 import type { GameMode, GameModeDetails } from './types';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
-import { generateWordQuestChallenge, type GenerateWordQuestChallengeInput, type WordQuestChallengeOutput } from '@/ai/flows/generate-wordquest-challenge-flow';
+import { generateWordQuestSession, type GenerateWordQuestSessionInput, type WordQuestSessionOutput, type SingleWordQuestChallenge } from '@/ai/flows/generate-wordquest-challenge-flow';
 import { useToast } from '@/hooks/use-toast';
 
 // Consistent Game Mode Details
@@ -20,19 +20,19 @@ const gameModesDetails: Record<GameMode, GameModeDetails> = {
   advanced: { title: 'Advanced', description: 'Challenging Definitions - Timed', icon: Flame, colorClass: 'border-orange-500/30 bg-orange-500/5 hover:shadow-orange-500/10', iconColorClass: 'text-orange-500' },
 };
 
-// Modified WordData type to align with AI output
-export interface WordDataForGame {
-  id: string; // Will use the 'word' itself as ID
+// Represents a single challenge after AI processing, adapted for UI
+export interface ChallengeDataForGame {
+  id: string; // Will use the 'word' itself as ID from AI
   word: string;
-  clueType: 'definition' | 'fill-in-the-blank'; // Simplified from AI output for now
+  clueType: 'definition' | 'fill-in-the-blank';
   clue: string;
-  options?: string[]; // For basic mode
+  options?: string[]; // For basic mode, shuffled
   correctAnswer: string; // Always the 'word'
   hint?: string; // For intermediate/advanced
 }
 
 
-const MAX_QUESTIONS_PER_SESSION = 5; // Number of questions per game session
+const MAX_QUESTIONS_PER_SESSION = 5; 
 
 interface GameInterfaceProps {
   selectedMode: GameMode;
@@ -71,7 +71,7 @@ const feedbackVariants = {
   exit: { opacity: 0, scale: 0.8, y: -10, transition: { duration: 0.2 } }
 };
 
-// Fisher-Yates shuffle function - still needed for MCQ options
+// Fisher-Yates shuffle function
 function shuffleArray<T>(array: T[]): T[] {
   if (!array) return [];
   const shuffled = [...array];
@@ -84,18 +84,18 @@ function shuffleArray<T>(array: T[]): T[] {
 
 
 export default function GameInterface({ selectedMode, onGoBack }: GameInterfaceProps) {
-  const [currentWordData, setCurrentWordData] = useState<WordDataForGame | null>(null);
-  const [currentQuestionNum, setCurrentQuestionNum] = useState(0); // Tracks number of questions asked in this session
+  const [currentChallengeData, setCurrentChallengeData] = useState<ChallengeDataForGame | null>(null);
+  const [gameSessionChallenges, setGameSessionChallenges] = useState<ChallengeDataForGame[]>([]);
+  const [currentQuestionNum, setCurrentQuestionNum] = useState(0);
   const [userInput, setUserInput] = useState('');
   const [score, setScore] = useState(0);
-  const [timeLeft, setTimeLeft] = useState(0); // Will be set by AI or mode
+  const [timeLeft, setTimeLeft] = useState(0);
   const [isHintUsedForQuestion, setIsHintUsedForQuestion] = useState(false);
   const [gameOver, setGameOver] = useState(false);
   const [feedbackMessage, setFeedbackMessage] = useState<string | null>(null);
-  const [shuffledOptions, setShuffledOptions] = useState<string[]>([]);
-  const [isLoadingWord, setIsLoadingWord] = useState(true);
-  const [gameSessionWords, setGameSessionWords] = useState<string[]>([]); // Track words used in this session
-  
+  const [isLoadingSession, setIsLoadingSession] = useState(true);
+  const [previousWordsForAI, setPreviousWordsForAI] = useState<string[]>([]); // To avoid repeats across sessions
+
   const { toast } = useToast();
   const hiddenInputRef = useRef<HTMLInputElement>(null);
   const correctAnswerSoundRef = useRef<HTMLAudioElement | null>(null);
@@ -110,87 +110,99 @@ export default function GameInterface({ selectedMode, onGoBack }: GameInterfaceP
     }
   }, []);
 
-  const getTimeLimitForMode = useCallback(() => {
-    switch (selectedMode) {
+  const getTimeLimitForMode = useCallback((mode: GameMode) => {
+    switch (mode) {
       case 'basic': return 83;
       case 'intermediate': return 78;
       case 'advanced': return 20;
       default: return 60;
     }
-  }, [selectedMode]);
+  }, []);
 
-  const fetchNextWord = useCallback(async () => {
-    setIsLoadingWord(true);
+  const fetchNewGameSession = useCallback(async () => {
+    setIsLoadingSession(true);
+    setFeedbackMessage(null);
+    setUserInput('');
+    setIsHintUsedForQuestion(false);
+    setCurrentChallengeData(null);
+    setGameSessionChallenges([]);
+
+    const aiInput: GenerateWordQuestSessionInput = {
+      gameMode: selectedMode,
+      previousWords: previousWordsForAI,
+      numChallenges: MAX_QUESTIONS_PER_SESSION,
+    };
+
+    try {
+      const aiResult: WordQuestSessionOutput = await generateWordQuestSession(aiInput);
+      
+      if (!aiResult.challenges || aiResult.challenges.length === 0) {
+        throw new Error("AI did not return any challenges for the session.");
+      }
+
+      const newSessionChallenges: ChallengeDataForGame[] = aiResult.challenges.map((challenge: SingleWordQuestChallenge) => ({
+        id: challenge.word,
+        word: challenge.word,
+        clueType: challenge.clueType,
+        clue: challenge.clue,
+        options: challenge.options ? shuffleArray(challenge.options) : undefined,
+        correctAnswer: challenge.word,
+        hint: challenge.hint,
+      }));
+      
+      setGameSessionChallenges(newSessionChallenges);
+      setCurrentChallengeData(newSessionChallenges[0]);
+      setCurrentQuestionNum(0); // Reset question number for new session
+      setScore(0); // Reset score for new session
+      setGameOver(false); // Reset game over state
+      setTimeLeft(getTimeLimitForMode(selectedMode));
+      // Add words from this session to previousWordsForAI for next potential game
+      setPreviousWordsForAI(prev => [...new Set([...prev, ...newSessionChallenges.map(c => c.word)])].slice(-50)); // Keep last 50 unique words
+
+    } catch (error: any) {
+      console.error("Error fetching game session from AI:", error);
+      toast({ title: "Error Generating Game", description: error.message || "Could not fetch challenges. Please try restarting.", variant: "destructive" });
+      setGameOver(true); 
+    } finally {
+      setIsLoadingSession(false);
+    }
+  }, [selectedMode, previousWordsForAI, getTimeLimitForMode, toast]);
+
+  useEffect(() => {
+    fetchNewGameSession();
+  }, [selectedMode, fetchNewGameSession]);
+
+
+  useEffect(() => {
+    if (currentChallengeData && (selectedMode === 'intermediate' || selectedMode === 'advanced') && !gameOver && !isLoadingSession) {
+      hiddenInputRef.current?.focus();
+    }
+  }, [currentChallengeData, selectedMode, gameOver, isLoadingSession]);
+
+
+  const proceedToNextOrEnd = useCallback(() => {
     setFeedbackMessage(null);
     setUserInput('');
     setIsHintUsedForQuestion(false);
 
-    const aiInput: GenerateWordQuestChallengeInput = {
-      gameMode: selectedMode,
-      previousWords: gameSessionWords,
-    };
-
-    try {
-      const aiResult = await generateWordQuestChallenge(aiInput);
-      const newWordData: WordDataForGame = {
-        id: aiResult.word, // Use word as ID
-        word: aiResult.word,
-        clueType: aiResult.clueType,
-        clue: aiResult.clue,
-        options: aiResult.options ? shuffleArray(aiResult.options) : undefined,
-        correctAnswer: aiResult.word, // Correct answer is the word itself
-        hint: aiResult.hint,
-      };
-      setCurrentWordData(newWordData);
-      setGameSessionWords(prev => [...prev, newWordData.word]);
-      if (newWordData.options) {
-        setShuffledOptions(newWordData.options); // Already shuffled by AI or here
-      }
-      setTimeLeft(getTimeLimitForMode());
-    } catch (error: any) {
-      console.error("Error fetching word from AI:", error);
-      toast({ title: "Error Generating Word", description: error.message || "Could not fetch a new word. Please try restarting.", variant: "destructive" });
-      // Potentially handle this by ending game or allowing retry
-      setGameOver(true); // Or offer a retry button
-    } finally {
-      setIsLoadingWord(false);
-    }
-  }, [selectedMode, gameSessionWords, getTimeLimitForMode, toast]);
-
-  useEffect(() => {
-    // Initial game setup or when mode changes (via gameKey prop)
-    setGameSessionWords([]);
-    setCurrentQuestionNum(0);
-    setScore(0);
-    setGameOver(false);
-    fetchNextWord(); // Fetch the first word
-  }, [selectedMode, fetchNextWord]); // Triggered by gameKey from parent if restarting same mode
-
-
-  useEffect(() => {
-    if (currentWordData && (selectedMode === 'intermediate' || selectedMode === 'advanced') && !gameOver && !isLoadingWord) {
-      hiddenInputRef.current?.focus();
-    }
-  }, [currentWordData, selectedMode, gameOver, isLoadingWord]);
-
-
-  const proceedToNextOrEnd = useCallback(() => {
-    if (currentQuestionNum < MAX_QUESTIONS_PER_SESSION -1) {
-      setCurrentQuestionNum(prev => prev + 1);
-      fetchNextWord(); // Fetch next word
+    if (currentQuestionNum < MAX_QUESTIONS_PER_SESSION - 1 && currentQuestionNum < gameSessionChallenges.length -1) {
+      const nextQuestionIndex = currentQuestionNum + 1;
+      setCurrentQuestionNum(nextQuestionIndex);
+      setCurrentChallengeData(gameSessionChallenges[nextQuestionIndex]);
+      setTimeLeft(getTimeLimitForMode(selectedMode));
     } else {
       setGameOver(true);
     }
-  }, [currentQuestionNum, fetchNextWord]);
+  }, [currentQuestionNum, gameSessionChallenges, selectedMode, getTimeLimitForMode]);
 
   const handleSubmitAnswer = useCallback(() => {
-    if (!currentWordData || feedbackMessage || isLoadingWord) return;
+    if (!currentChallengeData || feedbackMessage || isLoadingSession) return;
 
     let isCorrect = false;
     if (selectedMode === 'basic') {
-      isCorrect = userInput === currentWordData.correctAnswer;
+      isCorrect = userInput === currentChallengeData.correctAnswer;
     } else {
-      isCorrect = userInput.trim().toLowerCase() === currentWordData.correctAnswer.toLowerCase();
+      isCorrect = userInput.trim().toLowerCase() === currentChallengeData.correctAnswer.toLowerCase();
     }
 
     if (isCorrect) {
@@ -198,26 +210,26 @@ export default function GameInterface({ selectedMode, onGoBack }: GameInterfaceP
       setFeedbackMessage('Correct! 🎉');
       correctAnswerSoundRef.current?.play().catch(e => console.error("Error playing correct sound:", e));
     } else {
-      setFeedbackMessage(`Oops! The correct answer was: ${currentWordData.correctAnswer}`);
+      setFeedbackMessage(`Oops! The correct answer was: ${currentChallengeData.correctAnswer}`);
       wrongAnswerSoundRef.current?.play().catch(e => console.error("Error playing wrong sound:", e));
     }
 
     setTimeout(() => {
       proceedToNextOrEnd();
     }, 1500);
-  }, [currentWordData, userInput, selectedMode, feedbackMessage, isLoadingWord, proceedToNextOrEnd]);
+  }, [currentChallengeData, userInput, selectedMode, feedbackMessage, isLoadingSession, proceedToNextOrEnd]);
 
   const handleOptionSelect = (option: string) => {
-    if (feedbackMessage || !currentWordData || isLoadingWord) return;
+    if (feedbackMessage || !currentChallengeData || isLoadingSession) return;
     setUserInput(option); 
     if (selectedMode === 'basic') {
-        let isCorrect = option === currentWordData.correctAnswer;
+        let isCorrect = option === currentChallengeData.correctAnswer;
         if (isCorrect) {
             setScore(s => s + 10);
             setFeedbackMessage('Correct! 🎉');
             correctAnswerSoundRef.current?.play().catch(e => console.error("Error playing correct sound:", e));
         } else {
-            setFeedbackMessage(`Oops! The correct answer was: ${currentWordData.correctAnswer}`);
+            setFeedbackMessage(`Oops! The correct answer was: ${currentChallengeData.correctAnswer}`);
             wrongAnswerSoundRef.current?.play().catch(e => console.error("Error playing wrong sound:", e));
         }
         setTimeout(() => {
@@ -227,13 +239,13 @@ export default function GameInterface({ selectedMode, onGoBack }: GameInterfaceP
   };
 
   const handleSkip = useCallback(() => {
-    if (gameOver || feedbackMessage || !currentWordData || isLoadingWord) return;
-    setFeedbackMessage(`Skipped! The answer was: ${currentWordData.correctAnswer}`);
+    if (gameOver || feedbackMessage || !currentChallengeData || isLoadingSession) return;
+    setFeedbackMessage(`Skipped! The answer was: ${currentChallengeData.correctAnswer}`);
     wrongAnswerSoundRef.current?.play().catch(e => console.error("Error playing wrong sound on skip:", e));
     setTimeout(() => {
       proceedToNextOrEnd();
     }, 1500);
-  }, [gameOver, feedbackMessage, currentWordData, isLoadingWord, proceedToNextOrEnd]);
+  }, [gameOver, feedbackMessage, currentChallengeData, isLoadingSession, proceedToNextOrEnd]);
   
   const formatTimeForDisplay = (totalSeconds: number) => {
     const minutes = Math.floor(totalSeconds / 60);
@@ -242,7 +254,7 @@ export default function GameInterface({ selectedMode, onGoBack }: GameInterfaceP
   };
   
    useEffect(() => {
-    if (gameOver || isLoadingWord || feedbackMessage) return;
+    if (gameOver || isLoadingSession || feedbackMessage || !currentChallengeData) return;
     if (timeLeft <= 0) {
       handleSkip();
       return;
@@ -251,11 +263,11 @@ export default function GameInterface({ selectedMode, onGoBack }: GameInterfaceP
       setTimeLeft(prev => prev > 0 ? prev - 1 : 0);
     }, 1000);
     return () => clearInterval(timerId);
-  }, [timeLeft, gameOver, isLoadingWord, feedbackMessage, handleSkip]);
+  }, [timeLeft, gameOver, isLoadingSession, feedbackMessage, handleSkip, currentChallengeData]);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (gameOver || feedbackMessage || !currentWordData || isLoadingWord) return;
+      if (gameOver || feedbackMessage || !currentChallengeData || isLoadingSession) return;
 
       if (event.key === 'Escape') {
         event.preventDefault();
@@ -269,7 +281,7 @@ export default function GameInterface({ selectedMode, onGoBack }: GameInterfaceP
           if (userInput.trim()) handleSubmitAnswer();
         } else if (event.key === 'Backspace') {
           setUserInput(prev => prev.slice(0, -1));
-        } else if (event.key.length === 1 && /^[a-zA-Z]$/.test(event.key) && userInput.length < currentWordData.correctAnswer.length) {
+        } else if (event.key.length === 1 && /^[a-zA-Z]$/.test(event.key) && userInput.length < currentChallengeData.correctAnswer.length) {
           setUserInput(prev => prev + event.key.toUpperCase());
         }
       }
@@ -279,18 +291,18 @@ export default function GameInterface({ selectedMode, onGoBack }: GameInterfaceP
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [gameOver, feedbackMessage, selectedMode, userInput, handleSubmitAnswer, handleSkip, currentWordData, isLoadingWord]);
+  }, [gameOver, feedbackMessage, selectedMode, userInput, handleSubmitAnswer, handleSkip, currentChallengeData, isLoadingSession]);
 
   useEffect(() => {
     if (
       (selectedMode === 'intermediate' || selectedMode === 'advanced') &&
-      currentWordData &&
-      userInput.length === currentWordData.correctAnswer.length &&
-      !feedbackMessage && !isLoadingWord
+      currentChallengeData &&
+      userInput.length === currentChallengeData.correctAnswer.length &&
+      !feedbackMessage && !isLoadingSession
     ) {
       handleSubmitAnswer();
     }
-  }, [userInput, currentWordData, selectedMode, handleSubmitAnswer, feedbackMessage, isLoadingWord]);
+  }, [userInput, currentChallengeData, selectedMode, handleSubmitAnswer, feedbackMessage, isLoadingSession]);
 
 
   if (gameOver) {
@@ -318,18 +330,19 @@ export default function GameInterface({ selectedMode, onGoBack }: GameInterfaceP
             <p className="text-muted-foreground">You answered {score / 10} out of {MAX_QUESTIONS_PER_SESSION} questions correctly.</p>
           </CardContent>
           <CardFooter className="flex flex-col sm:flex-row gap-2 justify-center">
-            <Button onClick={onGoBack} variant="outline">Play Again</Button>
+            <Button onClick={() => { onGoBack(); fetchNewGameSession(); }} variant="outline">Play Again (Same Mode)</Button>
+            <Button onClick={onGoBack} variant="default">Change Mode</Button>
           </CardFooter>
         </Card>
       </motion.div>
     );
   }
   
-  if (isLoadingWord || !currentWordData) {
+  if (isLoadingSession || !currentChallengeData) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[calc(100vh-200px)] text-center p-6">
         <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
-        <p className="text-muted-foreground">Generating next word challenge...</p>
+        <p className="text-muted-foreground">AI is crafting your WordQuest session...</p>
         <Button onClick={onGoBack} variant="outline" className="mt-4">Back to Modes</Button>
       </div>
     );
@@ -337,13 +350,11 @@ export default function GameInterface({ selectedMode, onGoBack }: GameInterfaceP
 
 
   const renderClueContent = () => {
-    // Clue types from AI are 'definition' or 'fill-in-the-blank'
-    return <p className="text-xl md:text-2xl lg:text-3xl text-foreground font-medium leading-tight">{currentWordData.clue}</p>;
+    return <p className="text-xl md:text-2xl lg:text-3xl text-foreground font-medium leading-tight">{currentChallengeData.clue}</p>;
   };
 
   const renderLetterBoxes = () => {
-    if (!currentWordData) return null;
-    const wordLength = currentWordData.correctAnswer.length;
+    const wordLength = currentChallengeData.correctAnswer.length;
     return (
       <div className="flex justify-center space-x-1.5 sm:space-x-2">
         {Array.from({ length: wordLength }).map((_, index) => (
@@ -382,7 +393,6 @@ export default function GameInterface({ selectedMode, onGoBack }: GameInterfaceP
       </div>
 
       <div className="flex-grow grid grid-cols-1 md:grid-cols-2 min-h-[calc(100vh-150px)]">
-        {/* Left Panel - Clue */}
         <AnimatePresence mode="wait">
         <motion.div
             key={`clue-panel-${currentQuestionNum}`}
@@ -411,7 +421,7 @@ export default function GameInterface({ selectedMode, onGoBack }: GameInterfaceP
                                 variant="default"
                                 size="sm"
                                 onClick={handleSkip}
-                                disabled={!!feedbackMessage || gameOver || isLoadingWord}
+                                disabled={!!feedbackMessage || gameOver || isLoadingSession}
                                 className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs sm:text-sm px-3 py-1.5 h-auto"
                             >
                                 <span className="bg-indigo-700/80 px-1.5 py-0.5 rounded-sm text-xs mr-1.5">esc</span> Skip
@@ -423,20 +433,17 @@ export default function GameInterface({ selectedMode, onGoBack }: GameInterfaceP
                              <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-red-500"><ThumbsDown className="h-5 w-5"/></Button>
                            </>
                         )}
-                        {(selectedMode === 'intermediate' || selectedMode === 'advanced') && currentWordData.hint && (
+                        {(selectedMode === 'intermediate' || selectedMode === 'advanced') && currentChallengeData.hint && (
                             <>
                                 <Button 
                                     variant="ghost" 
                                     size="sm" 
                                     className="text-muted-foreground hover:text-foreground text-xs"
                                     onClick={() => setIsHintUsedForQuestion(true)}
-                                    disabled={isHintUsedForQuestion || !currentWordData.hint}
+                                    disabled={isHintUsedForQuestion || !currentChallengeData.hint}
                                 >
-                                    <HelpCircle className="h-4 w-4 mr-1" /> Hint {isHintUsedForQuestion ? `(${currentWordData.hint})` : ''}
+                                    <HelpCircle className="h-4 w-4 mr-1" /> Hint {isHintUsedForQuestion ? `(${currentChallengeData.hint})` : ''}
                                 </Button>
-                                {/* <div className="flex items-center text-muted-foreground text-sm">
-                                    <Flame className="h-4 w-4 mr-1" /> 0
-                                </div> */}
                             </>
                         )}
                     </div>
@@ -450,7 +457,6 @@ export default function GameInterface({ selectedMode, onGoBack }: GameInterfaceP
         </AnimatePresence>
 
 
-        {/* Right Panel - Options/Input */}
         <AnimatePresence mode="wait">
         <motion.div
            key={`input-panel-${currentQuestionNum}`}
@@ -461,16 +467,16 @@ export default function GameInterface({ selectedMode, onGoBack }: GameInterfaceP
            exit="exit"
           className="bg-muted/30 p-6 sm:p-8 flex flex-col justify-center items-center"
         >
-          {selectedMode === 'basic' && currentWordData.options ? (
+          {selectedMode === 'basic' && currentChallengeData.options ? (
             <motion.div
               className="space-y-3 w-full max-w-sm"
               initial="hidden"
               animate="visible"
               variants={{ visible: { transition: { staggerChildren: 0.05 }}}}
             >
-              {shuffledOptions.map((option, index) => (
+              {currentChallengeData.options.map((option, index) => (
                 <motion.div
-                  key={`${currentWordData.id}-opt-${index}`} // Ensure key is unique even if options repeat across words
+                  key={`${currentChallengeData.id}-opt-${index}`} 
                   custom={index}
                   variants={optionVariants}
                   whileHover={{ scale: 1.03, transition: { duration: 0.15 } }}
@@ -481,11 +487,11 @@ export default function GameInterface({ selectedMode, onGoBack }: GameInterfaceP
                     className={cn(
                       "w-full h-auto py-4 sm:py-5 text-base sm:text-lg justify-between items-center text-left whitespace-normal",
                       userInput === option && !feedbackMessage && "bg-primary/20 border-primary ring-2 ring-primary",
-                      feedbackMessage && option === currentWordData.correctAnswer && "bg-green-500/20 border-green-500 ring-2 ring-green-500 text-green-700 dark:text-green-300",
-                      feedbackMessage && userInput === option && option !== currentWordData.correctAnswer && "bg-red-500/20 border-red-500 ring-2 ring-red-500 text-red-700 dark:text-red-300"
+                      feedbackMessage && option === currentChallengeData.correctAnswer && "bg-green-500/20 border-green-500 ring-2 ring-green-500 text-green-700 dark:text-green-300",
+                      feedbackMessage && userInput === option && option !== currentChallengeData.correctAnswer && "bg-red-500/20 border-red-500 ring-2 ring-red-500 text-red-700 dark:text-red-300"
                     )}
                     onClick={() => handleOptionSelect(option)}
-                    disabled={!!feedbackMessage || isLoadingWord}
+                    disabled={!!feedbackMessage || isLoadingSession}
                   >
                     <span>{option}</span>
                     <span className="text-xs font-mono text-muted-foreground border border-border rounded-full h-5 w-5 flex items-center justify-center ml-2">
@@ -497,14 +503,14 @@ export default function GameInterface({ selectedMode, onGoBack }: GameInterfaceP
             </motion.div>
           ) : (selectedMode === 'intermediate' || selectedMode === 'advanced') ? (
             <div className="w-full max-w-md text-center space-y-6">
-              {currentWordData.hint && (isHintUsedForQuestion || selectedMode === 'intermediate') && ( 
+              {currentChallengeData.hint && (isHintUsedForQuestion || selectedMode === 'intermediate') && ( 
                 <motion.p
                   className="text-2xl sm:text-3xl font-semibold text-foreground/80"
                   initial={{ opacity: 0, y: -10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.1 }}
                 >
-                  {currentWordData.hint}
+                  {currentChallengeData.hint}
                 </motion.p>
               )}
               {renderLetterBoxes()}
@@ -513,8 +519,8 @@ export default function GameInterface({ selectedMode, onGoBack }: GameInterfaceP
                 type="text"
                 className="opacity-0 w-0 h-0 absolute"
                 onFocus={() => hiddenInputRef.current?.focus()}
-                value={userInput} // This is fine for controlled hidden input
-                readOnly // Important for this setup
+                value={userInput} 
+                readOnly 
               />
             </div>
           ) : (
