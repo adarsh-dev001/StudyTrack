@@ -2,56 +2,53 @@
 'use client';
 
 import React from 'react';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { ArrowRight, BookOpen, Type, Zap, Brain, Clock } from 'lucide-react';
-import type { GameMode, GameModeDetails } from './types'; // Ensure types.ts is created
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Image as ImageIcon, ListChecks, Library, Flame, Skull } from 'lucide-react'; // Updated icons
+import type { GameMode, GameModeDetails } from './types';
 import { motion } from 'framer-motion';
+import { cn } from '@/lib/utils';
 
+// Updated game mode details to match the new design
 const gameModesDetails: Record<GameMode, GameModeDetails> = {
   junior: {
-    title: 'Junior Journey',
-    description: 'Simple words with picture clues. Perfect for young beginners!',
-    icon: BookOpen, // Placeholder, consider an icon representing pictures or simplicity
-    buttonText: 'Start Junior',
-    colorClass: 'border-blue-500/50 bg-blue-500/5 hover:shadow-blue-500/20',
+    title: 'Junior',
+    description: 'Simple words with picture clues',
+    icon: ImageIcon,
+    colorClass: 'border-blue-500/30 bg-blue-500/5 hover:shadow-blue-500/10',
     iconColorClass: 'text-blue-500',
   },
   basic: {
-    title: 'Basic Builder',
-    description: 'Everyday words with multiple-choice options. Build your foundation.',
-    icon: Type, // Placeholder, consider an icon representing choices
-    buttonText: 'Play Basic',
-    colorClass: 'border-green-500/50 bg-green-500/5 hover:shadow-green-500/20',
+    title: 'Basic',
+    description: 'Everyday words with multiple choice answers',
+    icon: ListChecks, // Changed from Type
+    colorClass: 'border-green-500/30 bg-green-500/5 hover:shadow-green-500/10',
     iconColorClass: 'text-green-500',
   },
   intermediate: {
-    title: 'Intermediate Challenge',
-    description: 'Fill-in-the-blanks with hints (e.g., "Starts with P"). Step up your game!',
-    icon: Brain, // Placeholder, consider an icon for thinking or puzzles
-    buttonText: 'Take Intermediate',
-    colorClass: 'border-yellow-500/50 bg-yellow-500/5 hover:shadow-yellow-500/20',
-    iconColorClass: 'text-yellow-500',
+    title: 'Intermediate',
+    description: 'Test your typing and spelling skills with interesting words',
+    icon: Library, // Changed from Brain
+    colorClass: 'border-teal-500/30 bg-teal-500/5 hover:shadow-teal-500/10', // Greenish-blue accent
+    iconColorClass: 'text-teal-500',
   },
   advanced: {
-    title: 'Advanced Arena',
-    description: 'Difficult words via descriptive clues, under time pressure. Test your limits!',
-    icon: Zap,
-    buttonText: 'Enter Advanced',
-    colorClass: 'border-red-500/50 bg-red-500/5 hover:shadow-red-500/20',
-    iconColorClass: 'text-red-500',
+    title: 'Advanced',
+    description: 'Challenging words to level up your vocabulary',
+    icon: Flame, // Changed from Zap
+    colorClass: 'border-orange-500/30 bg-orange-500/5 hover:shadow-orange-500/10',
+    iconColorClass: 'text-orange-500',
   },
-  rapidFire: {
-    title: 'Rapid Fire Round',
-    description: 'Quickly match meanings with words in a fast-paced, time-bound setting.',
-    icon: Clock,
-    buttonText: 'Go Rapid Fire',
-    colorClass: 'border-purple-500/50 bg-purple-500/5 hover:shadow-purple-500/20',
+  expert: { // Changed from rapidFire to expert
+    title: 'Expert',
+    description: 'Rare and sophisticated words for vocabulary masters',
+    icon: Skull, // Changed from Clock
+    colorClass: 'border-purple-500/30 bg-purple-500/5 hover:shadow-purple-500/10',
     iconColorClass: 'text-purple-500',
   },
 };
 
 interface GameModeSelectionProps {
+  selectedMode: GameMode | null;
   onModeSelect: (mode: GameMode) => void;
 }
 
@@ -60,40 +57,38 @@ const cardVariants = {
   visible: { opacity: 1, y: 0, transition: { duration: 0.5 } }
 };
 
-export default function GameModeSelection({ onModeSelect }: GameModeSelectionProps) {
+export default function GameModeSelection({ selectedMode, onModeSelect }: GameModeSelectionProps) {
   return (
     <motion.div 
-      className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6"
+      className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5 px-4 md:px-6" // Added padding
       initial="hidden"
       animate="visible"
-      variants={{ visible: { transition: { staggerChildren: 0.1 } } }}
+      variants={{ visible: { transition: { staggerChildren: 0.05 } } }}
     >
       {(Object.keys(gameModesDetails) as GameMode[]).map((modeKey) => {
         const modeDetail = gameModesDetails[modeKey];
         const IconComponent = modeDetail.icon;
+        const isSelected = selectedMode === modeKey;
         return (
-          <motion.div key={modeKey} variants={cardVariants}>
-            <Card className={`shadow-lg hover:shadow-xl transition-all duration-300 ease-out transform hover:-translate-y-1 flex flex-col h-full ${modeDetail.colorClass}`}>
-              <CardHeader className="p-4 sm:p-5">
-                <div className="flex items-center gap-3 mb-1 sm:mb-1.5">
-                  <div className={`p-2 rounded-md ${modeDetail.colorClass?.replace('border-', 'bg-').replace('/50', '/10').replace('/5', '/10')}`}>
-                    <IconComponent className={`h-6 w-6 sm:h-7 sm:w-7 ${modeDetail.iconColorClass}`} />
-                  </div>
-                  <CardTitle className="text-lg sm:text-xl font-semibold text-foreground">{modeDetail.title}</CardTitle>
-                </div>
-                <CardDescription className="text-xs sm:text-sm text-muted-foreground leading-relaxed min-h-[40px] sm:min-h-[48px]">
-                  {modeDetail.description}
-                </CardDescription>
-              </CardHeader>
-              <CardFooter className="mt-auto p-4 sm:p-5">
-                <Button
-                  onClick={() => onModeSelect(modeKey)}
-                  className="w-full text-sm sm:text-base"
-                  variant="default" // Or dynamically based on modeDetail.colorClass
-                >
-                  {modeDetail.buttonText} <ArrowRight className="ml-2 h-4 w-4" />
-                </Button>
-              </CardFooter>
+          <motion.div 
+            key={modeKey} 
+            variants={cardVariants}
+            whileHover={{ y: -4 }}
+            transition={{ type: "spring", stiffness: 300 }}
+          >
+            <Card
+              onClick={() => onModeSelect(modeKey)}
+              className={cn(
+                "shadow-md hover:shadow-lg transition-all duration-200 ease-out cursor-pointer flex flex-col h-full text-center items-center justify-center p-4 sm:p-6 min-h-[160px] sm:min-h-[180px]",
+                modeDetail.colorClass,
+                isSelected ? 'ring-2 ring-offset-2 ring-teal-400 shadow-xl' : 'ring-1 ring-border' // Highlight for selected
+              )}
+            >
+              <IconComponent className={cn("h-7 w-7 sm:h-8 sm:w-8 mb-2 sm:mb-3", modeDetail.iconColorClass)} />
+              <CardTitle className="text-md sm:text-lg font-semibold text-foreground">{modeDetail.title}</CardTitle>
+              <CardDescription className="text-xs sm:text-sm text-muted-foreground mt-1 leading-tight">
+                {modeDetail.description}
+              </CardDescription>
             </Card>
           </motion.div>
         );
