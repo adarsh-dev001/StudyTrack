@@ -5,7 +5,7 @@
 
 @layer base {
   :root {
-    /* Vibrant Blue/Teal Modern Theme */
+    /* Vibrant Blue/Teal Modern Theme (Light) */
     --background: 200 30% 98%; /* Very light cool gray-blue */
     --foreground: 210 25% 25%; /* Dark desaturated blue */
 
@@ -53,11 +53,11 @@
   }
 
   .dark {
-    /* Vibrant Blue/Teal Modern Dark Theme */
-    --background: 210 20% 12%; /* Deep cool dark blue/gray */
-    --foreground: 200 25% 88%; /* Light cool gray-blue */
+    /* Enhanced Dark Mode with more depth */
+    --background: 210 20% 8%;   /* Deeper, near-black cool dark blue/gray for main page */
+    --foreground: 200 25% 88%;  /* Light cool gray-blue */
 
-    --card: 210 15% 18%; /* Slightly lighter than main dark bg */
+    --card: 210 18% 13%;        /* Darker card background, distinct from page */
     --card-foreground: 200 25% 88%;
 
     --popover: 210 15% 16%; 
@@ -88,11 +88,12 @@
     --chart-4: 210 65% 65%;
     --chart-5: 40 75% 60%;
 
-    --sidebar-background: 210 18% 10%;
+    /* Sidebar - make it distinct from elevated cards if page bg is very dark */
+    --sidebar-background: 210 20% 10%; /* Slightly lighter than deep page bg */
     --sidebar-foreground: 200 20% 85%;
     --sidebar-primary: 180 70% 50%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 190 40% 15%;
+    --sidebar-accent: 190 40% 18%; /* Darker sidebar accent */
     --sidebar-accent-foreground: 190 50% 80%;
     --sidebar-border: 210 15% 20%;
     --sidebar-ring: 180 70% 55%;
