@@ -11,14 +11,12 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Loader2, Wand2, Sparkles, Youtube, FileText, Download, BookText, AlertTriangle } from 'lucide-react';
+import { Loader2, Wand2, Sparkles, Youtube, FileText, Download, BookText, AlertTriangle, Edit } from 'lucide-react';
 import {
   processYouTubeVideo,
-  // Types are now imported from the schema file
   type ProcessYouTubeVideoInput,
   type ProcessYouTubeVideoOutput,
 } from '@/ai/flows/process-youtube-video-flow';
-// Import schemas and types from the dedicated schema file for form validation
 import { ProcessYouTubeVideoInputSchema as PageLevelInputSchema } from '@/ai/schemas/youtube-processing-schemas';
 
 import type { MCQ } from '@/ai/flows/summarize-study-material';
@@ -32,11 +30,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import OnboardingForm from '@/components/onboarding/onboarding-form';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/ui/skeleton';
+import { motion } from 'framer-motion'; // Added framer-motion
 
 const YouTubeSummarizerResultsDisplay = React.lazy(() => import('@/components/ai-tools/youtube-summarizer/YouTubeSummarizerResultsDisplay'));
 const YouTubeSummarizerResultsDisplayFallback = React.lazy(() => import('@/components/ai-tools/youtube-summarizer/YouTubeSummarizerResultsDisplayFallback'));
 
-// Local form schema using only fields relevant to the form
 const youtubeSummarizerFormSchema = PageLevelInputSchema.pick({
   youtubeUrl: true,
   videoTranscript: true,
@@ -83,6 +81,7 @@ export default function YouTubeSummarizerPage() {
   const [isLoadingProfile, setIsLoadingProfile] = useState(true);
   const [userFullProfile, setUserFullProfile] = useState<UserProfileData | null>(null);
   const [showOnboardingModal, setShowOnboardingModal] = useState(false);
+  const [isInputFormCollapsed, setIsInputFormCollapsed] = useState(false);
 
   useEffect(() => {
     if (analysisResult && resultsRef.current) {
@@ -151,8 +150,8 @@ export default function YouTubeSummarizerPage() {
     }
 
     setIsFetchingTranscript(true);
-    setAnalysisResult(null); // Clear previous AI results
-    setFetchTranscriptError(null); // Clear previous fetch errors
+    setAnalysisResult(null); 
+    setFetchTranscriptError(null); 
 
     try {
       const response = await fetch('/api/youtube-transcript', {
@@ -169,10 +168,8 @@ export default function YouTubeSummarizerPage() {
             serverErrorMsg = errorResult.error;
           }
         } catch (e) {
-          // If response is not JSON (e.g., HTML error page)
           const textError = await response.text();
           console.warn("Non-JSON error response from /api/youtube-transcript:", textError.substring(0,500));
-          // serverErrorMsg is already set to a generic message for non-ok responses
         }
         setFetchTranscriptError(serverErrorMsg);
         toast({ title: 'Transcript Fetch Failed', description: serverErrorMsg, variant: 'destructive' });
@@ -225,6 +222,7 @@ export default function YouTubeSummarizerPage() {
         initialMcqAnswers[index] = { ...mcq, userSelectedOption: undefined, answerRevealed: false };
       });
       setMcqAnswers(initialMcqAnswers);
+      setIsInputFormCollapsed(true); // Collapse form on success
 
       toast({
         title: '🎬 Video Processed! ✨',
@@ -236,6 +234,7 @@ export default function YouTubeSummarizerPage() {
     } catch (error: any) {
       console.error('Error processing video transcript:', error);
       setAnalysisResult(null);
+      setIsInputFormCollapsed(false); // Keep form open on error
       toast({
         title: 'Error Processing Video 😥',
         description: error.message || 'An unexpected error occurred with the AI.',
@@ -319,6 +318,11 @@ export default function YouTubeSummarizerPage() {
     );
   }
 
+  const inputFormVariants = {
+    expanded: { opacity: 1, height: 'auto', scaleY: 1, marginTop: '0rem', marginBottom: '0rem' },
+    collapsed: { opacity: 0, height: 0, scaleY: 0.95, marginTop: '0rem', marginBottom: '0rem' }
+  };
+
 
   return (
     <div className="w-full space-y-6 max-w-4xl mx-auto">
@@ -331,115 +335,147 @@ export default function YouTubeSummarizerPage() {
         </p>
       </div>
 
-      <Card className="shadow-lg">
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)}>
-            <CardHeader className="p-4 sm:p-6">
-              <CardTitle className="text-lg sm:text-xl">Video Details & Transcript 📝</CardTitle>
-              <CardDescription className="text-xs sm:text-sm">
-                  Provide the video URL to attempt fetching its transcript, or paste the full transcript below.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4 sm:space-y-6 p-4 sm:p-6">
-              <FormField
-                control={form.control}
-                name="youtubeUrl"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-sm sm:text-base">YouTube Video URL</FormLabel>
-                    <div className="flex items-center gap-2">
-                        <FormControl>
-                        <Input placeholder="e.g., https://www.youtube.com/watch?v=dQw4w9WgXcQ" {...field} className="text-sm sm:text-base flex-grow" />
-                        </FormControl>
-                        <Button 
-                            type="button" 
-                            onClick={handleFetchTranscript} 
-                            disabled={isFetchingTranscript || !field.value}
-                            variant="outline"
-                            className="shrink-0 text-xs sm:text-sm py-2 px-3"
-                        >
-                            {isFetchingTranscript ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin"/> : <Download className="mr-1.5 h-4 w-4"/>}
-                            Fetch Transcript
-                        </Button>
-                    </div>
-                    <FormDescription className="text-xs sm:text-sm">
-                      Attempt to fetch transcript (if available and public). Otherwise, paste manually below.
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+      {isInputFormCollapsed && (
+        <motion.div
+          className="flex justify-center pt-2"
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3 }}
+        >
+          <Button
+            onClick={() => {
+              setIsInputFormCollapsed(false);
+              setAnalysisResult(null);
+              setMcqAnswers({});
+              setFetchTranscriptError(null);
+              form.reset();
+            }}
+            variant="outline"
+            size="lg"
+            className="w-full sm:w-auto text-sm sm:text-base py-2.5 px-5 shadow-md hover:bg-accent/50"
+          >
+            <Edit className="mr-2 h-4 w-4 sm:h-5 sm:w-5" /> Summarize Another Video
+          </Button>
+        </motion.div>
+      )}
 
-              {fetchTranscriptError && (
-                <Alert variant="warning" className="mt-3">
-                  <AlertTriangle className="h-4 w-4" />
-                  <AlertTitle className="font-semibold">
-                    {fetchTranscriptError.includes("No transcript found") ? "Transcript Not Available via Fetch" : "Transcript Fetch Failed"}
-                  </AlertTitle>
-                  <AlertDescription>
-                    <p>{fetchTranscriptError}</p>
-                    <p className="mt-1">
-                      If you have the transcript, you can <strong className="text-foreground">paste it manually</strong> into the textarea below to proceed.
-                    </p>
-                  </AlertDescription>
-                </Alert>
-              )}
+      <motion.div
+        animate={isInputFormCollapsed ? "collapsed" : "expanded"}
+        variants={inputFormVariants}
+        transition={{ duration: 0.4, ease: "easeInOut" }}
+        style={{ overflow: 'hidden', transformOrigin: 'top' }}
+        className={isInputFormCollapsed ? "mt-0" : ""}
+      >
+        <Card className="shadow-lg">
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)}>
+              <CardHeader className="p-4 sm:p-6">
+                <CardTitle className="text-lg sm:text-xl">Video Details & Transcript 📝</CardTitle>
+                <CardDescription className="text-xs sm:text-sm">
+                    Provide the video URL to attempt fetching its transcript, or paste the full transcript below.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4 sm:space-y-6 p-4 sm:p-6">
+                <FormField
+                  control={form.control}
+                  name="youtubeUrl"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-sm sm:text-base">YouTube Video URL</FormLabel>
+                      <div className="flex items-center gap-2">
+                          <FormControl>
+                          <Input placeholder="e.g., https://www.youtube.com/watch?v=dQw4w9WgXcQ" {...field} className="text-sm sm:text-base flex-grow" />
+                          </FormControl>
+                          <Button 
+                              type="button" 
+                              onClick={handleFetchTranscript} 
+                              disabled={isFetchingTranscript || !field.value}
+                              variant="outline"
+                              className="shrink-0 text-xs sm:text-sm py-2 px-3"
+                          >
+                              {isFetchingTranscript ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin"/> : <Download className="mr-1.5 h-4 w-4"/>}
+                              Fetch Transcript
+                          </Button>
+                      </div>
+                      <FormDescription className="text-xs sm:text-sm">
+                        Attempt to fetch transcript (if available and public). Otherwise, paste manually below.
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
-              <FormField
-                control={form.control}
-                name="customTitle"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-sm sm:text-base">Custom Video Title (Optional)</FormLabel>
-                    <FormControl>
-                      <Input placeholder="e.g., Deep Dive into Quantum Entanglement" {...field} className="text-sm sm:text-base" />
-                    </FormControl>
-                    <FormDescription className="text-xs sm:text-sm">
-                      If you want to specify a title for the AI to use or refine.
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
+                {fetchTranscriptError && (
+                  <Alert variant="warning" className="mt-3">
+                    <AlertTriangle className="h-4 w-4" />
+                    <AlertTitle className="font-semibold">
+                      {fetchTranscriptError.includes("No transcript found") ? "Transcript Not Available via Fetch" : "Transcript Fetch Failed"}
+                    </AlertTitle>
+                    <AlertDescription>
+                      <p>{fetchTranscriptError}</p>
+                      <p className="mt-1">
+                        If you have the transcript, you can <strong className="text-foreground">paste it manually</strong> into the textarea below to proceed.
+                      </p>
+                    </AlertDescription>
+                  </Alert>
                 )}
-              />
-              <FormField
-                control={form.control}
-                name="videoTranscript"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-sm sm:text-base">Video Transcript <span className="text-destructive">*</span></FormLabel>
-                    <FormControl>
-                      <Textarea
-                        placeholder="Paste the full video transcript here... (min 100 characters)"
-                        className="min-h-[200px] sm:min-h-[250px] resize-y text-sm sm:text-base leading-relaxed"
-                        {...field}
-                      />
-                    </FormControl>
-                     <FormDescription className="text-xs sm:text-sm">
-                      Ensure the transcript is clean and accurate for best results. Max 30,000 characters.
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </CardContent>
-            <CardFooter className="p-4 sm:p-6">
-              <Button type="submit" disabled={isLoading || isFetchingTranscript} size="default" className="w-full sm:w-auto text-sm sm:text-base py-2.5 px-5">
-                {isLoading ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 sm:h-5 sm:w-5 animate-spin" />
-                    Generating Study Material...
-                  </>
-                ) : (
-                  <>
-                    <BookText className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />
-                    Generate from Transcript
-                  </>
-                )}
-              </Button>
-            </CardFooter>
-          </form>
-        </Form>
-      </Card>
+
+                <FormField
+                  control={form.control}
+                  name="customTitle"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-sm sm:text-base">Custom Video Title (Optional)</FormLabel>
+                      <FormControl>
+                        <Input placeholder="e.g., Deep Dive into Quantum Entanglement" {...field} className="text-sm sm:text-base" />
+                      </FormControl>
+                      <FormDescription className="text-xs sm:text-sm">
+                        If you want to specify a title for the AI to use or refine.
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="videoTranscript"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-sm sm:text-base">Video Transcript <span className="text-destructive">*</span></FormLabel>
+                      <FormControl>
+                        <Textarea
+                          placeholder="Paste the full video transcript here... (min 100 characters)"
+                          className="min-h-[200px] sm:min-h-[250px] resize-y text-sm sm:text-base leading-relaxed"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormDescription className="text-xs sm:text-sm">
+                        Ensure the transcript is clean and accurate for best results. Max 30,000 characters.
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </CardContent>
+              <CardFooter className="p-4 sm:p-6">
+                <Button type="submit" disabled={isLoading || isFetchingTranscript} size="default" className="w-full sm:w-auto text-sm sm:text-base py-2.5 px-5">
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 sm:h-5 sm:w-5 animate-spin" />
+                      Generating Study Material...
+                    </>
+                  ) : (
+                    <>
+                      <BookText className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />
+                      Generate from Transcript
+                    </>
+                  )}
+                </Button>
+              </CardFooter>
+            </form>
+          </Form>
+        </Card>
+      </motion.div>
 
       <div ref={resultsRef}>
         {(isLoading && form.formState.isSubmitted) && (

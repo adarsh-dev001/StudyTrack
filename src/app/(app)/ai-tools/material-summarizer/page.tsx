@@ -10,7 +10,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Loader2, Wand2, Sparkles, UploadCloud, FileText, Download, BookText, AlertTriangle } from 'lucide-react';
+import { Loader2, Wand2, Sparkles, UploadCloud, FileText, Download, BookText, AlertTriangle, Edit } from 'lucide-react';
 import { summarizeStudyMaterial, type SummarizeStudyMaterialOutput, type MCQ } from '@/ai/flows/summarize-study-material';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/auth-context';
@@ -22,6 +22,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import OnboardingForm from '@/components/onboarding/onboarding-form';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/ui/skeleton';
+import { motion } from 'framer-motion'; // Added framer-motion
 
 import * as pdfjsLib from 'pdfjs-dist';
 
@@ -74,10 +75,10 @@ export default function MaterialSummarizerPage() {
   const [isLoadingProfile, setIsLoadingProfile] = useState(true);
   const [userFullProfile, setUserFullProfile] = useState<UserProfileData | null>(null);
   const [showOnboardingModal, setShowOnboardingModal] = useState(false);
+  const [isInputFormCollapsed, setIsInputFormCollapsed] = useState(false);
 
   useEffect(() => {
     // Set the workerSrc for pdfjs-dist. This needs to be done on the client side.
-    // User needs to copy pdf.worker.min.mjs to public/js/ from node_modules/pdfjs-dist/build/
     if (typeof window !== 'undefined') {
       pdfjsLib.GlobalWorkerOptions.workerSrc = `/js/pdf.worker.min.mjs`;
     }
@@ -226,6 +227,7 @@ export default function MaterialSummarizerPage() {
         initialMcqAnswers[index] = { ...mcq, userSelectedOption: undefined, answerRevealed: false };
       });
       setMcqAnswers(initialMcqAnswers);
+      setIsInputFormCollapsed(true); // Collapse form on success
 
       toast({
         title: 'Material Processed! ✨',
@@ -237,6 +239,7 @@ export default function MaterialSummarizerPage() {
     } catch (error: any) {
       console.error('Error processing material:', error);
       setAnalysisResult(null);
+      setIsInputFormCollapsed(false); // Keep form open on error
       toast({
         title: 'Error Processing Material 😥',
         description: error.message || 'An unexpected error occurred.',
@@ -274,7 +277,7 @@ export default function MaterialSummarizerPage() {
     return (
       <div className="flex flex-col items-center justify-center min-h-[calc(100vh-200px)] text-center p-6">
         <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
-        <p className="text-muted-foreground">Loading Summarizer...</p>
+        <p className="text-muted-foreground">Loading Material Processor...</p>
       </div>
     );
   }
@@ -305,6 +308,10 @@ export default function MaterialSummarizerPage() {
     );
   }
 
+  const inputFormVariants = {
+    expanded: { opacity: 1, height: 'auto', scaleY: 1, marginTop: '0rem', marginBottom: '0rem' },
+    collapsed: { opacity: 0, height: 0, scaleY: 0.95, marginTop: '0rem', marginBottom: '0rem' }
+  };
 
   return (
     <div className="w-full space-y-6 max-w-3xl mx-auto">
@@ -317,95 +324,126 @@ export default function MaterialSummarizerPage() {
         </p>
       </div>
 
-      <Card className="shadow-lg">
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)}>
-            <CardHeader className="p-4 sm:p-6">
-              <CardTitle className="text-lg sm:text-xl">Input Material 📝</CardTitle>
-              <CardDescription className="text-xs sm:text-sm">Upload a PDF or paste text for analysis.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4 sm:space-y-6 p-4 sm:p-6">
-              <FormField
-                control={form.control}
-                name="pdfFile"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-sm sm:text-base">Upload PDF (Max 10MB)</FormLabel>
-                    <FormControl>
-                      <div className="flex items-center space-x-2">
-                        <Input
-                          type="file"
-                          id="pdfFile"
-                          accept=".pdf"
-                          onChange={handlePdfFileChange}
-                          className="text-sm sm:text-base file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20 cursor-pointer"
-                          disabled={isProcessingPdf}
+      {isInputFormCollapsed && (
+        <motion.div
+          className="flex justify-center pt-2"
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3 }}
+        >
+          <Button
+            onClick={() => {
+              setIsInputFormCollapsed(false);
+              setAnalysisResult(null);
+              setMcqAnswers({});
+              form.reset(); 
+            }}
+            variant="outline"
+            size="lg"
+            className="w-full sm:w-auto text-sm sm:text-base py-2.5 px-5 shadow-md hover:bg-accent/50"
+          >
+            <Edit className="mr-2 h-4 w-4 sm:h-5 sm:w-5" /> Process New Material
+          </Button>
+        </motion.div>
+      )}
+
+      <motion.div
+        animate={isInputFormCollapsed ? "collapsed" : "expanded"}
+        variants={inputFormVariants}
+        transition={{ duration: 0.4, ease: "easeInOut" }}
+        style={{ overflow: 'hidden', transformOrigin: 'top' }}
+        className={isInputFormCollapsed ? "mt-0" : ""}
+      >
+        <Card className="shadow-lg">
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)}>
+              <CardHeader className="p-4 sm:p-6">
+                <CardTitle className="text-lg sm:text-xl">Input Material 📝</CardTitle>
+                <CardDescription className="text-xs sm:text-sm">Upload a PDF or paste text for analysis.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4 sm:space-y-6 p-4 sm:p-6">
+                <FormField
+                  control={form.control}
+                  name="pdfFile"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-sm sm:text-base">Upload PDF (Max 10MB)</FormLabel>
+                      <FormControl>
+                        <div className="flex items-center space-x-2">
+                          <Input
+                            type="file"
+                            id="pdfFile"
+                            accept=".pdf"
+                            onChange={handlePdfFileChange}
+                            className="text-sm sm:text-base file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20 cursor-pointer"
+                            disabled={isProcessingPdf}
+                          />
+                          {isProcessingPdf && <Loader2 className="h-5 w-5 animate-spin text-primary" />}
+                        </div>
+                      </FormControl>
+                      <FormDescription className="text-xs sm:text-sm">
+                        The text from the PDF will fill the text area below.
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="topic"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-sm sm:text-base">Topic <span className="text-destructive">*</span></FormLabel>
+                      <FormControl>
+                        <Input placeholder="e.g., Photosynthesis, Indian National Movement" {...field} className="text-sm sm:text-base" />
+                      </FormControl>
+                      <FormDescription className="text-xs sm:text-sm">
+                        What is the main topic of the material?
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="material"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-sm sm:text-base">Study Material (Text) <span className="text-destructive">*</span></FormLabel>
+                      <FormControl>
+                        <Textarea
+                          placeholder="Paste your study notes, textbook chapter, or article here... (or upload a PDF above)"
+                          className="min-h-[150px] sm:min-h-[200px] resize-y text-sm sm:text-base"
+                          {...field}
                         />
-                        {isProcessingPdf && <Loader2 className="h-5 w-5 animate-spin text-primary" />}
-                      </div>
-                    </FormControl>
-                    <FormDescription className="text-xs sm:text-sm">
-                      The text from the PDF will fill the text area below.
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="topic"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-sm sm:text-base">Topic <span className="text-destructive">*</span></FormLabel>
-                    <FormControl>
-                      <Input placeholder="e.g., Photosynthesis, Indian National Movement" {...field} className="text-sm sm:text-base" />
-                    </FormControl>
-                    <FormDescription className="text-xs sm:text-sm">
-                      What is the main topic of the material?
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="material"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-sm sm:text-base">Study Material (Text) <span className="text-destructive">*</span></FormLabel>
-                    <FormControl>
-                      <Textarea
-                        placeholder="Paste your study notes, textbook chapter, or article here... (or upload a PDF above)"
-                        className="min-h-[150px] sm:min-h-[200px] resize-y text-sm sm:text-base"
-                        {...field}
-                      />
-                    </FormControl>
+                      </FormControl>
                      <FormDescription className="text-xs sm:text-sm">
-                      Enter the content you want to process (min 50 characters, max 30,000).
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </CardContent>
-            <CardFooter className="p-4 sm:p-6">
-              <Button type="submit" disabled={isLoading || isProcessingPdf} size="default" className="w-full sm:w-auto text-sm sm:text-base">
-                {isLoading ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 sm:h-5 sm:w-5 animate-spin" />
-                    Processing...
-                  </>
-                ) : (
-                  <>
-                    <Sparkles className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />
-                    Generate Insights
-                  </>
-                )}
-              </Button>
-            </CardFooter>
-          </form>
-        </Form>
-      </Card>
+                        Enter the content you want to process (min 50 characters, max 30,000).
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </CardContent>
+              <CardFooter className="p-4 sm:p-6">
+                <Button type="submit" disabled={isLoading || isProcessingPdf} size="default" className="w-full sm:w-auto text-sm sm:text-base">
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 sm:h-5 sm:w-5 animate-spin" />
+                      Processing...
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />
+                      Generate Insights
+                    </>
+                  )}
+                </Button>
+              </CardFooter>
+            </form>
+          </Form>
+        </Card>
+      </motion.div>
       
       <div ref={resultsRef}>
         {(isLoading && form.formState.isSubmitted) && (
@@ -428,5 +466,4 @@ export default function MaterialSummarizerPage() {
     </div>
   );
 }
-
     

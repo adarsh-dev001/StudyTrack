@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Loader2, Lightbulb, Zap, Brain, Award, TrendingUp, Rocket, Target as TargetIcon, Lock, Info, ListChecks, BarChart3 } from 'lucide-react';
+import { Loader2, Lightbulb, Zap, Brain, Award, TrendingUp, Rocket, Target as TargetIcon, Lock, Info, ListChecks, BarChart3, Edit } from 'lucide-react';
 import { analyzeProductivityData, type AnalyzeProductivityDataInput, type AnalyzeProductivityDataOutput } from '@/ai/flows/analyze-productivity-data';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/auth-context';
@@ -22,6 +22,7 @@ import type { UserProfileData } from '@/lib/profile-types';
 import OnboardingForm from '@/components/onboarding/onboarding-form';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/ui/skeleton';
+import { motion } from 'framer-motion'; // Added framer-motion
 
 
 const productivityAnalyzerFormSchema = z.object({
@@ -71,6 +72,7 @@ export default function ProductivityAnalyzerPage() {
   const [unlockState, setUnlockState] = useState<UnlockStatus | null>(null);
   const [isLoadingUnlockStatus, setIsLoadingUnlockStatus] = useState(true); 
   const [hasShownUnlockToast, setHasShownUnlockToast] = useState(false);
+  const [isInputFormCollapsed, setIsInputFormCollapsed] = useState(false);
 
 
   useEffect(() => {
@@ -168,6 +170,7 @@ export default function ProductivityAnalyzerPage() {
     try {
       const result: AnalyzeProductivityDataOutput = await analyzeProductivityData(inputForAI);
       setAnalysisResult(result);
+      setIsInputFormCollapsed(true); // Collapse form on success
       toast({
         title: 'Analysis Complete! 📊',
         description: 'Your productivity insights are ready.',
@@ -175,6 +178,7 @@ export default function ProductivityAnalyzerPage() {
     } catch (error: any) {
       console.error('Error analyzing productivity data:', error);
       setAnalysisResult(null);
+      setIsInputFormCollapsed(false); // Keep form open on error
       toast({
         title: 'Error Analyzing Data 😥',
         description: error.message || 'An unexpected error occurred.',
@@ -294,6 +298,11 @@ export default function ProductivityAnalyzerPage() {
     );
   }
 
+  const inputFormVariants = {
+    expanded: { opacity: 1, height: 'auto', scaleY: 1, marginTop: '0rem', marginBottom: '0rem' },
+    collapsed: { opacity: 0, height: 0, scaleY: 0.95, marginTop: '0rem', marginBottom: '0rem' }
+  };
+
   return (
     <div className="w-full space-y-6 sm:space-y-8 max-w-3xl mx-auto">
       <div>
@@ -304,117 +313,147 @@ export default function ProductivityAnalyzerPage() {
           Input your weekly study data to get AI-driven insights and recommendations. 📈
         </p>
       </div>
+      
+      {isInputFormCollapsed && (
+        <motion.div
+          className="flex justify-center pt-2"
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3 }}
+        >
+          <Button
+            onClick={() => {
+              setIsInputFormCollapsed(false);
+              setAnalysisResult(null);
+              form.reset(); 
+            }}
+            variant="outline"
+            size="lg"
+            className="w-full sm:w-auto text-sm sm:text-base py-2.5 px-5 shadow-md hover:bg-accent/50"
+          >
+            <Edit className="mr-2 h-4 w-4 sm:h-5 sm:w-5" /> Analyze New Data
+          </Button>
+        </motion.div>
+      )}
 
-      <Card className="shadow-lg">
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)}>
-            <CardHeader className="p-4 sm:p-6">
-              <CardTitle className="text-lg sm:text-xl">Your Weekly Study Data 🗓️</CardTitle>
-              <CardDescription className="text-xs sm:text-sm">Provide your study metrics for the past week to get AI feedback.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4 sm:space-y-6 p-4 sm:p-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 sm:gap-x-6 gap-y-3 sm:gap-y-4">
-                <FormField
-                  control={form.control}
-                  name="studyHours"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-sm sm:text-base">Total Study Hours (Weekly) ⏳</FormLabel>
-                      <FormControl>
-                        <Input type="number" placeholder="e.g., 20" {...field} value={isNaN(field.value as number) ? '' : field.value} className="text-sm sm:text-base"/>
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="topicsCompleted"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-sm sm:text-base">Total Topics Completed (Weekly) ✅</FormLabel>
-                      <FormControl>
-                        <Input type="number" placeholder="e.g., 5" {...field} value={isNaN(field.value as number) ? '' : field.value} className="text-sm sm:text-base"/>
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-              
-              <Card className="border-border/70 bg-muted/30">
-                <CardHeader className="pb-2 sm:pb-3 pt-3 sm:pt-4 px-3 sm:px-4">
-                    <CardTitle className="text-md sm:text-lg">Subject-wise Time Distribution (Hours) 📚</CardTitle>
-                    <CardDescription className="text-xs sm:text-sm">Enter hours spent on each subject this week. Leave blank or 0 if not applicable.</CardDescription>
-                </CardHeader>
-                <CardContent className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-x-3 sm:gap-x-4 gap-y-2 sm:gap-y-3 p-3 sm:p-4">
-                    <FormField control={form.control} name="subjectPhysicsHours" render={({ field }) => (
-                        <FormItem><FormLabel className="text-xs sm:text-sm">Physics</FormLabel><FormControl><Input type="number" placeholder="e.g., 5" {...field} value={isNaN(field.value as number) ? '' : field.value || ''} className="text-xs sm:text-sm h-9 sm:h-10"/></FormControl><FormMessage /></FormItem>
-                    )} />
-                    <FormField control={form.control} name="subjectChemistryHours" render={({ field }) => (
-                        <FormItem><FormLabel className="text-xs sm:text-sm">Chemistry</FormLabel><FormControl><Input type="number" placeholder="e.g., 4" {...field} value={isNaN(field.value as number) ? '' : field.value || ''} className="text-xs sm:text-sm h-9 sm:h-10"/></FormControl><FormMessage /></FormItem>
-                    )} />
-                    <FormField control={form.control} name="subjectBiologyHours" render={({ field }) => (
-                       <FormItem><FormLabel className="text-xs sm:text-sm">Biology</FormLabel><FormControl><Input type="number" placeholder="e.g., 3" {...field} value={isNaN(field.value as number) ? '' : field.value || ''} className="text-xs sm:text-sm h-9 sm:h-10"/></FormControl><FormMessage /></FormItem>
-                    )} />
-                    <FormField control={form.control} name="subjectMathHours" render={({ field }) => (
-                        <FormItem><FormLabel className="text-xs sm:text-sm">Mathematics</FormLabel><FormControl><Input type="number" placeholder="e.g., 4" {...field} value={isNaN(field.value as number) ? '' : field.value || ''} className="text-xs sm:text-sm h-9 sm:h-10"/></FormControl><FormMessage /></FormItem>
-                    )} />
-                    <FormField control={form.control} name="subjectOtherHours" render={({ field }) => (
-                        <FormItem><FormLabel className="text-xs sm:text-sm">Other Subjects</FormLabel><FormControl><Input type="number" placeholder="e.g., 2" {...field} value={isNaN(field.value as number) ? '' : field.value || ''} className="text-xs sm:text-sm h-9 sm:h-10"/></FormControl><FormMessage /></FormItem>
-                    )} />
-                </CardContent>
-              </Card>
+      <motion.div
+        animate={isInputFormCollapsed ? "collapsed" : "expanded"}
+        variants={inputFormVariants}
+        transition={{ duration: 0.4, ease: "easeInOut" }}
+        style={{ overflow: 'hidden', transformOrigin: 'top' }}
+        className={isInputFormCollapsed ? "mt-0" : ""}
+      >
+        <Card className="shadow-lg">
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)}>
+              <CardHeader className="p-4 sm:p-6">
+                <CardTitle className="text-lg sm:text-xl">Your Weekly Study Data 🗓️</CardTitle>
+                <CardDescription className="text-xs sm:text-sm">Provide your study metrics for the past week to get AI feedback.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4 sm:space-y-6 p-4 sm:p-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 sm:gap-x-6 gap-y-3 sm:gap-y-4">
+                  <FormField
+                    control={form.control}
+                    name="studyHours"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-sm sm:text-base">Total Study Hours (Weekly) ⏳</FormLabel>
+                        <FormControl>
+                          <Input type="number" placeholder="e.g., 20" {...field} value={isNaN(field.value as number) ? '' : field.value} className="text-sm sm:text-base"/>
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="topicsCompleted"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-sm sm:text-base">Total Topics Completed (Weekly) ✅</FormLabel>
+                        <FormControl>
+                          <Input type="number" placeholder="e.g., 5" {...field} value={isNaN(field.value as number) ? '' : field.value} className="text-sm sm:text-base"/>
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+                
+                <Card className="border-border/70 bg-muted/30">
+                  <CardHeader className="pb-2 sm:pb-3 pt-3 sm:pt-4 px-3 sm:px-4">
+                      <CardTitle className="text-md sm:text-lg">Subject-wise Time Distribution (Hours) 📚</CardTitle>
+                      <CardDescription className="text-xs sm:text-sm">Enter hours spent on each subject this week. Leave blank or 0 if not applicable.</CardDescription>
+                  </CardHeader>
+                  <CardContent className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-x-3 sm:gap-x-4 gap-y-2 sm:gap-y-3 p-3 sm:p-4">
+                      <FormField control={form.control} name="subjectPhysicsHours" render={({ field }) => (
+                          <FormItem><FormLabel className="text-xs sm:text-sm">Physics</FormLabel><FormControl><Input type="number" placeholder="e.g., 5" {...field} value={isNaN(field.value as number) ? '' : field.value || ''} className="text-xs sm:text-sm h-9 sm:h-10"/></FormControl><FormMessage /></FormItem>
+                      )} />
+                      <FormField control={form.control} name="subjectChemistryHours" render={({ field }) => (
+                          <FormItem><FormLabel className="text-xs sm:text-sm">Chemistry</FormLabel><FormControl><Input type="number" placeholder="e.g., 4" {...field} value={isNaN(field.value as number) ? '' : field.value || ''} className="text-xs sm:text-sm h-9 sm:h-10"/></FormControl><FormMessage /></FormItem>
+                      )} />
+                      <FormField control={form.control} name="subjectBiologyHours" render={({ field }) => (
+                        <FormItem><FormLabel className="text-xs sm:text-sm">Biology</FormLabel><FormControl><Input type="number" placeholder="e.g., 3" {...field} value={isNaN(field.value as number) ? '' : field.value || ''} className="text-xs sm:text-sm h-9 sm:h-10"/></FormControl><FormMessage /></FormItem>
+                      )} />
+                      <FormField control={form.control} name="subjectMathHours" render={({ field }) => (
+                          <FormItem><FormLabel className="text-xs sm:text-sm">Mathematics</FormLabel><FormControl><Input type="number" placeholder="e.g., 4" {...field} value={isNaN(field.value as number) ? '' : field.value || ''} className="text-xs sm:text-sm h-9 sm:h-10"/></FormControl><FormMessage /></FormItem>
+                      )} />
+                      <FormField control={form.control} name="subjectOtherHours" render={({ field }) => (
+                          <FormItem><FormLabel className="text-xs sm:text-sm">Other Subjects</FormLabel><FormControl><Input type="number" placeholder="e.g., 2" {...field} value={isNaN(field.value as number) ? '' : field.value || ''} className="text-xs sm:text-sm h-9 sm:h-10"/></FormControl><FormMessage /></FormItem>
+                      )} />
+                  </CardContent>
+                </Card>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 sm:gap-x-6 gap-y-3 sm:gap-y-4">
-                <FormField
-                  control={form.control}
-                  name="streakLength"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-sm sm:text-base">Current Study Streak (Days) 🔥</FormLabel>
-                      <FormControl>
-                        <Input type="number" placeholder="e.g., 7" {...field} value={isNaN(field.value as number) ? '' : field.value} className="text-sm sm:text-base"/>
-                      </FormControl>
-                      <FormDescription className="text-xs sm:text-sm">How many consecutive days have you studied?</FormDescription>
-                      <FormMessage />
-                    </FormItem>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 sm:gap-x-6 gap-y-3 sm:gap-y-4">
+                  <FormField
+                    control={form.control}
+                    name="streakLength"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-sm sm:text-base">Current Study Streak (Days) 🔥</FormLabel>
+                        <FormControl>
+                          <Input type="number" placeholder="e.g., 7" {...field} value={isNaN(field.value as number) ? '' : field.value} className="text-sm sm:text-base"/>
+                        </FormControl>
+                        <FormDescription className="text-xs sm:text-sm">How many consecutive days have you studied?</FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="weeklyGoalsCompleted"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-sm sm:text-base">Weekly Goals Completed 🎯</FormLabel>
+                        <FormControl>
+                          <Input type="number" placeholder="e.g., 3 of 5" {...field} value={isNaN(field.value as number) ? '' : field.value} className="text-sm sm:text-base"/>
+                        </FormControl>
+                        <FormDescription className="text-xs sm:text-sm">How many of your set weekly goals did you achieve?</FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              </CardContent>
+              <CardFooter className="p-4 sm:p-6">
+                <Button type="submit" disabled={isLoading} size="default" className="w-full sm:w-auto text-sm sm:text-base py-2.5 px-5">
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 sm:h-5 sm:w-5 animate-spin" />
+                      Analyzing...
+                    </>
+                  ) : (
+                    <>
+                      <Lightbulb className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />
+                      Get AI Insights
+                    </>
                   )}
-                />
-                <FormField
-                  control={form.control}
-                  name="weeklyGoalsCompleted"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-sm sm:text-base">Weekly Goals Completed 🎯</FormLabel>
-                      <FormControl>
-                        <Input type="number" placeholder="e.g., 3 of 5" {...field} value={isNaN(field.value as number) ? '' : field.value} className="text-sm sm:text-base"/>
-                      </FormControl>
-                      <FormDescription className="text-xs sm:text-sm">How many of your set weekly goals did you achieve?</FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-            </CardContent>
-            <CardFooter className="p-4 sm:p-6">
-              <Button type="submit" disabled={isLoading} size="default" className="w-full sm:w-auto text-sm sm:text-base py-2.5 px-5">
-                {isLoading ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 sm:h-5 sm:w-5 animate-spin" />
-                    Analyzing...
-                  </>
-                ) : (
-                  <>
-                    <Lightbulb className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />
-                    Get AI Insights
-                  </>
-                )}
-              </Button>
-            </CardFooter>
-          </form>
-        </Form>
-      </Card>
+                </Button>
+              </CardFooter>
+            </form>
+          </Form>
+        </Card>
+      </motion.div>
 
       {analysisResult && (
         <Card className="shadow-lg animate-in fade-in-50 duration-500 mt-6 sm:mt-8">
@@ -487,3 +526,4 @@ export default function ProductivityAnalyzerPage() {
     </div>
   );
 }
+

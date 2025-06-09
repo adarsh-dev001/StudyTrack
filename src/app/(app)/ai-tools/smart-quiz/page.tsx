@@ -11,7 +11,7 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { motion } from 'framer-motion';
-import { Loader2, Sparkles, Brain, HelpCircle, Award, Wand2 } from 'lucide-react';
+import { Loader2, Sparkles, Brain, HelpCircle, Award, Wand2, Edit } from 'lucide-react'; // Added Edit
 import { generateQuiz } from '@/ai/flows/generate-quiz-flow';
 import type { GenerateQuizInput, GenerateQuizOutput } from '@/ai/schemas/quiz-tool-schemas';
 import { GenerateQuizInputSchema } from '@/ai/schemas/quiz-tool-schemas';
@@ -26,7 +26,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import OnboardingForm from '@/components/onboarding/onboarding-form';
 import { Skeleton } from '@/components/ui/skeleton';
 
-// Lazy load state-specific display components
 const QuizInProgressDisplay = React.lazy(() => import('@/components/ai-tools/smart-quiz/QuizInProgressDisplay'));
 const QuizResultsDisplay = React.lazy(() => import('@/components/ai-tools/smart-quiz/QuizResultsDisplay'));
 const QuizInProgressDisplayFallback = React.lazy(() => import('@/components/ai-tools/smart-quiz/QuizInProgressDisplayFallback'));
@@ -166,14 +165,14 @@ export default function SmartQuizPage() {
         initialAnswers[index] = { selectedOption: undefined, skipped: false };
       });
       setUserAnswers(initialAnswers);
-      setQuizState('inProgress');
+      setQuizState('inProgress'); 
       toast({
         title: '🧠 Quiz Generated!',
         description: `Your quiz on "${result.quizTitle}" is ready. Good luck!`,
       });
     } catch (error: any) {
       console.error('Error generating quiz:', error);
-      setQuizState('idle');
+      setQuizState('idle'); 
       toast({
         title: 'Error Generating Quiz 😥',
         description: error.message || 'An unexpected error occurred. Please try adjusting your inputs or try again later.',
@@ -227,13 +226,6 @@ export default function SmartQuizPage() {
     }
   };
 
-  const handlePreviousQuestion = () => {
-    if (!quizData || quizState !== 'submitted') return;
-    if (currentQuestionIndex > 0) {
-      setCurrentQuestionIndex(prev => prev - 1);
-    }
-  };
-
   const handleSubmitQuiz = async () => {
     if (!quizData) return;
     let correctAnswers = 0;
@@ -270,7 +262,7 @@ export default function SmartQuizPage() {
 
   const handleCreateNewQuiz = () => {
     form.reset();
-    form.setValue('examType', 'general');
+    form.setValue('examType', userProfile?.targetExams?.[0] || 'general'); // Pre-fill from profile if available
     setQuizData(null);
     setUserAnswers({});
     setCurrentQuestionIndex(0);
@@ -315,6 +307,11 @@ export default function SmartQuizPage() {
     );
   }
 
+  const inputFormVariants = {
+    expanded: { opacity: 1, height: 'auto', scaleY: 1, marginTop: '0rem', marginBottom: '0rem' },
+    collapsed: { opacity: 0, height: 0, scaleY: 0.95, marginTop: '0rem', marginBottom: '0rem' }
+  };
+
   return (
     <div className="w-full space-y-6 sm:space-y-8">
       <header>
@@ -326,111 +323,120 @@ export default function SmartQuizPage() {
         </p>
       </header>
 
-      {quizState === 'idle' && (
-        <Card className="shadow-lg">
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)}>
-              <CardHeader className="p-4 sm:p-6">
-                <CardTitle className="text-lg sm:text-xl">Configure Your Quiz ⚙️</CardTitle>
-                <CardDescription className="text-xs sm:text-sm">Tell the AI what kind of quiz you need.</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4 sm:space-y-6 p-4 sm:p-6">
-                <FormField
-                  control={form.control}
-                  name="topic"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-sm sm:text-base">Quiz Topic <span className="text-destructive">*</span></FormLabel>
-                      <FormControl>
-                        <Input placeholder="e.g., Photosynthesis, Indian National Movement, Thermodynamics" {...field} className="text-sm sm:text-base h-11 sm:h-12" />
-                      </FormControl>
-                      <FormDescription className="text-xs sm:text-sm">
-                        Enter the specific topic you want the quiz on.
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
-                  <FormItem>
-                    <FormLabel className="text-sm sm:text-base font-semibold">Difficulty Level <span className="text-destructive">*</span></FormLabel>
-                     <FormField
-                        control={form.control}
-                        name="difficulty"
-                        render={({ field }) => (
-                            <ToggleGroup
-                                type="single"
-                                value={field.value}
-                                onValueChange={field.onChange}
-                                className="grid grid-cols-3 gap-1 sm:gap-2 mt-2"
-                                aria-label="Difficulty level"
-                            >
-                                {difficultyLevels.map(level => (
-                                <ToggleGroupItem
-                                    key={level.value}
-                                    value={level.value}
-                                    aria-label={level.label}
-                                    className="h-10 sm:h-11 text-xs sm:text-sm px-2"
-                                >
-                                    <span className="mr-1 sm:mr-1.5">{level.icon}</span>{level.label}
-                                </ToggleGroupItem>
-                                ))}
-                            </ToggleGroup>
-                        )}
-                     />
-                     <FormMessage className="mt-1" />
-                  </FormItem>
-                   <FormField
+      <motion.div
+        animate={quizState === 'idle' ? "expanded" : "collapsed"}
+        variants={inputFormVariants}
+        transition={{ duration: 0.4, ease: "easeInOut" }}
+        style={{ overflow: 'hidden', transformOrigin: 'top' }}
+        className={quizState !== 'idle' ? "mt-0" : ""}
+      >
+        {quizState === 'idle' && (
+          <Card className="shadow-lg">
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(onSubmit)}>
+                <CardHeader className="p-4 sm:p-6">
+                  <CardTitle className="text-lg sm:text-xl">Configure Your Quiz ⚙️</CardTitle>
+                  <CardDescription className="text-xs sm:text-sm">Tell the AI what kind of quiz you need.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4 sm:space-y-6 p-4 sm:p-6">
+                  <FormField
                     control={form.control}
-                    name="examType"
+                    name="topic"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-sm sm:text-base font-semibold">Target Exam Type <span className="text-destructive">*</span></FormLabel>
-                         <FormDescription className="text-xs sm:text-sm pb-1">Helps AI tailor question style & tone.</FormDescription>
-                        <Select onValueChange={field.onChange} value={field.value}>
-                          <FormControl>
-                            <SelectTrigger className="text-sm sm:text-base h-10 sm:h-11"><SelectValue placeholder="Select exam type..." /></SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {examTypeOptions.map(opt => (
-                              <SelectItem key={opt.value} value={opt.value} className="text-sm sm:text-base">{opt.label}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                        <FormLabel className="text-sm sm:text-base">Quiz Topic <span className="text-destructive">*</span></FormLabel>
+                        <FormControl>
+                          <Input placeholder="e.g., Photosynthesis, Indian National Movement, Thermodynamics" {...field} className="text-sm sm:text-base h-11 sm:h-12" />
+                        </FormControl>
+                        <FormDescription className="text-xs sm:text-sm">
+                          Enter the specific topic you want the quiz on.
+                        </FormDescription>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
-                </div>
-                <FormField
-                  control={form.control}
-                  name="numQuestions"
-                  render={({ field }) => (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
                     <FormItem>
-                      <FormLabel className="text-sm sm:text-base">Number of Questions (3-10) <span className="text-destructive">*</span></FormLabel>
-                      <FormControl>
-                        <Input type="number" min="3" max="10" placeholder="e.g., 5" {...field} value={isNaN(field.value as number) ? '' : field.value} className="text-sm sm:text-base w-full sm:w-32 h-10 sm:h-11" />
-                      </FormControl>
-                      <FormMessage />
+                      <FormLabel className="text-sm sm:text-base font-semibold">Difficulty Level <span className="text-destructive">*</span></FormLabel>
+                      <FormField
+                          control={form.control}
+                          name="difficulty"
+                          render={({ field }) => (
+                              <ToggleGroup
+                                  type="single"
+                                  value={field.value}
+                                  onValueChange={field.onChange}
+                                  className="grid grid-cols-3 gap-1 sm:gap-2 mt-2"
+                                  aria-label="Difficulty level"
+                              >
+                                  {difficultyLevels.map(level => (
+                                  <ToggleGroupItem
+                                      key={level.value}
+                                      value={level.value}
+                                      aria-label={level.label}
+                                      className="h-10 sm:h-11 text-xs sm:text-sm px-2"
+                                  >
+                                      <span className="mr-1 sm:mr-1.5">{level.icon}</span>{level.label}
+                                  </ToggleGroupItem>
+                                  ))}
+                              </ToggleGroup>
+                          )}
+                      />
+                      <FormMessage className="mt-1" />
                     </FormItem>
-                  )}
-                />
-              </CardContent>
-              <CardFooter className="p-4 sm:p-6">
-                <Button
-                    type="submit"
-                    disabled={form.formState.isSubmitting}
-                    size="lg"
-                    className="w-full sm:w-auto text-base py-3 bg-gradient-to-r from-primary to-accent hover:from-primary/90 hover:to-accent/90 text-primary-foreground rounded-lg shadow-md hover:shadow-lg transition-all duration-300 ease-in-out transform hover:scale-105"
-                >
-                    <Wand2 className="mr-2 h-5 w-5" />
-                    Generate SmartQuiz
-                </Button>
-              </CardFooter>
-            </form>
-          </Form>
-        </Card>
-      )}
+                    <FormField
+                      control={form.control}
+                      name="examType"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-sm sm:text-base font-semibold">Target Exam Type <span className="text-destructive">*</span></FormLabel>
+                          <FormDescription className="text-xs sm:text-sm pb-1">Helps AI tailor question style & tone.</FormDescription>
+                          <Select onValueChange={field.onChange} value={field.value}>
+                            <FormControl>
+                              <SelectTrigger className="text-sm sm:text-base h-10 sm:h-11"><SelectValue placeholder="Select exam type..." /></SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {examTypeOptions.map(opt => (
+                                <SelectItem key={opt.value} value={opt.value} className="text-sm sm:text-base">{opt.label}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                  <FormField
+                    control={form.control}
+                    name="numQuestions"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-sm sm:text-base">Number of Questions (3-10) <span className="text-destructive">*</span></FormLabel>
+                        <FormControl>
+                          <Input type="number" min="3" max="10" placeholder="e.g., 5" {...field} value={isNaN(field.value as number) ? '' : field.value} className="text-sm sm:text-base w-full sm:w-32 h-10 sm:h-11" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </CardContent>
+                <CardFooter className="p-4 sm:p-6">
+                  <Button
+                      type="submit"
+                      disabled={form.formState.isSubmitting}
+                      size="lg"
+                      className="w-full sm:w-auto text-base py-3 bg-gradient-to-r from-primary to-accent hover:from-primary/90 hover:to-accent/90 text-primary-foreground rounded-lg shadow-md hover:shadow-lg transition-all duration-300 ease-in-out transform hover:scale-105"
+                  >
+                      <Wand2 className="mr-2 h-5 w-5" />
+                      Generate SmartQuiz
+                  </Button>
+                </CardFooter>
+              </form>
+            </Form>
+          </Card>
+        )}
+      </motion.div>
+
 
       {(quizState === 'generating') && (
         <div className="flex flex-col items-center justify-center text-center p-6 sm:p-10 border-2 border-dashed border-primary/30 rounded-lg bg-primary/5 min-h-[200px] sm:min-h-[300px]">
