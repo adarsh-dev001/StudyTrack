@@ -5,7 +5,7 @@ import { z } from 'zod';
 export const GenerateWordQuestSessionInputSchema = z.object({
   gameMode: z.enum(['basic', 'intermediate', 'advanced']).describe("The selected game mode, which dictates difficulty and format."),
   previousWords: z.array(z.string()).optional().describe("An array of words already used in the current session to avoid repetition by the AI."),
-  numChallenges: z.number().int().min(1).max(10).optional().default(5).describe("Number of challenges to generate for the session."),
+  numChallenges: z.number().int().min(1).max(10).optional().default(3).describe("Number of challenges to generate for the session."),
 });
 export type GenerateWordQuestSessionInput = z.infer<typeof GenerateWordQuestSessionInputSchema>;
 
@@ -25,3 +25,4 @@ export const WordQuestSessionOutputSchema = z.object({
   challenges: z.array(SingleWordQuestChallengeSchema).min(1).describe("An array of word challenges for the game session.")
 });
 export type WordQuestSessionOutput = z.infer<typeof WordQuestSessionOutputSchema>;
+

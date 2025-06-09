@@ -32,7 +32,7 @@ export interface ChallengeDataForGame {
 }
 
 
-const MAX_QUESTIONS_PER_SESSION = 5; 
+const MAX_QUESTIONS_PER_SESSION = 3; 
 
 interface GameInterfaceProps {
   selectedMode: GameMode;
@@ -554,3 +554,4 @@ export default function GameInterface({ selectedMode, onGoBack }: GameInterfaceP
     </div>
   );
 }
+
