@@ -3,47 +3,33 @@
 
 import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Image as ImageIcon, ListChecks, Library, Flame, Skull } from 'lucide-react'; // Updated icons
+import { ListChecks, Library, Flame } from 'lucide-react'; // Adjusted icons
 import type { GameMode, GameModeDetails } from './types';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 
-// Updated game mode details to match the new design
+// Updated game mode details to only include Basic, Intermediate, Advanced
 const gameModesDetails: Record<GameMode, GameModeDetails> = {
-  junior: {
-    title: 'Junior',
-    description: 'Simple words with picture clues',
-    icon: ImageIcon,
-    colorClass: 'border-blue-500/30 bg-blue-500/5 hover:shadow-blue-500/10',
-    iconColorClass: 'text-blue-500',
-  },
   basic: {
     title: 'Basic',
     description: 'Everyday words with multiple choice answers',
-    icon: ListChecks, // Changed from Type
+    icon: ListChecks,
     colorClass: 'border-green-500/30 bg-green-500/5 hover:shadow-green-500/10',
     iconColorClass: 'text-green-500',
   },
   intermediate: {
     title: 'Intermediate',
     description: 'Test your typing and spelling skills with interesting words',
-    icon: Library, // Changed from Brain
-    colorClass: 'border-teal-500/30 bg-teal-500/5 hover:shadow-teal-500/10', // Greenish-blue accent
+    icon: Library,
+    colorClass: 'border-teal-500/30 bg-teal-500/5 hover:shadow-teal-500/10',
     iconColorClass: 'text-teal-500',
   },
   advanced: {
     title: 'Advanced',
     description: 'Challenging words to level up your vocabulary',
-    icon: Flame, // Changed from Zap
+    icon: Flame,
     colorClass: 'border-orange-500/30 bg-orange-500/5 hover:shadow-orange-500/10',
     iconColorClass: 'text-orange-500',
-  },
-  expert: { // Changed from rapidFire to expert
-    title: 'Expert',
-    description: 'Rare and sophisticated words for vocabulary masters',
-    icon: Skull, // Changed from Clock
-    colorClass: 'border-purple-500/30 bg-purple-500/5 hover:shadow-purple-500/10',
-    iconColorClass: 'text-purple-500',
   },
 };
 

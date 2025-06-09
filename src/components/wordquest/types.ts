@@ -1,8 +1,8 @@
 
 import type { LucideIcon } from 'lucide-react';
 
-// Updated GameMode to include 'expert' instead of 'rapidFire'
-export type GameMode = 'junior' | 'basic' | 'intermediate' | 'advanced' | 'expert';
+// Updated GameMode to only include Basic, Intermediate, and Advanced
+export type GameMode = 'basic' | 'intermediate' | 'advanced';
 
 export interface GameModeDetails {
   title: string;

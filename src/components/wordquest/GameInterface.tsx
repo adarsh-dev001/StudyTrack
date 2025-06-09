@@ -12,21 +12,14 @@ import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 
 const gameModesDetails: Record<GameMode, GameModeDetails> = {
-  junior: { title: 'Junior Journey', description: 'Pictures & Simple Words', icon: ImageIcon, colorClass: 'border-blue-500/30 bg-blue-500/5 hover:shadow-blue-500/10', iconColorClass: 'text-blue-500' },
   basic: { title: 'Basic Builder', description: 'Everyday Words - MCQs', icon: ListChecks, colorClass: 'border-green-500/30 bg-green-500/5 hover:shadow-green-500/10', iconColorClass: 'text-green-500' },
   intermediate: { title: 'Intermediate Challenge', description: 'Fill-in-the-blanks', icon: Library, colorClass: 'border-teal-500/30 bg-teal-500/5 hover:shadow-teal-500/10', iconColorClass: 'text-teal-500' },
   advanced: { title: 'Advanced Arena', description: 'Descriptive Clues - Timed', icon: Flame, colorClass: 'border-orange-500/30 bg-orange-500/5 hover:shadow-orange-500/10', iconColorClass: 'text-orange-500' },
-  expert: { title: 'Expert Arena', description: 'Rare & Sophisticated Words', icon: Skull, colorClass: 'border-purple-500/30 bg-purple-500/5 hover:shadow-purple-500/10', iconColorClass: 'text-purple-500' },
 };
 
 const MOCK_WORDS: Record<GameMode, WordData[]> = {
-  junior: [
-    { id: 'j1', word: 'Apple', clueType: 'image', clue: 'https://placehold.co/300x200/FF0000/FFFFFF?text=Apple', correctAnswer: 'Apple' },
-    { id: 'j2', word: 'Ball', clueType: 'image', clue: 'https://placehold.co/300x200/0000FF/FFFFFF?text=Ball', correctAnswer: 'Ball' },
-    { id: 'j3', word: 'Cat', clueType: 'image', clue: 'https://placehold.co/300x200/FFFF00/000000?text=Cat', correctAnswer: 'Cat' },
-  ],
   basic: [ 
-    { id: 'b1', word: 'Deep', clueType: 'definition', clue: 'adjective. Extending far down from the top or surface.', options: ['Shallow', 'Deep', 'Narrow'], correctAnswer: 'Deep' },
+    { id: 'b1', word: 'Deep', clueType: 'definition', clue: 'adjective. Going far down from the top or surface.', options: ['Shallow', 'Deep', 'Narrow'], correctAnswer: 'Deep' },
     { id: 'b2', word: 'Run', clueType: 'definition', clue: 'Move at a speed faster than a walk.', options: ['Walk', 'Sit', 'Run'], correctAnswer: 'Run' },
     { id: 'b3', word: 'Big', clueType: 'definition', clue: 'Of considerable size or extent.', options: ['Small', 'Tiny', 'Big'], correctAnswer: 'Big' },
   ],
@@ -39,11 +32,6 @@ const MOCK_WORDS: Record<GameMode, WordData[]> = {
     { id: 'a1', word: 'Ephemeral', clueType: 'definition', clue: 'Lasting for a very short time.', correctAnswer: 'Ephemeral', hint: "Think 'fleeting'" },
     { id: 'a2', word: 'Ubiquitous', clueType: 'definition', clue: 'Present, appearing, or found everywhere.', correctAnswer: 'Ubiquitous', hint: "Like air, or popular trends"},
     { id: 'a3', word: 'Serendipity', clueType: 'definition', clue: 'The occurrence of events by chance in a happy or beneficial way.', correctAnswer: 'Serendipity', hint: "A fortunate accident"},
-  ],
-  expert: [
-    { id: 'e1', word: 'Pulchritudinous', clueType: 'definition', clue: 'Having great physical beauty.', correctAnswer: 'Pulchritudinous', hint: "Relates to beauty" },
-    { id: 'e2', word: 'Mellifluous', clueType: 'definition', clue: 'Pleasant and musical to hear.', correctAnswer: 'Mellifluous', hint: "Describes a sweet sound"},
-    { id: 'e3', word: 'Supersede', clueType: 'definition', clue: 'Take the place of (a person or thing previously in authority or use); supplant.', correctAnswer: 'Supersede', hint: "To replace something older"},
   ],
 };
 const MAX_TIME_PER_QUESTION = 83; 
@@ -62,16 +50,15 @@ export default function GameInterface({ selectedMode, onGoBack }: GameInterfaceP
   const [gameOver, setGameOver] = useState(false);
   const [feedbackMessage, setFeedbackMessage] = useState<string | null>(null);
   const [shuffledOptions, setShuffledOptions] = useState<string[]>([]);
-  const hiddenInputRef = useRef<HTMLInputElement>(null); // For intermediate/advanced typing
+  const hiddenInputRef = useRef<HTMLInputElement>(null); 
 
   const wordsForMode = MOCK_WORDS[selectedMode] || MOCK_WORDS.basic;
   const currentWordData = wordsForMode[currentWordIndex];
 
   const resetTimer = useCallback(() => {
-    let duration = MAX_TIME_PER_QUESTION; // Default for basic
-    if (selectedMode === 'advanced' || selectedMode === 'expert') duration = 20;
-    else if (selectedMode === 'intermediate') duration = 78; // 1:18 for intermediate
-    else if (selectedMode === 'junior') duration = 60;
+    let duration = MAX_TIME_PER_QUESTION; 
+    if (selectedMode === 'advanced') duration = 20;
+    else if (selectedMode === 'intermediate') duration = 78; 
     setTimeLeft(duration);
   }, [selectedMode]);
 
@@ -79,8 +66,7 @@ export default function GameInterface({ selectedMode, onGoBack }: GameInterfaceP
     if (currentWordData && selectedMode === 'basic' && currentWordData.options) {
       setShuffledOptions([...currentWordData.options].sort(() => Math.random() - 0.5));
     }
-    // Focus hidden input for typing modes
-    if (selectedMode === 'intermediate' || selectedMode === 'advanced' || selectedMode === 'expert' || selectedMode === 'junior') {
+    if (selectedMode === 'intermediate' || selectedMode === 'advanced') {
       hiddenInputRef.current?.focus();
     }
   }, [currentWordData, selectedMode]);
@@ -90,7 +76,7 @@ export default function GameInterface({ selectedMode, onGoBack }: GameInterfaceP
     setIsHintUsedForQuestion(false);
     setUserInput('');
     setFeedbackMessage(null);
-     if ((selectedMode === 'intermediate' || selectedMode === 'advanced' || selectedMode === 'expert' || selectedMode === 'junior') && !gameOver) {
+     if ((selectedMode === 'intermediate' || selectedMode === 'advanced') && !gameOver) {
       hiddenInputRef.current?.focus();
     }
   }, [currentWordIndex, selectedMode, resetTimer, gameOver]);
@@ -98,14 +84,14 @@ export default function GameInterface({ selectedMode, onGoBack }: GameInterfaceP
   useEffect(() => {
     if (gameOver) return;
     if (timeLeft <= 0) {
-      handleSkip(); // Auto-skip if time runs out
+      handleSkip(); 
       return;
     }
     const timerId = setInterval(() => {
       setTimeLeft(prev => prev - 1);
     }, 1000);
     return () => clearInterval(timerId);
-  }, [timeLeft, gameOver]); // Removed handleSkip from deps to avoid re-triggering
+  }, [timeLeft, gameOver]); 
 
   const proceedToNextOrEnd = useCallback(() => {
     if (currentWordIndex < wordsForMode.length - 1) {
@@ -116,7 +102,7 @@ export default function GameInterface({ selectedMode, onGoBack }: GameInterfaceP
   }, [currentWordIndex, wordsForMode.length]);
 
   const handleSubmitAnswer = useCallback(() => {
-    if (!currentWordData || feedbackMessage) return; // Don't submit if already showing feedback
+    if (!currentWordData || feedbackMessage) return; 
 
     let isCorrect = false;
     if (selectedMode === 'basic') {
@@ -141,7 +127,7 @@ export default function GameInterface({ selectedMode, onGoBack }: GameInterfaceP
   const handleOptionSelect = (option: string) => {
     if (feedbackMessage) return;
     setUserInput(option); 
-    handleSubmitAnswer(); // Directly submit for MCQ
+    handleSubmitAnswer(); 
   };
 
   const handleSkip = useCallback(() => {
@@ -155,7 +141,6 @@ export default function GameInterface({ selectedMode, onGoBack }: GameInterfaceP
   const handleHint = () => {
     if (currentWordData?.hint && !isHintUsedForQuestion) {
         setIsHintUsedForQuestion(true);
-        // Potentially deduct points for using a hint, if that's a game mechanic
     }
   };
   
@@ -165,7 +150,6 @@ export default function GameInterface({ selectedMode, onGoBack }: GameInterfaceP
     return `${minutes}:${String(seconds).padStart(2, '0')}`;
   };
 
-  // Keyboard event listener for typing modes and global shortcuts
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (gameOver || feedbackMessage) return;
@@ -176,14 +160,13 @@ export default function GameInterface({ selectedMode, onGoBack }: GameInterfaceP
         return;
       }
 
-      if (selectedMode === 'intermediate' || selectedMode === 'advanced' || selectedMode === 'expert' || selectedMode === 'junior') {
+      if (selectedMode === 'intermediate' || selectedMode === 'advanced') {
         if (event.key === 'Enter') {
           event.preventDefault();
           if (userInput.trim()) handleSubmitAnswer();
         } else if (event.key === 'Backspace') {
           setUserInput(prev => prev.slice(0, -1));
         } else if (event.key.length === 1 && userInput.length < (currentWordData?.correctAnswer.length || 20)) { 
-          // Allow typing if length is 1 (alphanumeric, symbols) and not exceeding word length
           setUserInput(prev => prev + event.key);
         }
       }
@@ -196,13 +179,12 @@ export default function GameInterface({ selectedMode, onGoBack }: GameInterfaceP
   }, [gameOver, feedbackMessage, selectedMode, userInput, handleSubmitAnswer, handleSkip, currentWordData]);
 
 
-  // Auto-submit for intermediate when all blanks are filled
   useEffect(() => {
     if (
-      (selectedMode === 'intermediate' || selectedMode === 'advanced' || selectedMode === 'expert' || selectedMode === 'junior') &&
+      (selectedMode === 'intermediate' || selectedMode === 'advanced') &&
       currentWordData &&
       userInput.length === currentWordData.correctAnswer.length &&
-      !feedbackMessage // Only submit if not already showing feedback
+      !feedbackMessage 
     ) {
       handleSubmitAnswer();
     }
@@ -239,7 +221,7 @@ export default function GameInterface({ selectedMode, onGoBack }: GameInterfaceP
           <img src={currentWordData.clue} alt="Word Clue" className="rounded-md shadow-md max-w-xs mx-auto h-auto" data-ai-hint="game clue image" />
         );
       case 'definition':
-      case 'fill-in-the-blank': // Treat fill-in-the-blank clues similarly to definitions for display
+      case 'fill-in-the-blank': 
       case 'meaning':
         return <p className="text-xl md:text-2xl lg:text-3xl text-foreground font-medium leading-tight">{currentWordData.clue}</p>;
       default:
@@ -281,8 +263,7 @@ export default function GameInterface({ selectedMode, onGoBack }: GameInterfaceP
         </div>
       </div>
 
-      <div className="flex-grow grid grid-cols-1 md:grid-cols-2 min-h-[calc(100vh-150px)]"> {/* Main two-panel layout */}
-        {/* Left Panel: Clue and Game Info */}
+      <div className="flex-grow grid grid-cols-1 md:grid-cols-2 min-h-[calc(100vh-150px)]"> 
         <motion.div 
           key={`clue-panel-${currentWordIndex}`}
           initial={{ opacity: 0, x: -30 }}
@@ -298,7 +279,7 @@ export default function GameInterface({ selectedMode, onGoBack }: GameInterfaceP
             {renderClueContent()}
           </div>
 
-          <div className="mt-auto"> {/* Bottom aligned content */}
+          <div className="mt-auto"> 
             <div className="flex justify-between items-end">
               <div className="flex items-center space-x-2 sm:space-x-3">
                  <Button 
@@ -311,10 +292,10 @@ export default function GameInterface({ selectedMode, onGoBack }: GameInterfaceP
                     <span className="bg-indigo-700/80 px-1.5 py-0.5 rounded-sm text-xs mr-1.5">esc</span> Skip
                 </Button>
                 <div className="flex items-center text-muted-foreground text-sm">
-                    <HelpCircle className="h-4 w-4 mr-1" /> 0 {/* Placeholder for hints used */}
+                    <HelpCircle className="h-4 w-4 mr-1" /> 0 
                 </div>
                 <div className="flex items-center text-muted-foreground text-sm">
-                    <Flame className="h-4 w-4 mr-1" /> 0 {/* Placeholder for streak/lives */}
+                    <Flame className="h-4 w-4 mr-1" /> 0 
                 </div>
               </div>
               <div className="text-right">
@@ -325,7 +306,6 @@ export default function GameInterface({ selectedMode, onGoBack }: GameInterfaceP
           </div>
         </motion.div>
 
-        {/* Right Panel: Options or Input */}
         <motion.div 
            key={`input-panel-${currentWordIndex}`}
            initial={{ opacity: 0, x: 30 }}
@@ -341,9 +321,9 @@ export default function GameInterface({ selectedMode, onGoBack }: GameInterfaceP
                   variant="outline"
                   className={cn(
                     "w-full h-auto py-4 sm:py-5 text-base sm:text-lg justify-between items-center text-left whitespace-normal hover:bg-primary/10 hover:border-primary",
-                    userInput === option && !feedbackMessage && "bg-primary/20 border-primary ring-2 ring-primary", // Highlight selection before feedback
-                    feedbackMessage && option === currentWordData.correctAnswer && "bg-green-500/20 border-green-500 ring-2 ring-green-500", // Correct answer on feedback
-                    feedbackMessage && userInput === option && option !== currentWordData.correctAnswer && "bg-red-500/20 border-red-500 ring-2 ring-red-500" // Incorrect user selection on feedback
+                    userInput === option && !feedbackMessage && "bg-primary/20 border-primary ring-2 ring-primary", 
+                    feedbackMessage && option === currentWordData.correctAnswer && "bg-green-500/20 border-green-500 ring-2 ring-green-500", 
+                    feedbackMessage && userInput === option && option !== currentWordData.correctAnswer && "bg-red-500/20 border-red-500 ring-2 ring-red-500" 
                   )}
                   onClick={() => handleOptionSelect(option)}
                   disabled={!!feedbackMessage}
@@ -355,7 +335,7 @@ export default function GameInterface({ selectedMode, onGoBack }: GameInterfaceP
                 </Button>
               ))}
             </div>
-          ) : (selectedMode === 'intermediate' || selectedMode === 'advanced' || selectedMode === 'expert' || selectedMode === 'junior') ? (
+          ) : (selectedMode === 'intermediate' || selectedMode === 'advanced') ? (
             <div className="w-full max-w-md text-center space-y-6">
               {currentWordData.hint && (
                 <p className="text-2xl sm:text-3xl font-semibold text-foreground/80">
@@ -363,14 +343,13 @@ export default function GameInterface({ selectedMode, onGoBack }: GameInterfaceP
                 </p>
               )}
               {renderLetterBoxes()}
-              {/* Hidden input for capturing keyboard events */}
               <input
                 ref={hiddenInputRef}
                 type="text"
                 className="opacity-0 w-0 h-0 absolute"
-                onFocus={() => hiddenInputRef.current?.focus()} // Keep focus
-                value={userInput} // Needed to ensure state drives the value if we were to show it
-                readOnly // We handle input via global keydown
+                onFocus={() => hiddenInputRef.current?.focus()} 
+                value={userInput} 
+                readOnly 
               />
             </div>
           ) : (
@@ -395,4 +374,5 @@ export default function GameInterface({ selectedMode, onGoBack }: GameInterfaceP
     </div>
   );
 }
+
 
