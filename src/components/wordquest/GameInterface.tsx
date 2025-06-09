@@ -87,6 +87,19 @@ export default function GameInterface({ selectedMode, onGoBack }: GameInterfaceP
   const [shuffledOptions, setShuffledOptions] = useState<string[]>([]);
   const hiddenInputRef = useRef<HTMLInputElement>(null);
 
+  const correctAnswerSoundRef = useRef<HTMLAudioElement | null>(null);
+  const wrongAnswerSoundRef = useRef<HTMLAudioElement | null>(null);
+
+  useEffect(() => {
+    // Initialize Audio objects on the client side
+    if (typeof window !== 'undefined') {
+      correctAnswerSoundRef.current = new Audio('/sounds/correct_answer.mp3');
+      wrongAnswerSoundRef.current = new Audio('/sounds/wrong_answer.mp3');
+      correctAnswerSoundRef.current.preload = 'auto';
+      wrongAnswerSoundRef.current.preload = 'auto';
+    }
+  }, []);
+
   const wordsForMode = MOCK_WORDS[selectedMode] || MOCK_WORDS.basic;
   const currentWordData = wordsForMode[currentWordIndex];
 
@@ -137,8 +150,10 @@ export default function GameInterface({ selectedMode, onGoBack }: GameInterfaceP
     if (isCorrect) {
       setScore(s => s + 10);
       setFeedbackMessage('Correct! 🎉');
+      correctAnswerSoundRef.current?.play().catch(e => console.error("Error playing correct sound:", e));
     } else {
       setFeedbackMessage(`Oops! The correct answer was: ${currentWordData.correctAnswer}`);
+      wrongAnswerSoundRef.current?.play().catch(e => console.error("Error playing wrong sound:", e));
     }
 
     setTimeout(() => {
@@ -149,14 +164,28 @@ export default function GameInterface({ selectedMode, onGoBack }: GameInterfaceP
   const handleOptionSelect = (option: string) => {
     if (feedbackMessage) return;
     setUserInput(option);
+    // For basic mode, submit immediately after selection.
+    // We need to pass the selected option directly because state update might not be immediate.
     if (selectedMode === 'basic') {
-        handleSubmitAnswer(); // Submit immediately for basic mode
+        let isCorrect = option === currentWordData.correctAnswer;
+        if (isCorrect) {
+            setScore(s => s + 10);
+            setFeedbackMessage('Correct! 🎉');
+            correctAnswerSoundRef.current?.play().catch(e => console.error("Error playing correct sound:", e));
+        } else {
+            setFeedbackMessage(`Oops! The correct answer was: ${currentWordData.correctAnswer}`);
+            wrongAnswerSoundRef.current?.play().catch(e => console.error("Error playing wrong sound:", e));
+        }
+        setTimeout(() => {
+            proceedToNextOrEnd();
+        }, 1500);
     }
   };
 
   const handleSkip = useCallback(() => {
     if (gameOver || feedbackMessage) return;
     setFeedbackMessage(`Skipped! The answer was: ${currentWordData?.correctAnswer || 'N/A'}`);
+    wrongAnswerSoundRef.current?.play().catch(e => console.error("Error playing wrong sound on skip:", e));
     setTimeout(() => {
       proceedToNextOrEnd();
     }, 1500);
@@ -427,7 +456,7 @@ export default function GameInterface({ selectedMode, onGoBack }: GameInterfaceP
                 className="opacity-0 w-0 h-0 absolute"
                 onFocus={() => hiddenInputRef.current?.focus()}
                 value={userInput}
-                readOnly
+                readOnly // Input is controlled by global keydown listener
               />
             </div>
           ) : (
@@ -461,4 +490,3 @@ export default function GameInterface({ selectedMode, onGoBack }: GameInterfaceP
     </div>
   );
 }
-
