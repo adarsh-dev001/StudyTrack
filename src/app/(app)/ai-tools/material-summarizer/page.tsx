@@ -10,7 +10,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Loader2, Wand2, Sparkles, UploadCloud, FileText, Download, BookText, AlertTriangle, Edit, CheckCircle } from 'lucide-react'; // Added Edit, CheckCircle
+import { Loader2, Wand2, Sparkles, UploadCloud, FileText, Download, BookText, AlertTriangle, Edit, CheckCircle } from 'lucide-react';
 import { summarizeStudyMaterial, type SummarizeStudyMaterialOutput, type MCQ } from '@/ai/flows/summarize-study-material';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/auth-context';
@@ -202,7 +202,6 @@ export default function MaterialSummarizerPage() {
       setPdfFileName(null);
     } finally {
       setIsProcessingPdf(false);
-      // Do not reset fileInputRef.current.value here, as it might still be needed or cause issues.
     }
   };
 
@@ -359,9 +358,9 @@ export default function MaterialSummarizerPage() {
               if (fileInputRef.current) fileInputRef.current.value = "";
               form.reset(); 
             }}
-            variant="outline"
+            variant="default" // Changed variant to default for primary color
             size="lg"
-            className="w-full sm:w-auto text-base py-3 px-6 shadow-md hover:bg-accent/10 border-accent text-accent hover:text-accent-foreground transition-colors duration-200"
+            className="w-full sm:w-auto text-base py-3 px-6 bg-gradient-to-r from-primary to-teal-500 hover:from-primary/90 hover:to-teal-500/90 text-primary-foreground rounded-lg shadow-md hover:shadow-lg transition-all duration-300 ease-in-out transform hover:scale-105"
           >
             <Edit className="mr-2 h-5 w-5" /> Process New Material
           </Button>
@@ -388,7 +387,6 @@ export default function MaterialSummarizerPage() {
                 </CardHeader>
                 <CardContent className="space-y-6 p-5 sm:p-8">
                   
-                  {/* PDF Upload Section */}
                   <div className="space-y-3">
                     <FormLabel className="text-base sm:text-lg font-medium text-foreground">Upload PDF</FormLabel>
                     <div 
@@ -412,7 +410,7 @@ export default function MaterialSummarizerPage() {
                         id="pdfFile"
                         accept=".pdf"
                         onChange={handlePdfFileChange}
-                        className="opacity-0 w-0 h-0 absolute" // Hidden visually but accessible
+                        className="opacity-0 w-0 h-0 absolute"
                         disabled={isProcessingPdf}
                       />
                     </div>
@@ -430,7 +428,6 @@ export default function MaterialSummarizerPage() {
                     <div className="flex-grow border-t border-border"></div>
                   </div>
 
-                  {/* Text Input Section */}
                   <FormField
                     control={form.control}
                     name="topic"
