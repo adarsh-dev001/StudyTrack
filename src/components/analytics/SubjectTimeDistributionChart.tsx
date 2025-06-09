@@ -6,7 +6,7 @@ import { ChartContainer, ChartLegend, ChartTooltipContent } from "@/components/u
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from '@/contexts/auth-context';
 import { db } from '@/lib/firebase';
-import { collection, onSnapshot, query, where, type Unsubscribe, Timestamp, select } from 'firebase/firestore'; // Added select
+import * as Firestore from 'firebase/firestore';
 import { Loader2, PieChartIcon as PieIcon } from "lucide-react";
 import React, { useEffect, useRef, useState } from 'react';
 import { Cell, Pie, PieChart as RechartsPieChart } from "recharts";
@@ -78,7 +78,7 @@ export default function SubjectTimeDistributionChart({ selectedSubjectFilter = n
   const [subjectTimeDataDynamic, setSubjectTimeDataDynamic] = useState<SubjectTimeDataPoint[]>([]);
   const [loadingSubjectData, setLoadingSubjectData] = useState(true);
   const [subjectTimeConfig, setSubjectTimeConfig] = useState<ChartConfig>(subjectTimeConfigBase);
-  const unsubscribeRef = useRef<Unsubscribe | null>(null);
+  const unsubscribeRef = useRef<Firestore.Unsubscribe | null>(null);
 
   useEffect(() => {
     if (!currentUser?.uid) { 
@@ -93,25 +93,24 @@ export default function SubjectTimeDistributionChart({ selectedSubjectFilter = n
     }
 
     setLoadingSubjectData(true);
-    const tasksRef = collection(db, 'users', currentUser.uid, 'plannerTasks');
+    const tasksRef = Firestore.collection(db, 'users', currentUser.uid, 'plannerTasks');
     
-    const queryConstraints = [
-        where('status', '==', 'completed'),
-        select("subject", "duration", "status") // Select only necessary fields including the one used in where
+    const queryConstraints: Firestore.QueryConstraint[] = [
+        Firestore.where('status', '==', 'completed'),
     ];
 
     if (selectedSubjectFilter && selectedSubjectFilter !== "all") {
-      queryConstraints.push(where('subject', '==', selectedSubjectFilter));
+      queryConstraints.push(Firestore.where('subject', '==', selectedSubjectFilter));
     }
     
-    const q = query(tasksRef, ...queryConstraints);
+    const q = Firestore.query(tasksRef, ...queryConstraints, Firestore.select("subject", "duration", "status"));
 
 
     if (unsubscribeRef.current) {
       unsubscribeRef.current();
     }
 
-    unsubscribeRef.current = onSnapshot(q, (querySnapshot) => {
+    unsubscribeRef.current = Firestore.onSnapshot(q, (querySnapshot) => {
       console.log(`SubjectTimeDistributionChart: Processing ${querySnapshot.size} completed task documents.`);
       const subjectHoursMap: Record<string, number> = {};
       querySnapshot.forEach((doc) => {

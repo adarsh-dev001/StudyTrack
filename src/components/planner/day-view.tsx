@@ -27,17 +27,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/auth-context";
 import { db } from "@/lib/firebase";
-import {
-  collection,
-  addDoc,
-  doc,
-  updateDoc,
-  deleteDoc,
-  query,
-  where,
-  onSnapshot,
-  select, 
-} from "firebase/firestore";
+import * as Firestore from "firebase/firestore";
 import { format } from "date-fns";
 import type { Task, Priority } from "./planner-types";
 import { subjects, getPriorityBadgeInfo, getSubjectInfo, hourToDisplayTime } from "./planner-utils";
@@ -158,19 +148,21 @@ export default function DayView({ selectedDate, selectedSubjectFilter }: DayView
     }
 
     setIsLoadingTasks(true);
-    const tasksCollectionRef = collection(db, "users", currentUser.uid, "plannerTasks");
+    const tasksCollectionRef = Firestore.collection(db, "users", currentUser.uid, "plannerTasks");
     
     const dayOfWeek = selectedDate.getDay();
-    const selectFields = select("title", "subject", "topic", "description", "duration", "priority", "status", "startHour", "day");
-    let q;
-
+    const queryConstraints: Firestore.QueryConstraint[] = [Firestore.where("day", "==", dayOfWeek)];
     if (selectedSubjectFilter && selectedSubjectFilter !== "all") {
-      q = query(tasksCollectionRef, where("day", "==", dayOfWeek), where("subject", "==", selectedSubjectFilter), selectFields);
-    } else {
-      q = query(tasksCollectionRef, where("day", "==", dayOfWeek), selectFields);
+      queryConstraints.push(Firestore.where("subject", "==", selectedSubjectFilter));
     }
     
-    const unsubscribe = onSnapshot(q, (querySnapshot) => {
+    const q = Firestore.query(
+      tasksCollectionRef,
+      ...queryConstraints,
+      Firestore.select("title", "subject", "topic", "description", "duration", "priority", "status", "startHour", "day")
+    );
+    
+    const unsubscribe = Firestore.onSnapshot(q, (querySnapshot) => {
       const fetchedTasks: Task[] = [];
       querySnapshot.forEach((doc) => {
         fetchedTasks.push({ id: doc.id, ...doc.data() } as Task);
@@ -216,7 +208,7 @@ export default function DayView({ selectedDate, selectedSubjectFilter }: DayView
     };
 
     try {
-      await addDoc(collection(db, "users", currentUser.uid, "plannerTasks"), taskToSave);
+      await Firestore.addDoc(Firestore.collection(db, "users", currentUser.uid, "plannerTasks"), taskToSave);
       if (currentUser.uid) { 
         await recordPlatformInteraction(currentUser.uid);
       }
@@ -239,7 +231,7 @@ export default function DayView({ selectedDate, selectedSubjectFilter }: DayView
 
     const newStatus = taskToUpdate.status === "completed" ? "pending" : "completed";
     try {
-      await updateDoc(doc(db, "users", currentUser.uid, "plannerTasks", taskId), { status: newStatus });
+      await Firestore.updateDoc(Firestore.doc(db, "users", currentUser.uid, "plannerTasks", taskId), { status: newStatus });
       if (newStatus === "completed" && currentUser.uid) { 
          await recordPlatformInteraction(currentUser.uid);
       }
@@ -252,7 +244,7 @@ export default function DayView({ selectedDate, selectedSubjectFilter }: DayView
     if (!currentUser || !db) return;
     if (!window.confirm("Are you sure you want to delete this task?")) return;
     try {
-      await deleteDoc(doc(db, "users", currentUser.uid, "plannerTasks", taskId));
+      await Firestore.deleteDoc(Firestore.doc(db, "users", currentUser.uid, "plannerTasks", taskId));
        if (currentUser.uid) { 
         await recordPlatformInteraction(currentUser.uid);
       }

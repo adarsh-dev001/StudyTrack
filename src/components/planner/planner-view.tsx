@@ -29,17 +29,7 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { cn } from "@/lib/utils"
 import { useAuth } from "@/contexts/auth-context"
 import { db } from "@/lib/firebase"
-import {
-  collection,
-  addDoc,
-  doc,
-  updateDoc,
-  deleteDoc,
-  query,
-  where,
-  onSnapshot,
-  select, 
-} from "firebase/firestore"
+import * as Firestore from "firebase/firestore";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { Task, Priority } from "./planner-types"; 
 import { subjects, getPriorityBadgeInfo, getSubjectInfo, hourToDisplayTime } from "./planner-utils"; 
@@ -195,18 +185,20 @@ export function PlannerView({ selectedDate, selectedSubjectFilter, onDateChange,
     }
 
     setIsLoadingTasks(true);
-    const tasksCollectionRef = collection(db, "users", currentUser.uid, "plannerTasks");
+    const tasksCollectionRef = Firestore.collection(db, "users", currentUser.uid, "plannerTasks");
     
-    const selectFields = select("title", "subject", "topic", "description", "duration", "priority", "status", "startHour", "day");
-    let q;
-
+    const queryConstraints: Firestore.QueryConstraint[] = [];
     if (selectedSubjectFilter && selectedSubjectFilter !== "all") {
-      q = query(tasksCollectionRef, where("subject", "==", selectedSubjectFilter), selectFields);
-    } else {
-      q = query(tasksCollectionRef, selectFields);
+      queryConstraints.push(Firestore.where("subject", "==", selectedSubjectFilter));
     }
     
-    const unsubscribe = onSnapshot(q, (querySnapshot) => {
+    const q = Firestore.query(
+      tasksCollectionRef, 
+      ...queryConstraints, 
+      Firestore.select("title", "subject", "topic", "description", "duration", "priority", "status", "startHour", "day")
+    );
+    
+    const unsubscribe = Firestore.onSnapshot(q, (querySnapshot) => {
       const fetchedTasks: Task[] = [];
       querySnapshot.forEach((doc) => {
         fetchedTasks.push({ id: doc.id, ...doc.data() } as Task);
@@ -254,8 +246,8 @@ export function PlannerView({ selectedDate, selectedSubjectFilter, onDateChange,
     };
 
     try {
-      const tasksCollectionRef = collection(db, "users", currentUser.uid, "plannerTasks");
-      await addDoc(tasksCollectionRef, taskToSave);
+      const tasksCollectionRef = Firestore.collection(db, "users", currentUser.uid, "plannerTasks");
+      await Firestore.addDoc(tasksCollectionRef, taskToSave);
       if (currentUser.uid) { 
         await recordPlatformInteraction(currentUser.uid);
       }
@@ -298,9 +290,9 @@ export function PlannerView({ selectedDate, selectedSubjectFilter, onDateChange,
   const handleDrop = useCallback(async (day: number, hour: number) => {
     if (!currentUser || !db || !draggedTask || !draggedTask.id) return;
 
-    const taskDocRef = doc(db, "users", currentUser.uid, "plannerTasks", draggedTask.id);
+    const taskDocRef = Firestore.doc(db, "users", currentUser.uid, "plannerTasks", draggedTask.id);
     try {
-      await updateDoc(taskDocRef, { day, startHour: hour });
+      await Firestore.updateDoc(taskDocRef, { day, startHour: hour });
       if (currentUser.uid) { 
         await recordPlatformInteraction(currentUser.uid);
       }
@@ -317,9 +309,9 @@ export function PlannerView({ selectedDate, selectedSubjectFilter, onDateChange,
     if (!taskToUpdate) return;
 
     const newStatus = taskToUpdate.status === "completed" ? "pending" : "completed";
-    const taskDocRef = doc(db, "users", currentUser.uid, "plannerTasks", taskId);
+    const taskDocRef = Firestore.doc(db, "users", currentUser.uid, "plannerTasks", taskId);
     try {
-      await updateDoc(taskDocRef, { status: newStatus });
+      await Firestore.updateDoc(taskDocRef, { status: newStatus });
       if (newStatus === "completed" && currentUser.uid) { 
          await recordPlatformInteraction(currentUser.uid);
       }
@@ -332,9 +324,9 @@ export function PlannerView({ selectedDate, selectedSubjectFilter, onDateChange,
     if (!currentUser || !db) return;
     if (!window.confirm("Are you sure you want to delete this task?")) return;
 
-    const taskDocRef = doc(db, "users", currentUser.uid, "plannerTasks", taskId);
+    const taskDocRef = Firestore.doc(db, "users", currentUser.uid, "plannerTasks", taskId);
     try {
-      await deleteDoc(taskDocRef);
+      await Firestore.deleteDoc(taskDocRef);
       if (currentUser.uid) { 
         await recordPlatformInteraction(currentUser.uid);
       }
