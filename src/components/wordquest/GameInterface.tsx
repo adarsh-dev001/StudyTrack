@@ -52,7 +52,7 @@ const gameModesDetails: Record<GameMode, GameModeDetails> = {
   advanced: { title: 'Advanced', description: 'Challenging Definitions - Timed', icon: Flame, colorClass: 'border-orange-500/30 bg-orange-500/5 hover:shadow-orange-500/10', iconColorClass: 'text-orange-500' },
 };
 
-const MAX_QUESTIONS_PER_SESSION = 3; // Use 3 as per previous refinement
+const MAX_QUESTIONS_PER_SESSION = 3; 
 
 interface GameInterfaceProps {
   selectedMode: GameMode;
@@ -97,7 +97,7 @@ export default function GameInterface({ selectedMode, onGoBack, gameKey }: GameI
   const [isHintUsedForQuestion, setIsHintUsedForQuestion] = useState(false);
   const [gameOver, setGameOver] = useState(false);
   const [feedbackMessage, setFeedbackMessage] = useState<string | null>(null);
-  const [isLoadingSession, setIsLoadingSession] = useState(true); // Keep for initial setup
+  const [isLoadingSession, setIsLoadingSession] = useState(true); 
 
   const { toast } = useToast();
   const hiddenInputRef = useRef<HTMLInputElement>(null);
@@ -123,13 +123,13 @@ export default function GameInterface({ selectedMode, onGoBack, gameKey }: GameI
   const setupNewGameSession = useCallback(() => {
     console.log('[GameInterface:setupNewGameSession] Call initiated. Mode:', selectedMode, 'GameKey:', gameKey);
     setIsLoadingSession(true);
+    setGameOver(false);
     setFeedbackMessage(null);
     setUserInput('');
     setIsHintUsedForQuestion(false);
     setCurrentQuestionNum(0);
     setScore(0);
-    setGameOver(false);
-
+    
     const wordsForMode = MOCK_WORDS[selectedMode] || [];
     if (wordsForMode.length === 0) {
       toast({ title: "Game Error", description: "No words available for this mode.", variant: "destructive" });
@@ -153,15 +153,20 @@ export default function GameInterface({ selectedMode, onGoBack, gameKey }: GameI
     }
 
     setShuffledSessionWords(sessionWords);
-    setCurrentChallengeData(sessionWords[0]);
+    
+    const firstChallengeWithOptions = sessionWords[0].options ? 
+      { ...sessionWords[0], options: shuffleArray(sessionWords[0].options) } :
+      sessionWords[0];
+
+    setCurrentChallengeData(firstChallengeWithOptions);
     setTimeLeft(getTimeLimitForMode(selectedMode));
     setIsLoadingSession(false);
-    console.log('[GameInterface:setupNewGameSession] Finished. isLoadingSession:', false);
+    console.log('[GameInterface:setupNewGameSession] Finished. isLoadingSession:', false, 'First challenge:', firstChallengeWithOptions);
   }, [selectedMode, getTimeLimitForMode, toast, gameKey]);
 
   useEffect(() => {
     setupNewGameSession();
-  }, [setupNewGameSession]); // gameKey change will call setupNewGameSession
+  }, [setupNewGameSession]); 
 
 
   useEffect(() => {
@@ -179,24 +184,37 @@ export default function GameInterface({ selectedMode, onGoBack, gameKey }: GameI
     if (currentQuestionNum < shuffledSessionWords.length - 1) {
       const nextQuestionIndex = currentQuestionNum + 1;
       setCurrentQuestionNum(nextQuestionIndex);
-      setCurrentChallengeData(shuffledSessionWords[nextQuestionIndex]);
+      
+      const nextChallengeRaw = shuffledSessionWords[nextQuestionIndex];
+      const nextChallengeWithOptions = nextChallengeRaw.options ? 
+        { ...nextChallengeRaw, options: shuffleArray(nextChallengeRaw.options) } :
+        nextChallengeRaw;
+      
+      setCurrentChallengeData(nextChallengeWithOptions);
       setTimeLeft(getTimeLimitForMode(selectedMode));
-      console.log('[GameInterface:proceedToNextOrEnd] Moving to next question index:', nextQuestionIndex);
+      console.log('[GameInterface:proceedToNextOrEnd] Moving to next question index:', nextQuestionIndex, 'Challenge:', nextChallengeWithOptions);
     } else {
       console.log('[GameInterface:proceedToNextOrEnd] Game over condition met.');
       setGameOver(true);
     }
   }, [currentQuestionNum, shuffledSessionWords, selectedMode, getTimeLimitForMode]);
 
-  const handleSubmitAnswer = useCallback(() => {
+  const handleSubmitAnswer = useCallback((answerFromOption?: string) => {
     if (!currentChallengeData || feedbackMessage || isLoadingSession) return;
-    console.log('[GameInterface:handleSubmitAnswer] User input:', userInput, 'Correct Answer:', currentChallengeData.word);
 
+    const answerToCompare = selectedMode === 'basic' && answerFromOption !== undefined ? answerFromOption : userInput.trim();
+    const correctAnswer = currentChallengeData.word;
+
+    console.log('[GameInterface:handleSubmitAnswer] Comparing Answer:', `"${answerToCompare}"`, 'Correct Answer:', `"${correctAnswer}"`, 'Mode:', selectedMode);
+    
     let isCorrect = false;
     if (selectedMode === 'basic') {
-      isCorrect = userInput === currentChallengeData.word;
-    } else {
-      isCorrect = userInput.trim().toLowerCase() === currentChallengeData.word.toLowerCase();
+      // For basic mode, answerFromOption is the direct value from the button click.
+      // MOCK_WORDS basic words and options are uppercase.
+      isCorrect = answerFromOption === correctAnswer;
+    } else { // intermediate or advanced
+      // For typed answers, normalize case. MOCK_WORDS intermediate/advanced words are uppercase.
+      isCorrect = answerToCompare.toUpperCase() === correctAnswer.toUpperCase();
     }
 
     if (isCorrect) {
@@ -215,9 +233,9 @@ export default function GameInterface({ selectedMode, onGoBack, gameKey }: GameI
 
   const handleOptionSelect = (option: string) => {
     if (feedbackMessage || !currentChallengeData || isLoadingSession) return;
-    setUserInput(option); // Set userInput for basic mode, which then calls handleSubmitAnswer
+    setUserInput(option); 
     if (selectedMode === 'basic') {
-        handleSubmitAnswer();
+        handleSubmitAnswer(option); 
     }
   };
 
@@ -250,13 +268,13 @@ export default function GameInterface({ selectedMode, onGoBack, gameKey }: GameI
     return () => clearInterval(timerId);
   }, [timeLeft, gameOver, isLoadingSession, feedbackMessage, handleSkip, currentChallengeData]);
   
-  // Keyboard input for intermediate/advanced
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (gameOver || feedbackMessage || !currentChallengeData || isLoadingSession) return;
       if (selectedMode === 'intermediate' || selectedMode === 'advanced') {
         if (event.key === 'Enter') {
-          event.preventDefault(); if (userInput.trim()) handleSubmitAnswer();
+          event.preventDefault(); 
+          if (userInput.trim()) handleSubmitAnswer(); 
         } else if (event.key === 'Backspace') {
           setUserInput(prev => prev.slice(0, -1));
         } else if (event.key.length === 1 && /^[a-zA-Z]$/.test(event.key) && userInput.length < currentChallengeData.word.length) {
@@ -270,7 +288,6 @@ export default function GameInterface({ selectedMode, onGoBack, gameKey }: GameI
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [gameOver, feedbackMessage, selectedMode, userInput, handleSubmitAnswer, handleSkip, currentChallengeData, isLoadingSession]);
 
-  // Auto-submit for intermediate/advanced when word length matches
   useEffect(() => {
     if (
       (selectedMode === 'intermediate' || selectedMode === 'advanced') &&
@@ -278,12 +295,16 @@ export default function GameInterface({ selectedMode, onGoBack, gameKey }: GameI
       userInput.length === currentChallengeData.word.length &&
       !feedbackMessage && !isLoadingSession
     ) {
-      handleSubmitAnswer();
+      handleSubmitAnswer(); 
     }
   }, [userInput, currentChallengeData, selectedMode, handleSubmitAnswer, feedbackMessage, isLoadingSession]);
 
 
-  console.log('[GameInterface Render] --- isLoading:', isLoadingSession, 'gameOver:', gameOver, 'currentChallengeData:', !!currentChallengeData, 'questionNum:', currentQuestionNum, 'numTotalChallenges:', shuffledSessionWords.length);
+  console.log('[GameInterface Render] --- isLoading:', isLoadingSession, 'gameOver:', gameOver, 'currentChallengeData:', !!currentChallengeData, 'questionNum:', currentQuestionNum);
+  if (currentChallengeData) {
+      console.log("Current Challenge Data for Render:", currentChallengeData);
+  }
+
 
   if (isLoadingSession) {
     return (
@@ -321,16 +342,17 @@ export default function GameInterface({ selectedMode, onGoBack, gameKey }: GameI
             <p className="text-muted-foreground">You answered {score / 10} out of {shuffledSessionWords.length > 0 ? shuffledSessionWords.length : MAX_QUESTIONS_PER_SESSION} questions correctly.</p>
           </CardContent>
           <CardFooter className="flex flex-col sm:flex-row gap-2 justify-center">
-            <Button onClick={() => setupNewGameSession()} variant="outline">Play Again (Same Mode)</Button>
+            <Button onClick={setupNewGameSession} variant="outline">Play Again (Same Mode)</Button>
             <Button onClick={onGoBack} variant="default">Change Mode</Button>
           </CardFooter>
         </Card>
       </motion.div>
     );
   }
-
-  if (!currentChallengeData) {
-     console.error("[GameInterface Render] CRITICAL: Not loading, not game over, BUT currentChallengeData is NULL.");
+  
+  // This state should ideally not be reached if logic is correct, but as a fallback:
+  if (!isLoadingSession && !gameOver && !currentChallengeData) {
+     console.error("[GameInterface Render] CRITICAL WATCHDOG: Not loading, not game over, BUT currentChallengeData is NULL. This indicates a state error.");
      return (
         <div className="flex flex-col items-center justify-center min-h-[calc(100vh-200px)] text-center p-6">
             <Skull className="h-12 w-12 text-destructive mb-4" />
@@ -340,13 +362,21 @@ export default function GameInterface({ selectedMode, onGoBack, gameKey }: GameI
         </div>
      );
   }
+  
+  // Only render the main game UI if we are not loading, not game over, AND currentChallengeData is available
+  if (!isLoadingSession && !gameOver && currentChallengeData) {
+    console.log("RENDERING MAIN GAME. Clue:", currentChallengeData.clue);
+  } else {
+     console.log("NOT RENDERING MAIN GAME. Loading:", isLoadingSession, "GameOver:", gameOver, "ChallengeData:", !!currentChallengeData);
+  }
+
 
   const renderClueContent = () => {
-    return <p className="text-xl md:text-2xl lg:text-3xl text-foreground font-medium leading-tight">{currentChallengeData.clue}</p>;
+    return <p className="text-xl md:text-2xl lg:text-3xl text-foreground font-medium leading-tight">{currentChallengeData!.clue}</p>;
   };
 
   const renderLetterBoxes = () => {
-    const wordLength = currentChallengeData.word.length;
+    const wordLength = currentChallengeData!.word.length;
     return (
       <div className="flex justify-center space-x-1.5 sm:space-x-2">
         {Array.from({ length: wordLength }).map((_, index) => (
@@ -401,7 +431,7 @@ export default function GameInterface({ selectedMode, onGoBack, gameKey }: GameI
             </div>
 
             <div className="my-auto flex items-center justify-center h-full">
-                {renderClueContent()}
+                {currentChallengeData && renderClueContent()}
             </div>
 
             <div className="mt-auto">
@@ -424,7 +454,7 @@ export default function GameInterface({ selectedMode, onGoBack, gameKey }: GameI
                              <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-red-500"><ThumbsDown className="h-5 w-5"/></Button>
                            </>
                         )}
-                        {(selectedMode === 'intermediate' || selectedMode === 'advanced') && currentChallengeData.hint && (
+                        {(selectedMode === 'intermediate' || selectedMode === 'advanced') && currentChallengeData && currentChallengeData.hint && (
                             <>
                                 <Button
                                     variant="ghost"
@@ -457,7 +487,7 @@ export default function GameInterface({ selectedMode, onGoBack, gameKey }: GameI
            exit="exit"
           className="bg-muted/30 p-6 sm:p-8 flex flex-col justify-center items-center"
         >
-          {selectedMode === 'basic' && currentChallengeData.options ? (
+          {currentChallengeData && selectedMode === 'basic' && currentChallengeData.options ? (
             <motion.div
               className="space-y-3 w-full max-w-sm"
               initial="hidden"
@@ -491,7 +521,7 @@ export default function GameInterface({ selectedMode, onGoBack, gameKey }: GameI
                 </motion.div>
               ))}
             </motion.div>
-          ) : (selectedMode === 'intermediate' || selectedMode === 'advanced') ? (
+          ) : currentChallengeData && (selectedMode === 'intermediate' || selectedMode === 'advanced') ? (
             <div className="w-full max-w-md text-center space-y-6">
               {currentChallengeData.hint && (isHintUsedForQuestion || (selectedMode === 'intermediate' && !currentChallengeData.clueType?.includes('blank'))) && (
                 <motion.p
@@ -510,7 +540,7 @@ export default function GameInterface({ selectedMode, onGoBack, gameKey }: GameI
                 className="opacity-0 w-0 h-0 absolute"
                 onFocus={() => hiddenInputRef.current?.focus()}
                 value={userInput}
-                readOnly // This input is only for focus management
+                readOnly 
               />
             </div>
           ) : (
