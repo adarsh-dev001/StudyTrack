@@ -3,119 +3,99 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Remove direct body font-family, as next/font and tailwind.config.ts will handle it */
-/*
-body {
-  font-family: Arial, Helvetica, sans-serif;
-}
-*/
-
 @layer base {
   :root {
-    --background: 210 20% 96.1%; /* Light Gray #F5F7FA */
-    --foreground: 0 0% 3.9%; /* Dark Gray/Black */
+    /* Vibrant Blue/Teal Modern Theme */
+    --background: 200 30% 98%; /* Very light cool gray-blue */
+    --foreground: 210 25% 25%; /* Dark desaturated blue */
 
     --card: 0 0% 100%; /* White */
-    --card-foreground: 0 0% 3.9%; /* Dark Gray/Black */
+    --card-foreground: 210 25% 25%; 
 
-    --popover: 0 0% 100%; /* White */
-    --popover-foreground: 0 0% 3.9%; /* Dark Gray/Black */
+    --popover: 0 0% 100%; 
+    --popover-foreground: 210 25% 25%;
 
-    --primary: 200 95% 74.5%; /* Sky Blue #7DD3FC */
-    --primary-foreground: 0 0% 3.9%; /* Dark Gray/Black for text on Sky Blue */
+    --primary: 180 70% 45%;    /* Vibrant Teal */
+    --primary-foreground: 0 0% 100%; /* White for text on Teal */
 
-    --secondary: 210 20% 90%; /* Slightly darker than background */
-    --secondary-foreground: 0 0% 9%; /* Dark text */
+    --secondary: 190 60% 92%; /* Lighter Teal/Cyan */
+    --secondary-foreground: 190 50% 30%; 
 
-    --muted: 210 20% 92%; /* Lighter than secondary, darker than background */
-    --muted-foreground: 0 0% 45.1%; /* Gray text */
+    --muted: 200 30% 94%; 
+    --muted-foreground: 200 20% 45%; 
 
-    --accent: 26 95% 53.1%; /* Orange #F97316 */
-    --accent-foreground: 0 0% 98%; /* White/Light Gray for text on Orange */
+    --accent: 15 90% 60%;      /* Warm Coral/Orange */
+    --accent-foreground: 0 0% 100%; 
 
-    --destructive: 0 84.2% 60.2%;
+    --destructive: 0 75% 55%; /* Softer Red */
     --destructive-foreground: 0 0% 98%;
 
-    --border: 210 20% 85%; /* Related to background */
-    --input: 0 0% 100%; /* White for input fields */
-    --ring: 200 95% 74.5%; /* Primary color for focus rings */
+    --border: 200 20% 88%; 
+    --input: 0 0% 100%; 
+    --ring: 180 70% 55%; /* Slightly brighter primary for focus */
 
-    --chart-1: 12 76% 61%;
-    --chart-2: 173 58% 39%;
-    --chart-3: 197 37% 24%;
-    --chart-4: 43 74% 66%;
-    --chart-5: 27 87% 67%;
-    --radius: 0.5rem;
+    --chart-1: 180 70% 50%;
+    --chart-2: 195 75% 45%;
+    --chart-3: 15 85% 65%;
+    --chart-4: 210 70% 60%;
+    --chart-5: 40 80% 55%;
+    --radius: 0.75rem; /* Slightly more rounded */
 
+    /* Sidebar remains largely the same but will pick up some new base colors */
     --sidebar-background: 0 0% 98%;
     --sidebar-foreground: 240 5.3% 26.1%;
-    --sidebar-primary: 240 5.9% 10%;
+    --sidebar-primary: 180 70% 40%; /* Adjusted to teal family */
     --sidebar-primary-foreground: 0 0% 98%;
-    --sidebar-accent: 240 4.8% 95.9%;
-    --sidebar-accent-foreground: 240 5.9% 10%;
-    --sidebar-border: 220 13% 91%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
-
-    /* New theme colors based on screenshot */
-    --theme-purple-light: 246 80% 97%; /* approx #E9E7FD for light backgrounds */
-    --theme-purple-medium: 255 85% 60%; /* approx #7C3AED for primary buttons */
-    --theme-purple-dark: 255 80% 50%;
-    --theme-green-cta: 145 63% 49%; /* approx #22C55E */
-    --theme-red-cta: 0 84% 60%; /* approx #EF4444 */
-    --theme-yellow-cta: 45 93% 47%; /* approx #F59E0B */
+    --sidebar-accent: 190 60% 95%; /* Lighter teal for sidebar accent */
+    --sidebar-accent-foreground: 190 50% 25%;
+    --sidebar-border: 200 20% 90%;
+    --sidebar-ring: 180 70% 50%;
   }
 
   .dark {
-    --background: 210 10% 15%; /* Dark Cool Gray */
-    --foreground: 210 10% 85%; /* Light Cool Gray */
+    /* Vibrant Blue/Teal Modern Dark Theme */
+    --background: 210 20% 12%; /* Deep cool dark blue/gray */
+    --foreground: 200 25% 88%; /* Light cool gray-blue */
 
-    --card: 210 10% 20%;
-    --card-foreground: 210 10% 85%;
+    --card: 210 15% 18%; /* Slightly lighter than main dark bg */
+    --card-foreground: 200 25% 88%;
 
-    --popover: 210 10% 20%;
-    --popover-foreground: 210 10% 85%;
+    --popover: 210 15% 16%; 
+    --popover-foreground: 200 25% 88%;
 
-    --primary: 200 80% 60%; /* Sky Blue for dark mode */
-    --primary-foreground: 200 10% 10%; /* Darker blue for text on sky blue */
+    --primary: 180 70% 55%;    /* Slightly lighter Teal for dark mode */
+    --primary-foreground: 210 20% 10%; /* Darker text on primary */
 
-    --secondary: 210 10% 25%;
-    --secondary-foreground: 210 10% 85%;
+    --secondary: 190 50% 25%; /* Darker Teal/Cyan */
+    --secondary-foreground: 190 60% 80%; 
 
-    --muted: 210 10% 22%;
-    --muted-foreground: 210 10% 60%;
+    --muted: 210 15% 22%; 
+    --muted-foreground: 200 20% 65%; 
 
-    --accent: 26 90% 60%; /* Orange for dark mode */
-    --accent-foreground: 0 0% 98%; /* Light text on orange */
+    --accent: 15 90% 65%;      /* Slightly lighter Coral/Orange */
+    --accent-foreground: 0 0% 100%;
 
-    --destructive: 0 62.8% 30.6%;
+    --destructive: 0 70% 50%;
     --destructive-foreground: 0 0% 98%;
 
-    --border: 210 10% 30%;
-    --input: 210 10% 25%;
-    --ring: 200 80% 60%; /* Primary color for focus rings */
+    --border: 210 15% 28%; 
+    --input: 210 15% 22%; 
+    --ring: 180 70% 60%;
 
-    --chart-1: 220 70% 50%;
-    --chart-2: 160 60% 45%;
-    --chart-3: 30 80% 55%;
-    --chart-4: 280 65% 60%;
-    --chart-5: 340 75% 55%;
+    --chart-1: 180 65% 60%;
+    --chart-2: 195 70% 50%;
+    --chart-3: 15 80% 70%;
+    --chart-4: 210 65% 65%;
+    --chart-5: 40 75% 60%;
 
-    --sidebar-background: 240 5.9% 10%;
-    --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 224.3 76.3% 48%;
+    --sidebar-background: 210 18% 10%;
+    --sidebar-foreground: 200 20% 85%;
+    --sidebar-primary: 180 70% 50%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 3.7% 15.9%;
-    --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
-
-    /* New theme colors based on screenshot - dark mode */
-    --theme-purple-light: 255 30% 20%; 
-    --theme-purple-medium: 255 80% 70%; 
-    --theme-purple-dark: 255 75% 60%;
-    --theme-green-cta: 145 55% 55%;
-    --theme-red-cta: 0 70% 60%;
-    --theme-yellow-cta: 45 80% 55%;
+    --sidebar-accent: 190 40% 15%;
+    --sidebar-accent-foreground: 190 50% 80%;
+    --sidebar-border: 210 15% 20%;
+    --sidebar-ring: 180 70% 55%;
   }
 }
 
@@ -126,6 +106,5 @@ body {
   body {
     @apply bg-background text-foreground;
   }
-  /* Redundant table styles removed as they are handled by mdx-components.tsx and Tailwind Typography */
 }
     

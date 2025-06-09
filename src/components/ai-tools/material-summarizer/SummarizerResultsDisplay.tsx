@@ -26,43 +26,34 @@ interface SummarizerResultsDisplayProps {
   handleShowAnswer: (questionIndex: number) => Promise<void>;
 }
 
-// Basic Markdown to HTML renderer
 function renderBasicMarkdown(markdownText: string): string {
   let html = markdownText;
-  // Headers (more specific regex and classes)
   html = html.replace(/^#### (.*$)/gim, '<h4 class="text-md font-semibold mt-3 mb-1">$1</h4>');
   html = html.replace(/^### (.*$)/gim, '<h3 class="text-lg font-semibold mt-4 mb-1.5">$1</h3>');
-  html = html.replace(/^## (.*$)/gim, '<h2 class="text-xl font-semibold mt-5 mb-2 border-b pb-1">$1</h2>');
-  html = html.replace(/^# (.*$)/gim, '<h1 class="text-2xl font-bold mt-6 mb-3 border-b pb-1.5">$1</h1>');
+  html = html.replace(/^## (.*$)/gim, '<h2 class="text-xl font-semibold mt-5 mb-2 border-b pb-1 border-border/70">$1</h2>');
+  html = html.replace(/^# (.*$)/gim, '<h1 class="text-2xl font-bold mt-6 mb-3 border-b pb-1.5 border-border/70">$1</h1>');
   
-  // Bold and Italic (ensure not to mess up URLs or other constructs)
   html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
   html = html.replace(/__(.*?)__/g, '<strong>$1</strong>');
   html = html.replace(/\*(.*?)\*/g, '<em>$1</em>');
   html = html.replace(/_(.*?)_/g, '<em>$1</em>');
 
-  // Unordered lists (basic, improved for nesting somewhat)
-  // Handle nested lists better by processing outer lists first
   html = html.replace(/^\s*([-*+]) +(.*)/gm, (match, bullet, content) => {
-    // Simple check for nesting depth for basic styling
-    const depth = (match.match(/^\s*/)?.[0].length || 0) / 2; // Assuming 2 spaces per indent level
+    const depth = (match.match(/^\s*/)?.[0].length || 0) / 2; 
     const marginLeft = depth > 0 ? `ml-${depth * 4}` : 'ml-4';
-    return `<li class="${marginLeft} leading-relaxed">${content.trim()}</li>`;
+    return `<li class="${marginLeft} leading-relaxed text-foreground/90">${content.trim()}</li>`;
   });
-  // Wrap sets of <li> into <ul>
   html = html.replace(/((<li.*?>.*?<\/li>\s*)+)/g, (match) => {
-    // Avoid double-wrapping if already in a <ul>
     if (match.trim().startsWith('<ul') && match.trim().endsWith('</ul>')) return match;
-    return `<ul class="list-disc list-outside pl-5 my-2 space-y-1">${match}</ul>`;
+    return `<ul class="list-disc list-outside pl-5 my-2 space-y-1.5">${match}</ul>`;
   });
   
-  // Convert newlines to <br />, but be careful not to add too many
-  html = html.split('\n').map(line => line.trim() === '' ? '<br class="my-1"/>' : line).join('<br />')
-    .replace(/<br \/>\s*<br \/>/g, '<br class="my-1"/>') // Consolidate multiple breaks
-    .replace(/(<\/ul>)<br class="my-1"\/>/g, '$1') // Remove <br> after </ul>
-    .replace(/<br class="my-1"\/>(<ul)/g, '$1')   // Remove <br> before <ul>
-    .replace(/(<\/h[1-4]>)<br class="my-1"\/>/g, '$1') // Remove <br> after headings
-    .replace(/<br class="my-1"\/>(<h[1-4]>)/g, '$1');  // Remove <br> before headings
+  html = html.split('\n').map(line => line.trim() === '' ? '<br class="my-1.5"/>' : line).join('<br />')
+    .replace(/<br \/>\s*<br \/>/g, '<br class="my-1.5"/>') 
+    .replace(/(<\/ul>)<br class="my-1.5"\/>/g, '$1') 
+    .replace(/<br class="my-1.5"\/>(<ul)/g, '$1')   
+    .replace(/(<\/h[1-4]>)<br class="my-1.5"\/>/g, '$1') 
+    .replace(/<br class="my-1.5"\/>(<h[1-4]>)/g, '$1');  
     
   return html;
 }
@@ -90,9 +81,9 @@ export default function SummarizerResultsDisplay({
       const formattedCardBg = `hsl(${cardBgValue})`;
 
       const canvas = await html2canvas(notesElement, { 
-        scale: 2, // Increase scale for better resolution
+        scale: 2, 
         useCORS: true, 
-        backgroundColor: formattedCardBg || '#ffffff', // Use themed background
+        backgroundColor: formattedCardBg || '#ffffff', 
       });
       const imgData = canvas.toDataURL('image/png');
       const pdf = new jsPDF({
@@ -102,11 +93,10 @@ export default function SummarizerResultsDisplay({
       });
 
       const pdfWidth = pdf.internal.pageSize.getWidth();
-      // const pdfHeight = pdf.internal.pageSize.getHeight(); // Not used for single page image
       const imgProps= pdf.getImageProperties(imgData);
       const aspectRatio = imgProps.width / imgProps.height;
       
-      let newImgWidth = pdfWidth - 20; // Margin of 10mm on each side
+      let newImgWidth = pdfWidth - 20; 
       let newImgHeight = newImgWidth / aspectRatio;
 
       pdf.addImage(imgData, 'PNG', 10, 10, newImgWidth, newImgHeight);
@@ -120,44 +110,44 @@ export default function SummarizerResultsDisplay({
   };
   
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 sm:space-y-8">
       <Tabs defaultValue="structuredNotes" className="w-full animate-in fade-in-50 duration-500">
-        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 text-xs sm:text-sm h-auto rounded-lg shadow-md">
-          <TabsTrigger value="structuredNotes" className="py-2.5 sm:py-3 flex items-center gap-1.5"><FileText className="h-4 w-4" />Notes</TabsTrigger>
-          <TabsTrigger value="summary" className="py-2.5 sm:py-3 flex items-center gap-1.5"><ClipboardList className="h-4 w-4" />Summary</TabsTrigger>
-          <TabsTrigger value="keyConcepts" className="py-2.5 sm:py-3 flex items-center gap-1.5"><Sparkles className="h-4 w-4" />Key Concepts</TabsTrigger>
-          <TabsTrigger value="quiz" className="py-2.5 sm:py-3 flex items-center gap-1.5"><HelpCircle className="h-4 w-4" />Quick Quiz</TabsTrigger>
+        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 text-xs sm:text-sm h-auto rounded-xl shadow-md bg-muted/70 p-1">
+          <TabsTrigger value="structuredNotes" className="py-2.5 sm:py-3 flex items-center gap-1.5 data-[state=active]:bg-card data-[state=active]:text-primary data-[state=active]:shadow-lg rounded-lg"><FileText className="h-4 w-4" />Notes</TabsTrigger>
+          <TabsTrigger value="summary" className="py-2.5 sm:py-3 flex items-center gap-1.5 data-[state=active]:bg-card data-[state=active]:text-primary data-[state=active]:shadow-lg rounded-lg"><ClipboardList className="h-4 w-4" />Summary</TabsTrigger>
+          <TabsTrigger value="keyConcepts" className="py-2.5 sm:py-3 flex items-center gap-1.5 data-[state=active]:bg-card data-[state=active]:text-primary data-[state=active]:shadow-lg rounded-lg"><Sparkles className="h-4 w-4" />Key Concepts</TabsTrigger>
+          <TabsTrigger value="quiz" className="py-2.5 sm:py-3 flex items-center gap-1.5 data-[state=active]:bg-card data-[state=active]:text-primary data-[state=active]:shadow-lg rounded-lg"><HelpCircle className="h-4 w-4" />Quick Quiz</TabsTrigger>
         </TabsList>
         
-        <TabsContent value="structuredNotes">
-          <Card className="shadow-lg border-border">
-            <CardHeader className="p-4 md:p-6 flex flex-row justify-between items-center">
+        <TabsContent value="structuredNotes" className="mt-4">
+          <Card className="shadow-lg border-border/70 rounded-xl overflow-hidden">
+            <CardHeader className="p-4 md:p-6 flex flex-row justify-between items-center bg-card/80 border-b">
               <div>
-                <CardTitle className="text-lg md:text-xl font-semibold text-foreground flex items-center">
-                    <FileText className="mr-2 h-5 w-5 md:h-6 md:w-6 text-accent" /> AI-Generated Study Notes
+                <CardTitle className="text-lg md:text-xl font-semibold text-primary flex items-center">
+                    <FileText className="mr-2 h-5 w-5 md:h-6 md:w-6" /> AI-Generated Study Notes
                 </CardTitle>
                 <CardDescription className="text-xs md:text-sm text-muted-foreground mt-1">Topic: {topic}</CardDescription>
               </div>
-              <Button onClick={handleDownloadPdf} variant="outline" size="sm" disabled={isDownloadingPdf} className="text-xs">
+              <Button onClick={handleDownloadPdf} variant="outline" size="sm" disabled={isDownloadingPdf} className="text-xs border-primary text-primary hover:bg-primary/10">
                 {isDownloadingPdf ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin"/> : <Download className="mr-1.5 h-3.5 w-3.5" />}
                 PDF
               </Button>
             </CardHeader>
-            <CardContent className="p-4 md:p-6">
+            <CardContent className="p-4 md:p-6 bg-background">
               <div id="structured-notes-content-for-pdf" className="prose prose-base lg:prose-lg max-w-none dark:prose-invert text-foreground leading-relaxed dark:text-gray-100">
-                <div dangerouslySetInnerHTML={{ __html: renderBasicMarkdown(analysisResult.structuredNotes) }} />
+                 <div dangerouslySetInnerHTML={{ __html: renderBasicMarkdown(analysisResult.structuredNotes) }} />
               </div>
             </CardContent>
           </Card>
         </TabsContent>
 
-        <TabsContent value="summary">
-          <Card className="shadow-md">
-            <CardHeader className="p-4 sm:p-6">
-              <CardTitle className="flex items-center text-lg sm:text-xl font-semibold"><ClipboardList className="mr-2 h-5 w-5 sm:h-6 sm:w-6 text-primary" /> Summary of Material</CardTitle>
+        <TabsContent value="summary" className="mt-4">
+          <Card className="shadow-lg border-border/70 rounded-xl overflow-hidden">
+            <CardHeader className="p-4 sm:p-6 bg-card/80 border-b">
+              <CardTitle className="flex items-center text-lg sm:text-xl font-semibold text-primary"><ClipboardList className="mr-2 h-5 w-5 sm:h-6 sm:w-6" /> Summary of Material</CardTitle>
               <CardDescription className="text-sm sm:text-base">Topic: {topic}</CardDescription>
             </CardHeader>
-            <CardContent className="p-4 sm:p-6">
+            <CardContent className="p-4 sm:p-6 bg-background">
               <div className="prose prose-base lg:prose-lg max-w-none dark:prose-invert text-foreground leading-relaxed">
                 <p>{analysisResult.summary}</p>
               </div>
@@ -165,16 +155,16 @@ export default function SummarizerResultsDisplay({
           </Card>
         </TabsContent>
 
-        <TabsContent value="keyConcepts">
-          <Card className="shadow-md">
-            <CardHeader className="p-4 sm:p-6">
-              <CardTitle className="flex items-center text-lg sm:text-xl font-semibold"><Sparkles className="mr-2 h-5 w-5 sm:h-6 sm:w-6 text-primary" /> Core Concepts Unpacked</CardTitle>
+        <TabsContent value="keyConcepts" className="mt-4">
+          <Card className="shadow-lg border-border/70 rounded-xl overflow-hidden">
+            <CardHeader className="p-4 sm:p-6 bg-card/80 border-b">
+              <CardTitle className="flex items-center text-lg sm:text-xl font-semibold text-primary"><Sparkles className="mr-2 h-5 w-5 sm:h-6 sm:w-6" /> Core Concepts Unpacked</CardTitle>
               <CardDescription className="text-sm sm:text-base">Main ideas from your material.</CardDescription>
             </CardHeader>
-            <CardContent className="p-4 sm:p-6">
+            <CardContent className="p-4 sm:p-6 bg-background">
               <ul className="space-y-2.5 text-base text-foreground/90 leading-relaxed">
                 {analysisResult.keyConcepts.map((concept, index) => (
-                  <li key={`concept-${index}`} className="flex items-start p-2 rounded-md bg-muted/50">
+                  <li key={`concept-${index}`} className="flex items-start p-3 rounded-lg bg-muted/50 dark:bg-muted/30 border border-border/50 shadow-sm">
                       <CheckCircle className="mr-2 sm:mr-3 h-4 w-4 text-green-500 dark:text-green-400 shrink-0 mt-1" />
                       <span>{concept}</span>
                   </li>
@@ -184,19 +174,19 @@ export default function SummarizerResultsDisplay({
           </Card>
         </TabsContent>
 
-        <TabsContent value="quiz">
-          <Card className="shadow-md">
-            <CardHeader className="p-4 sm:p-6">
-              <CardTitle className="flex items-center text-lg sm:text-xl font-semibold"><HelpCircle className="mr-2 h-5 w-5 sm:h-6 sm:w-6 text-primary" /> Quick Quiz: Test Your Knowledge! 🧩</CardTitle>
+        <TabsContent value="quiz" className="mt-4">
+          <Card className="shadow-lg border-border/70 rounded-xl overflow-hidden">
+            <CardHeader className="p-4 sm:p-6 bg-card/80 border-b">
+              <CardTitle className="flex items-center text-lg sm:text-xl font-semibold text-primary"><HelpCircle className="mr-2 h-5 w-5 sm:h-6 sm:w-6" /> Quick Quiz: Test Your Knowledge! 🧩</CardTitle>
               <CardDescription className="text-sm sm:text-base">See how well you've grasped the concepts.</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4 sm:space-y-6 p-4 sm:p-6">
+            <CardContent className="space-y-4 sm:space-y-6 p-4 sm:p-6 bg-background">
               {Object.entries(mcqAnswers).map(([qIndexStr, mcqItem]) => {
                 const questionIndex = parseInt(qIndexStr);
                 const isCorrect = mcqItem.userSelectedOption === mcqItem.correctAnswerIndex;
                 return (
-                  <div key={`mcq-${questionIndex}`} className="p-3 sm:p-4 border rounded-lg bg-card/60 shadow">
-                    <p className="font-semibold mb-2 sm:mb-3 text-base sm:text-md text-foreground leading-snug">
+                  <div key={`mcq-${questionIndex}`} className="p-3 sm:p-4 border rounded-lg bg-card/80 dark:bg-card/50 shadow">
+                    <p className="font-semibold mb-2 sm:mb-3 text-base sm:text-md text-foreground dark:text-gray-100 leading-snug">
                       <span className="text-sm text-muted-foreground uppercase tracking-wide mr-1.5">Q{questionIndex + 1}:</span> {mcqItem.questionText}
                     </p>
                     <RadioGroup
@@ -206,20 +196,20 @@ export default function SummarizerResultsDisplay({
                       className="space-y-1.5 sm:space-y-2"
                     >
                       {mcqItem.options.map((option, optionIndex) => (
-                        <div key={optionIndex} className="flex items-center space-x-2 p-2 rounded-md hover:bg-muted/50 transition-colors">
+                        <div key={optionIndex} className="flex items-center space-x-2 p-2 rounded-md hover:bg-muted/30 dark:hover:bg-muted/10 transition-colors">
                           <RadioGroupItem 
                             value={optionIndex.toString()} 
                             id={`q${questionIndex}-opt${optionIndex}`}
                             className={cn(
-                              "h-4 w-4 sm:h-4 sm:w-4",
-                              mcqItem.answerRevealed && optionIndex === mcqItem.correctAnswerIndex && "border-green-500 ring-green-500 text-green-600",
-                              mcqItem.answerRevealed && optionIndex === mcqItem.userSelectedOption && optionIndex !== mcqItem.correctAnswerIndex && "border-red-500 ring-red-500 text-red-600"
+                              "h-4 w-4 sm:h-4 sm:w-4 border-muted-foreground/70 focus:ring-primary",
+                              mcqItem.answerRevealed && optionIndex === mcqItem.correctAnswerIndex && "border-green-500 ring-green-500 text-green-600 data-[state=checked]:bg-green-500 data-[state=checked]:border-green-600",
+                              mcqItem.answerRevealed && optionIndex === mcqItem.userSelectedOption && optionIndex !== mcqItem.correctAnswerIndex && "border-red-500 ring-red-500 text-red-600 data-[state=checked]:bg-red-500 data-[state=checked]:border-red-600"
                             )}
                           />
                           <Label 
                             htmlFor={`q${questionIndex}-opt${optionIndex}`}
                             className={cn(
-                              "font-normal text-sm text-foreground/90 leading-relaxed cursor-pointer",
+                              "font-normal text-sm text-foreground/90 dark:text-gray-100/90 leading-relaxed cursor-pointer",
                               mcqItem.answerRevealed && optionIndex === mcqItem.correctAnswerIndex && "text-green-700 dark:text-green-300 font-medium",
                               mcqItem.answerRevealed && optionIndex === mcqItem.userSelectedOption && optionIndex !== mcqItem.correctAnswerIndex && "text-red-700 dark:text-red-300"
                             )}
@@ -234,7 +224,7 @@ export default function SummarizerResultsDisplay({
                         onClick={() => handleShowAnswer(questionIndex)} 
                         variant="outline" 
                         size="sm" 
-                        className="mt-3 sm:mt-4 text-xs py-1.5 px-2.5"
+                        className="mt-3 sm:mt-4 text-xs py-1.5 px-2.5 border-primary/70 text-primary hover:bg-primary/10"
                         disabled={mcqItem.userSelectedOption === undefined}
                       >
                         Show Answer
@@ -242,9 +232,9 @@ export default function SummarizerResultsDisplay({
                     )}
                     {mcqItem.answerRevealed && (
                       <div className={cn(
-                          "mt-3 sm:mt-4 p-2.5 sm:p-3 rounded-md text-sm leading-relaxed border",
-                          isCorrect ? "bg-green-50 dark:bg-green-900/30 border-green-400 dark:border-green-600 text-green-800 dark:text-green-200" 
-                                    : "bg-red-50 dark:bg-red-900/30 border-red-400 dark:border-red-600 text-red-800 dark:text-red-200"
+                          "mt-3 sm:mt-4 p-2.5 sm:p-3 rounded-lg text-sm leading-relaxed border-2",
+                          isCorrect ? "bg-green-500/10 border-green-500/30 text-green-700 dark:text-green-300" 
+                                    : "bg-red-500/10 border-red-500/30 text-red-700 dark:text-red-300"
                         )}
                       >
                         <div className="flex items-center font-semibold mb-1 text-sm">
@@ -253,7 +243,7 @@ export default function SummarizerResultsDisplay({
                         </div>
                         {mcqItem.explanation && (
                           <div className="mt-1.5 flex items-start text-xs">
-                             <Lightbulb className="mr-1.5 h-3.5 w-3.5 mt-0.5 text-yellow-600 dark:text-yellow-400 shrink-0" />
+                             <Lightbulb className="mr-1.5 h-3.5 w-3.5 mt-0.5 text-yellow-500 dark:text-yellow-400 shrink-0" />
                              <p className="opacity-90">{mcqItem.explanation}</p>
                           </div>
                         )}
@@ -266,7 +256,7 @@ export default function SummarizerResultsDisplay({
           </Card>
         </TabsContent>
       </Tabs>
-      <div className="mt-6 sm:mt-8 text-center p-3 sm:p-4 border-t bg-card rounded-b-lg">
+      <div className="mt-6 sm:mt-8 text-center p-4 sm:p-6 border-t border-border/50 bg-card/70 rounded-b-xl">
         <p className="text-md sm:text-lg font-semibold text-accent leading-relaxed">✨ Understanding is power! Use these insights to supercharge your learning. You're doing great! 💪</p>
       </div>
     </div>
