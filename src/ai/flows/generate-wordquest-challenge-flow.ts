@@ -55,6 +55,7 @@ For EACH of the {{numChallenges}} challenges, adhere to the following:
     *   If gameMode is 'basic', generate an array of 3 to 4 unique strings:
         *   One string MUST be the correct target 'word'.
         *   The other strings MUST be plausible but incorrect distractor words (single words, not phrases).
+        *   For distractor options, choose words that are related in category or sound but are clearly incorrect. Avoid direct synonyms or antonyms of the target word.
         *   Ensure options are distinct and make sense in the context of a vocabulary game.
     *   If gameMode is 'intermediate' or 'advanced', DO NOT provide the 'options' field (or provide an empty array) for that challenge.
 
@@ -88,7 +89,7 @@ const generateWordQuestSessionFlow = ai.defineFlow(
   },
   async (input) => {
     // Ensure numChallenges has a default if not provided by input, though schema does this.
-    const effectiveInput = { ...input, numChallenges: input.numChallenges || 5 };
+    const effectiveInput = { ...input, numChallenges: input.numChallenges || 3 }; // Using 3 from schema default
     const { output } = await generateSessionPrompt(effectiveInput);
     
     if (!output || !output.challenges || output.challenges.length === 0) {
@@ -117,8 +118,14 @@ const generateWordQuestSessionFlow = ai.defineFlow(
           challenge.options = challenge.options.map(opt => opt.includes(" ") ? opt.split(" ")[0] : opt);
           if (input.gameMode === 'basic' && !challenge.options.includes(challenge.word)) {
               console.warn(`Challenge ${index + 1} ('${challenge.word}') for basic mode did not include the correct word in options. Adding it.`);
-              challenge.options.pop(); 
+              if (challenge.options.length > 0) {
+                  challenge.options.pop(); 
+              }
               challenge.options.push(challenge.word);
+              // Ensure there are enough options after correction
+              while (challenge.options.length < 3) {
+                challenge.options.push(`Placeholder${Math.random().toString(36).substring(7)}`); // Add unique placeholder
+              }
           }
       }
     });
@@ -126,3 +133,4 @@ const generateWordQuestSessionFlow = ai.defineFlow(
     return output;
   }
 );
+
