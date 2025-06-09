@@ -25,14 +25,6 @@ import { Skeleton } from '@/components/ui/skeleton';
 
 import * as pdfjsLib from 'pdfjs-dist';
 
-// Set the workerSrc for pdfjs-dist.
-// This needs to be done on the client side.
-if (typeof window !== 'undefined') {
-  // pdf.worker.min.js should be manually copied to public/js/ from node_modules/pdfjs-dist/build/
-  pdfjsLib.GlobalWorkerOptions.workerSrc = `/js/pdf.worker.min.js`;
-}
-
-
 // Lazy load result display
 const SummarizerResultsDisplay = React.lazy(() => import('@/components/ai-tools/material-summarizer/SummarizerResultsDisplay'));
 const SummarizerResultsDisplayFallback = React.lazy(() => import('@/components/ai-tools/material-summarizer/SummarizerResultsDisplayFallback'));
@@ -82,6 +74,14 @@ export default function MaterialSummarizerPage() {
   const [isLoadingProfile, setIsLoadingProfile] = useState(true);
   const [userFullProfile, setUserFullProfile] = useState<UserProfileData | null>(null);
   const [showOnboardingModal, setShowOnboardingModal] = useState(false);
+
+  useEffect(() => {
+    // Set the workerSrc for pdfjs-dist. This needs to be done on the client side.
+    // pdf.worker.min.js should be manually copied to public/js/ from node_modules/pdfjs-dist/build/
+    if (typeof window !== 'undefined') {
+      pdfjsLib.GlobalWorkerOptions.workerSrc = `/js/pdf.worker.min.js`;
+    }
+  }, []); // Empty dependency array ensures this runs once on mount
 
   useEffect(() => {
     if (analysisResult && resultsRef.current) {
