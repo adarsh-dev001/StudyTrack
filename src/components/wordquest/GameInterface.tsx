@@ -10,7 +10,9 @@ import { Timer, HelpCircle, SkipForward, Star, ArrowLeft, ImageIcon, ListChecks,
 import type { GameMode, GameModeDetails } from './types';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
-import { generateWordQuestSession, type GenerateWordQuestSessionInput, type WordQuestSessionOutput, type SingleWordQuestChallenge } from '@/ai/flows/generate-wordquest-challenge-flow';
+// Updated import: calling the new flow that (simulates) fetching from DB
+import { getWordQuestSessionFromDb } from '@/ai/flows/get-wordquest-session-from-db';
+import type { GenerateWordQuestSessionInput, WordQuestSessionOutput, SingleWordQuestChallenge } from '@/ai/schemas/wordquest-ai-schemas';
 import { useToast } from '@/hooks/use-toast';
 
 const gameModesDetails: Record<GameMode, GameModeDetails> = {
@@ -19,18 +21,11 @@ const gameModesDetails: Record<GameMode, GameModeDetails> = {
   advanced: { title: 'Advanced', description: 'Challenging Definitions - Timed', icon: Flame, colorClass: 'border-orange-500/30 bg-orange-500/5 hover:shadow-orange-500/10', iconColorClass: 'text-orange-500' },
 };
 
-export interface ChallengeDataForGame {
-  id: string;
-  word: string;
-  clueType: 'definition' | 'fill-in-the-blank';
-  clue: string;
-  options?: string[];
-  correctAnswer: string;
-  hint?: string;
-}
+// This type now directly aligns with SingleWordQuestChallenge from AI schemas
+export type ChallengeDataForGame = SingleWordQuestChallenge;
 
 
-const MAX_QUESTIONS_PER_SESSION = 3;
+const MAX_QUESTIONS_PER_SESSION = 3; // Reduced for faster (simulated) DB interaction
 
 interface GameInterfaceProps {
   selectedMode: GameMode;
@@ -91,20 +86,13 @@ export default function GameInterface({ selectedMode, onGoBack }: GameInterfaceP
   const [gameOver, setGameOver] = useState(false);
   const [feedbackMessage, setFeedbackMessage] = useState<string | null>(null);
   const [isLoadingSession, setIsLoadingSession] = useState(true);
+  // This state can still be useful if we want to hint the DB query to avoid very recent words across different sessions.
   const [previousWordsForAI, setPreviousWordsForAI] = useState<string[]>([]);
 
   const { toast } = useToast();
   const hiddenInputRef = useRef<HTMLInputElement>(null);
   const correctAnswerSoundRef = useRef<HTMLAudioElement | null>(null);
   const wrongAnswerSoundRef = useRef<HTMLAudioElement | null>(null);
-
-  console.log('--- GameInterface Render ---');
-  console.log('isLoadingSession:', isLoadingSession);
-  console.log('gameOver:', gameOver);
-  console.log('currentChallengeData:', currentChallengeData);
-  console.log('currentQuestionNum:', currentQuestionNum);
-  console.log('feedbackMessage:', feedbackMessage);
-
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -125,7 +113,7 @@ export default function GameInterface({ selectedMode, onGoBack }: GameInterfaceP
   }, []);
 
   const fetchNewGameSession = useCallback(async () => {
-    console.log('[fetchNewGameSession] Starting to fetch new game session.');
+    console.log('[fetchNewGameSession] Starting to fetch new game session from DB (simulated).');
     setIsLoadingSession(true);
     setFeedbackMessage(null);
     setUserInput('');
@@ -135,54 +123,45 @@ export default function GameInterface({ selectedMode, onGoBack }: GameInterfaceP
 
     const aiInput: GenerateWordQuestSessionInput = {
       gameMode: selectedMode,
-      previousWords: previousWordsForAI,
+      previousWords: previousWordsForAI, // Can be used by DB query logic later
       numChallenges: MAX_QUESTIONS_PER_SESSION,
     };
 
     try {
-      const aiResult: WordQuestSessionOutput = await generateWordQuestSession(aiInput);
-      console.log('[fetchNewGameSession] AI Result:', aiResult);
+      // Updated to call the new flow
+      const aiResult: WordQuestSessionOutput = await getWordQuestSessionFromDb(aiInput);
+      console.log('[fetchNewGameSession] DB (Simulated) Result:', aiResult);
 
       if (!aiResult.challenges || aiResult.challenges.length === 0) {
-        console.error("[fetchNewGameSession] AI returned no challenges.");
-        toast({ title: "Game Error", description: "AI failed to provide any challenges. Please try again.", variant: "destructive" });
+        console.error("[fetchNewGameSession] DB (Simulated) returned no challenges.");
+        toast({ title: "Game Error", description: "No challenges found for this mode. The vocabulary list might be empty.", variant: "destructive" });
         setGameOver(true);
         setIsLoadingSession(false);
         return;
       }
+      
+      // Shuffle options client-side if it's basic mode
+      const processedChallenges = aiResult.challenges.map(challenge => {
+        if (challenge.options && selectedMode === 'basic') {
+          return { ...challenge, options: shuffleArray(challenge.options) };
+        }
+        return challenge;
+      });
 
-      const newSessionChallenges: ChallengeDataForGame[] = aiResult.challenges.map((challenge: SingleWordQuestChallenge) => ({
-        id: challenge.word,
-        word: challenge.word,
-        clueType: challenge.clueType,
-        clue: challenge.clue,
-        options: challenge.options ? shuffleArray(challenge.options) : undefined,
-        correctAnswer: challenge.word,
-        hint: challenge.hint,
-      }));
-      console.log('[fetchNewGameSession] Mapped AI challenges:', newSessionChallenges);
-
-      if (newSessionChallenges.length === 0 || !newSessionChallenges[0] || !newSessionChallenges[0].word || !newSessionChallenges[0].clue) {
-        console.error("[fetchNewGameSession] First challenge data is invalid after mapping:", newSessionChallenges[0]);
-        toast({ title: "Game Error", description: "Received invalid first challenge from AI. Please try again.", variant: "destructive" });
-        setGameOver(true);
-        setIsLoadingSession(false);
-        return;
-      }
-
-      setGameSessionChallenges(newSessionChallenges);
-      setCurrentChallengeData(newSessionChallenges[0]);
-      console.log('[fetchNewGameSession] Set currentChallengeData to first challenge:', newSessionChallenges[0]);
+      setGameSessionChallenges(processedChallenges);
+      setCurrentChallengeData(processedChallenges[0]);
+      console.log('[fetchNewGameSession] Set currentChallengeData to first challenge:', processedChallenges[0]);
       setCurrentQuestionNum(0);
       setScore(0);
       setGameOver(false);
       setTimeLeft(getTimeLimitForMode(selectedMode));
-      setPreviousWordsForAI(prev => [...new Set([...prev, ...newSessionChallenges.map(c => c.word)])].slice(-50));
+      // Update previousWordsForAI with words from this session for context in *future* sessions
+      setPreviousWordsForAI(prev => [...new Set([...prev, ...processedChallenges.map(c => c.word)])].slice(-50));
 
     } catch (error: any) {
-      console.error("Error fetching game session from AI:", error);
-      toast({ title: "Error Generating Game", description: error.message || "Could not fetch challenges. Please try restarting.", variant: "destructive" });
-      setGameOver(true);
+      console.error("Error fetching game session from DB (simulated):", error);
+      toast({ title: "Error Generating Game", description: error.message || "Could not load challenges. Please try again.", variant: "destructive" });
+      setGameOver(true); // Go to game over screen on error
     } finally {
       setIsLoadingSession(false);
       console.log('[fetchNewGameSession] Finished fetching. isLoadingSession:', false);
@@ -221,13 +200,14 @@ export default function GameInterface({ selectedMode, onGoBack }: GameInterfaceP
 
   const handleSubmitAnswer = useCallback(() => {
     if (!currentChallengeData || feedbackMessage || isLoadingSession) return;
-    console.log('[handleSubmitAnswer] User input:', userInput, 'Correct Answer:', currentChallengeData.correctAnswer);
+    console.log('[handleSubmitAnswer] User input:', userInput, 'Correct Answer:', currentChallengeData.word);
 
     let isCorrect = false;
     if (selectedMode === 'basic') {
-      isCorrect = userInput === currentChallengeData.correctAnswer;
+      // For basic mode, userInput is the selected option string
+      isCorrect = userInput === currentChallengeData.word;
     } else {
-      isCorrect = userInput.trim().toLowerCase() === currentChallengeData.correctAnswer.toLowerCase();
+      isCorrect = userInput.trim().toLowerCase() === currentChallengeData.word.toLowerCase();
     }
 
     if (isCorrect) {
@@ -235,7 +215,7 @@ export default function GameInterface({ selectedMode, onGoBack }: GameInterfaceP
       setFeedbackMessage('Correct! 🎉');
       correctAnswerSoundRef.current?.play().catch(e => console.error("Error playing correct sound:", e));
     } else {
-      setFeedbackMessage(`Oops! The correct answer was: ${currentChallengeData.correctAnswer}`);
+      setFeedbackMessage(`Oops! The correct answer was: ${currentChallengeData.word}`);
       wrongAnswerSoundRef.current?.play().catch(e => console.error("Error playing wrong sound:", e));
     }
 
@@ -246,28 +226,17 @@ export default function GameInterface({ selectedMode, onGoBack }: GameInterfaceP
 
   const handleOptionSelect = (option: string) => {
     if (feedbackMessage || !currentChallengeData || isLoadingSession) return;
-    setUserInput(option);
+    setUserInput(option); // This sets the selected option as the input for basic mode
     if (selectedMode === 'basic') {
       console.log('[handleOptionSelect] Option selected:', option);
-      let isCorrect = option === currentChallengeData.correctAnswer;
-      if (isCorrect) {
-        setScore(s => s + 10);
-        setFeedbackMessage('Correct! 🎉');
-        correctAnswerSoundRef.current?.play().catch(e => console.error("Error playing correct sound:", e));
-      } else {
-        setFeedbackMessage(`Oops! The correct answer was: ${currentChallengeData.correctAnswer}`);
-        wrongAnswerSoundRef.current?.play().catch(e => console.error("Error playing wrong sound:", e));
-      }
-      setTimeout(() => {
-        proceedToNextOrEnd();
-      }, 1500);
+      handleSubmitAnswer(); // Directly submit for basic mode
     }
   };
 
   const handleSkip = useCallback(() => {
     if (gameOver || feedbackMessage || !currentChallengeData || isLoadingSession) return;
     console.log('[handleSkip] Skipping question.');
-    setFeedbackMessage(`Skipped! The answer was: ${currentChallengeData.correctAnswer}`);
+    setFeedbackMessage(`Skipped! The answer was: ${currentChallengeData.word}`);
     wrongAnswerSoundRef.current?.play().catch(e => console.error("Error playing wrong sound on skip:", e));
     setTimeout(() => {
       proceedToNextOrEnd();
@@ -309,7 +278,7 @@ export default function GameInterface({ selectedMode, onGoBack }: GameInterfaceP
           if (userInput.trim()) handleSubmitAnswer();
         } else if (event.key === 'Backspace') {
           setUserInput(prev => prev.slice(0, -1));
-        } else if (event.key.length === 1 && /^[a-zA-Z]$/.test(event.key) && userInput.length < currentChallengeData.correctAnswer.length) {
+        } else if (event.key.length === 1 && /^[a-zA-Z]$/.test(event.key) && userInput.length < currentChallengeData.word.length) {
           setUserInput(prev => prev + event.key.toUpperCase());
         }
       }
@@ -325,7 +294,7 @@ export default function GameInterface({ selectedMode, onGoBack }: GameInterfaceP
     if (
       (selectedMode === 'intermediate' || selectedMode === 'advanced') &&
       currentChallengeData &&
-      userInput.length === currentChallengeData.correctAnswer.length &&
+      userInput.length === currentChallengeData.word.length &&
       !feedbackMessage && !isLoadingSession
     ) {
       console.log('[UserInputEffect] Input matches word length, submitting.');
@@ -333,14 +302,11 @@ export default function GameInterface({ selectedMode, onGoBack }: GameInterfaceP
     }
   }, [userInput, currentChallengeData, selectedMode, handleSubmitAnswer, feedbackMessage, isLoadingSession]);
 
-  // Watchdog useEffect to catch unexpected states
   useEffect(() => {
     if (!isLoadingSession && !gameOver && !currentChallengeData) {
-      console.error("CRITICAL: Main game UI should render, but currentChallengeData is missing. Fetching new session.");
-      // Attempt to recover by fetching a new session. This might indicate a deeper state issue.
-      // fetchNewGameSession(); // Be cautious with this, could cause loops if not handled well.
+      console.error("CRITICAL: Main game UI should render, but currentChallengeData is missing. Game State:", {gameSessionChallenges, currentQuestionNum});
     }
-  }, [isLoadingSession, gameOver, currentChallengeData, fetchNewGameSession]);
+  }, [isLoadingSession, gameOver, currentChallengeData, gameSessionChallenges, currentQuestionNum]);
 
 
   if (gameOver) {
@@ -380,12 +346,11 @@ export default function GameInterface({ selectedMode, onGoBack }: GameInterfaceP
     return (
       <div className="flex flex-col items-center justify-center min-h-[calc(100vh-200px)] text-center p-6">
         <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
-        <p className="text-muted-foreground">AI is crafting your WordQuest session...</p>
+        <p className="text-muted-foreground">Setting up your WordQuest challenges...</p>
         <Button onClick={onGoBack} variant="outline" className="mt-4">Back to Modes</Button>
       </div>
     );
   }
-
 
   const renderClueContent = () => {
     if (!currentChallengeData) return <p className="text-xl md:text-2xl lg:text-3xl text-muted-foreground font-medium">Loading clue...</p>;
@@ -394,7 +359,7 @@ export default function GameInterface({ selectedMode, onGoBack }: GameInterfaceP
 
   const renderLetterBoxes = () => {
     if (!currentChallengeData) return null;
-    const wordLength = currentChallengeData.correctAnswer.length;
+    const wordLength = currentChallengeData.word.length;
     return (
       <div className="flex justify-center space-x-1.5 sm:space-x-2">
         {Array.from({ length: wordLength }).map((_, index) => (
@@ -417,7 +382,6 @@ export default function GameInterface({ selectedMode, onGoBack }: GameInterfaceP
 
 
   if (!isLoadingSession && !gameOver && currentChallengeData) {
-    console.log("RENDERING MAIN GAME. Clue:", currentChallengeData.clue);
     return (
     <div className="w-full h-full flex flex-col">
        <div className="flex justify-between items-center p-3 sm:p-4 border-b">
@@ -498,7 +462,6 @@ export default function GameInterface({ selectedMode, onGoBack }: GameInterfaceP
         </motion.div>
         </AnimatePresence>
 
-
         <AnimatePresence mode="wait">
         <motion.div
            key={`input-panel-${currentQuestionNum}`}
@@ -518,7 +481,7 @@ export default function GameInterface({ selectedMode, onGoBack }: GameInterfaceP
             >
               {currentChallengeData.options.map((option, index) => (
                 <motion.div
-                  key={`${currentChallengeData.id}-opt-${index}`}
+                  key={`${currentChallengeData.word}-opt-${index}`} // Ensure key is unique even if options are similar across words
                   custom={index}
                   variants={optionVariants}
                   whileHover={{ scale: 1.03, transition: { duration: 0.15 } }}
@@ -529,8 +492,8 @@ export default function GameInterface({ selectedMode, onGoBack }: GameInterfaceP
                     className={cn(
                       "w-full h-auto py-4 sm:py-5 text-base sm:text-lg justify-between items-center text-left whitespace-normal",
                       userInput === option && !feedbackMessage && "bg-primary/20 border-primary ring-2 ring-primary",
-                      feedbackMessage && option === currentChallengeData.correctAnswer && "bg-green-500/20 border-green-500 ring-2 ring-green-500 text-green-700 dark:text-green-300",
-                      feedbackMessage && userInput === option && option !== currentChallengeData.correctAnswer && "bg-red-500/20 border-red-500 ring-2 ring-red-500 text-red-700 dark:text-red-300"
+                      feedbackMessage && option === currentChallengeData.word && "bg-green-500/20 border-green-500 ring-2 ring-green-500 text-green-700 dark:text-green-300",
+                      feedbackMessage && userInput === option && option !== currentChallengeData.word && "bg-red-500/20 border-red-500 ring-2 ring-red-500 text-red-700 dark:text-red-300"
                     )}
                     onClick={() => handleOptionSelect(option)}
                     disabled={!!feedbackMessage || isLoadingSession}
@@ -545,7 +508,7 @@ export default function GameInterface({ selectedMode, onGoBack }: GameInterfaceP
             </motion.div>
           ) : (selectedMode === 'intermediate' || selectedMode === 'advanced') ? (
             <div className="w-full max-w-md text-center space-y-6">
-              {currentChallengeData.hint && (isHintUsedForQuestion || selectedMode === 'intermediate') && (
+              {currentChallengeData.hint && (isHintUsedForQuestion || (selectedMode === 'intermediate' && !currentChallengeData.clueType.includes('blank'))) && ( // Show hint for intermediate if not fill-in-blank immediately
                 <motion.p
                   className="text-2xl sm:text-3xl font-semibold text-foreground/80"
                   initial={{ opacity: 0, y: -10 }}
@@ -597,14 +560,11 @@ export default function GameInterface({ selectedMode, onGoBack }: GameInterfaceP
     );
   } else {
     console.log("NOT RENDERING MAIN GAME. State:", { isLoadingSession, gameOver, currentChallengeData });
-    // This case should ideally not be reached if loading/gameOver states are handled.
-    // It might indicate an issue with currentChallengeData not being set when it should be.
     return (
         <div className="flex flex-col items-center justify-center min-h-[calc(100vh-200px)] text-center p-6">
-            <p className="text-muted-foreground">An unexpected error occurred or game state is inconsistent.</p>
+            <p className="text-muted-foreground">Loading WordQuest... If this persists, there might be an issue.</p>
             <Button onClick={onGoBack} variant="outline" className="mt-4">Back to Modes</Button>
       </div>
     );
   }
 }
-
