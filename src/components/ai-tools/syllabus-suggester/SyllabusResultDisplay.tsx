@@ -1,19 +1,19 @@
 
 'use client';
 
-import React, { useState } // Added useState
+import React, { useState, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Badge } from "@/components/ui/badge";
-import { Button } from '@/components/ui/button'; // Added Button
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"; // Added Tooltip
+import { Button } from '@/components/ui/button';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { format } from 'date-fns';
-import { BookOpen, CalendarDays, Target as TargetIcon, Lightbulb, Sparkles, Star, ClockIcon, AlertTriangle, ThumbsUp, ThumbsDown, PlayCircle, Circle, CheckCircle, Loader2 } from 'lucide-react'; // Added new icons
+import { BookOpen, CalendarDays, Target as TargetIcon, Lightbulb, Sparkles, Star, ClockIcon, AlertTriangle, ThumbsUp, ThumbsDown, PlayCircle, Circle, CheckCircle, Loader2, Brain } from 'lucide-react';
 import type { SuggestStudyTopicsOutput } from '@/ai/flows/suggest-study-topics';
 import { cn } from '@/lib/utils';
-import { motion } from 'framer-motion'; // Added framer-motion
-import { useToast } from '@/hooks/use-toast'; // Added useToast
+import { motion } from 'framer-motion';
+import { useToast } from '@/hooks/use-toast';
 
 interface SyllabusResultDisplayProps {
   generatedSyllabus: SuggestStudyTopicsOutput['generatedSyllabus'] | null;
@@ -23,7 +23,7 @@ interface SyllabusResultDisplayProps {
     targetDate: Date;
     timeAvailablePerDay: number;
     preparationLevel: 'beginner' | 'intermediate' | 'advanced';
-    userName?: string; // Added for personalized greeting
+    userName?: string;
   };
 }
 
@@ -78,8 +78,8 @@ export default function SyllabusResultDisplay({ generatedSyllabus, overallFeedba
       </Card>
     );
   }
-  
-  const handleTopicStatusChange = (subjectIndex: number, weekIndex: number, topicIndex: number) => {
+
+  const handleTopicStatusChange = useCallback((subjectIndex: number, weekIndex: number, topicIndex: number) => {
     const topicKey = `s${subjectIndex}-w${weekIndex}-t${topicIndex}`;
     setTopicStatuses(prev => {
       const currentStatus = prev[topicKey] || 'not_started';
@@ -89,29 +89,29 @@ export default function SyllabusResultDisplay({ generatedSyllabus, overallFeedba
       else nextStatus = 'not_started';
       return { ...prev, [topicKey]: nextStatus };
     });
-  };
+  }, []);
 
-  const handleFeedback = (type: 'positive' | 'negative') => {
+  const handleFeedback = useCallback((type: 'positive' | 'negative') => {
     toast({
       title: 'Feedback Submitted (Mock)',
       description: `Thank you for your ${type} feedback on the AI Coach's Wisdom!`,
     });
-  };
-  
-  const handleStudyNow = (topicTitle: string) => {
+  }, [toast]);
+
+  const handleStudyNow = useCallback((topicTitle: string) => {
     toast({
       title: `Study "${topicTitle}"`,
       description: "Integration with Pomodoro or other study tools coming soon!",
     });
-  };
+  }, [toast]);
 
   return (
-    <Card className="shadow-2xl animate-in fade-in-50 duration-500 mt-6 bg-card/80 dark:bg-slate-800/30 border-border/50">
+    <Card className="shadow-2xl animate-in fade-in-50 duration-500 mt-6 bg-card/80 dark:bg-slate-900/20 border-border/50">
       <CardHeader className="p-4 sm:p-6 text-center">
         <CardTitle className="text-2xl sm:text-3xl md:text-4xl font-bold font-headline flex items-center justify-center">
-           Your Personalized Study Plan 
-           <motion.span 
-             animate={{ scale: [1, 1.2, 1], rotate: [0, -5, 5, 0]}} 
+           Your Personalized Study Plan
+           <motion.span
+             animate={{ scale: [1, 1.2, 1], rotate: [0, -5, 5, 0]}}
              transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut", repeatDelay: 2 }}
              className="inline-block ml-1.5 sm:ml-2"
            >🌟</motion.span>
@@ -125,7 +125,7 @@ export default function SyllabusResultDisplay({ generatedSyllabus, overallFeedba
       </CardHeader>
       <CardContent className="space-y-4 sm:space-y-6 p-4 sm:p-6">
         {overallFeedback && (
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2, duration: 0.5 }}
@@ -145,9 +145,9 @@ export default function SyllabusResultDisplay({ generatedSyllabus, overallFeedba
         )}
         <Accordion type="multiple" className="w-full space-y-3 sm:space-y-4">
           {generatedSyllabus.map((subjectSyllabus, subjectIndex) => (
-            <AccordionItem 
-              value={`subject-${subjectIndex}`} 
-              key={`subject-${subjectIndex}`} 
+            <AccordionItem
+              value={`subject-${subjectIndex}`}
+              key={`subject-${subjectIndex}`}
               className="border border-border/70 rounded-xl bg-card dark:bg-slate-900/50 shadow-lg overflow-hidden"
             >
               <AccordionTrigger className="px-3 sm:px-4 py-2.5 sm:py-3 text-left hover:no-underline hover:bg-muted/50 dark:hover:bg-slate-800/60 transition-colors">
@@ -156,11 +156,11 @@ export default function SyllabusResultDisplay({ generatedSyllabus, overallFeedba
                   <span className="text-md sm:text-lg font-semibold text-foreground">{subjectSyllabus.subject}</span>
                 </div>
               </AccordionTrigger>
-              <AccordionContent className="px-3 sm:px-4 pb-3 sm:pb-4 pt-1 bg-background dark:bg-slate-800/30">
+              <AccordionContent className="px-3 sm:px-4 pb-3 sm:pb-4 pt-1 bg-background dark:bg-slate-900/30">
                 {subjectSyllabus.summary && (
-                  <motion.div 
+                  <motion.div
                     initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.1 }}
-                    className="my-3 sm:my-4 p-2.5 sm:p-3 bg-muted/70 dark:bg-slate-700/40 rounded-md border border-border/50 text-xs sm:text-sm italic"
+                    className="my-3 sm:my-4 p-2.5 sm:p-3 bg-muted/70 dark:bg-slate-800/40 rounded-md border border-border/50 text-xs sm:text-sm italic"
                   >
                     <Lightbulb className="inline-block mr-1.5 h-3.5 w-3.5 sm:h-4 sm:w-4 text-yellow-500 dark:text-yellow-400" />
                     <strong className="text-foreground/90 dark:text-foreground/80">Quick Notes:</strong> {subjectSyllabus.summary}
@@ -169,7 +169,7 @@ export default function SyllabusResultDisplay({ generatedSyllabus, overallFeedba
                 <div className="space-y-3 sm:space-y-4">
                   {subjectSyllabus.schedule.map((weeklyItem, weekIndex) => (
                     <div key={`${subjectSyllabus.subject}-week-${weekIndex}`} className="pl-1 sm:pl-2 border-l-2 border-primary/40 dark:border-primary/60">
-                      <h4 className="font-medium text-sm sm:text-md text-primary flex items-center mb-1.5 sm:mb-2 sticky top-0 bg-background/80 dark:bg-slate-800/80 backdrop-blur-sm py-1.5 z-10 rounded-r-md px-2 -ml-2 sm:-ml-3">
+                      <h4 className="font-medium text-sm sm:text-md text-primary flex items-center mb-1.5 sm:mb-2 sticky top-0 bg-background/80 dark:bg-slate-900/80 backdrop-blur-sm py-1.5 z-10 rounded-r-md px-2 -ml-2 sm:-ml-3">
                         <CalendarDays className="mr-1.5 sm:mr-2 h-4 w-4 sm:h-5 sm:w-5 text-primary/80" /> {weeklyItem.weekLabel}:
                       </h4>
                       {weeklyItem.topics.length > 0 ? (
@@ -184,7 +184,7 @@ export default function SyllabusResultDisplay({ generatedSyllabus, overallFeedba
                             else if (currentStatus === 'completed') { StatusIcon = CheckCircle; statusColor = "text-green-500"; }
 
                             return (
-                              <motion.li 
+                              <motion.li
                                 key={topicKey}
                                 initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: topicIndex * 0.05 }}
                                 className={cn(
@@ -252,4 +252,3 @@ export default function SyllabusResultDisplay({ generatedSyllabus, overallFeedba
     </Card>
   );
 }
-
