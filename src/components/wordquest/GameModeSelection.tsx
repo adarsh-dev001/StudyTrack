@@ -38,36 +38,54 @@ interface GameModeSelectionProps {
   onModeSelect: (mode: GameMode) => void;
 }
 
-const cardVariants = {
-  hidden: { opacity: 0, y: 20 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.5 } }
+const cardVariantsContainer = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: { staggerChildren: 0.07, delayChildren: 0.1 }
+  }
 };
+
+const cardVariantItem = {
+  hidden: { opacity: 0, y: 20, scale: 0.95 },
+  visible: { opacity: 1, y: 0, scale: 1, transition: { duration: 0.4, ease: "easeOut" } }
+};
+
+const cardHoverTapProps = {
+  whileHover: { y: -5, scale: 1.03, boxShadow: "0px 8px 20px rgba(0,0,0,0.08)" },
+  whileTap: { scale: 0.98 },
+  transition: { type: "spring", stiffness: 300, damping: 15 }
+};
+
 
 export default function GameModeSelection({ selectedMode, onModeSelect }: GameModeSelectionProps) {
   return (
-    <motion.div 
+    <motion.div
       className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5 px-4 md:px-6" // Added padding
+      variants={cardVariantsContainer}
       initial="hidden"
       animate="visible"
-      variants={{ visible: { transition: { staggerChildren: 0.05 } } }}
     >
       {(Object.keys(gameModesDetails) as GameMode[]).map((modeKey) => {
         const modeDetail = gameModesDetails[modeKey];
         const IconComponent = modeDetail.icon;
         const isSelected = selectedMode === modeKey;
         return (
-          <motion.div 
-            key={modeKey} 
-            variants={cardVariants}
-            whileHover={{ y: -4 }}
-            transition={{ type: "spring", stiffness: 300 }}
+          <motion.div
+            key={modeKey}
+            variants={cardVariantItem}
+            {...cardHoverTapProps}
+            onClick={() => onModeSelect(modeKey)}
+            className={cn(
+              "cursor-pointer rounded-xl overflow-hidden", // Apply rounded here for motion.div to clip shadow
+              isSelected ? 'ring-2 ring-offset-2 ring-teal-400 shadow-xl' : 'ring-1 ring-transparent' // Ring on motion.div for better effect
+            )}
           >
             <Card
-              onClick={() => onModeSelect(modeKey)}
               className={cn(
-                "shadow-md hover:shadow-lg transition-all duration-200 ease-out cursor-pointer flex flex-col h-full text-center items-center justify-center p-4 sm:p-6 min-h-[160px] sm:min-h-[180px]",
+                "shadow-md transition-all duration-200 ease-out flex flex-col h-full text-center items-center justify-center p-4 sm:p-6 min-h-[160px] sm:min-h-[180px]",
                 modeDetail.colorClass,
-                isSelected ? 'ring-2 ring-offset-2 ring-teal-400 shadow-xl' : 'ring-1 ring-border' // Highlight for selected
+                isSelected ? 'border-transparent' : 'border-border' // Remove card border if selected for cleaner ring look
               )}
             >
               <IconComponent className={cn("h-7 w-7 sm:h-8 sm:w-8 mb-2 sm:mb-3", modeDetail.iconColorClass)} />
@@ -82,5 +100,3 @@ export default function GameModeSelection({ selectedMode, onModeSelect }: GameMo
     </motion.div>
   );
 }
-
-    

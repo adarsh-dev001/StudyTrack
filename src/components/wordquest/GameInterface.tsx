@@ -6,16 +6,16 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Progress } from '@/components/ui/progress';
-import { Timer, HelpCircle, SkipForward, Star, ArrowLeft, ImageIcon, ListChecks, Library, Flame, Skull, ThumbsUp, ThumbsDown, Volume2, Settings, KeyboardIcon, ArrowRightToLine, ChevronsRight } from 'lucide-react';
+import { Timer, HelpCircle, SkipForward, Star, ArrowLeft, ImageIcon, ListChecks, Library, Flame, Skull, ThumbsUp, ThumbsDown, Volume2, Settings, KeyboardIcon, ArrowRightToLine, ChevronsRight, CheckCircle, XCircle } from 'lucide-react';
 import type { GameMode, GameModeDetails, WordData } from './types';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 
 // Consistent Game Mode Details, ensuring Advanced matches Intermediate's expected UI type
 const gameModesDetails: Record<GameMode, GameModeDetails> = {
   basic: { title: 'Basic', description: 'Everyday Words - MCQs', icon: ListChecks, colorClass: 'border-green-500/30 bg-green-500/5 hover:shadow-green-500/10', iconColorClass: 'text-green-500' },
   intermediate: { title: 'Intermediate', description: 'Fill-in-the-blanks', icon: Library, colorClass: 'border-teal-500/30 bg-teal-500/5 hover:shadow-teal-500/10', iconColorClass: 'text-teal-500' },
-  advanced: { title: 'Advanced Arena', description: 'Descriptive Clues - Timed', icon: Flame, colorClass: 'border-orange-500/30 bg-orange-500/5 hover:shadow-orange-500/10', iconColorClass: 'text-orange-500' },
+  advanced: { title: 'Advanced', description: 'Descriptive Clues - Timed', icon: Flame, colorClass: 'border-orange-500/30 bg-orange-500/5 hover:shadow-orange-500/10', iconColorClass: 'text-orange-500' },
 };
 
 const MOCK_WORDS: Record<GameMode, WordData[]> = {
@@ -43,6 +43,39 @@ interface GameInterfaceProps {
   onGoBack: () => void;
 }
 
+const panelVariants = {
+  initial: (custom: 'left' | 'right') => ({
+    opacity: 0,
+    x: custom === 'left' ? -30 : 30,
+  }),
+  animate: {
+    opacity: 1,
+    x: 0,
+    transition: { duration: 0.4, ease: "easeOut" }
+  },
+  exit: (custom: 'left' | 'right') => ({
+    opacity: 0,
+    x: custom === 'left' ? -30 : 30,
+    transition: { duration: 0.3, ease: "easeIn" }
+  })
+};
+
+const optionVariants = {
+  hidden: { opacity: 0, y: 10 },
+  visible: (i: number) => ({
+    opacity: 1,
+    y: 0,
+    transition: { delay: i * 0.08, duration: 0.3, ease: "easeOut" }
+  })
+};
+
+const feedbackVariants = {
+  initial: { opacity: 0, scale: 0.8, y: 10 },
+  animate: { opacity: 1, scale: 1, y: 0, transition: { type: "spring", stiffness: 300, damping: 15 } },
+  exit: { opacity: 0, scale: 0.8, y: -10, transition: { duration: 0.2 } }
+};
+
+
 export default function GameInterface({ selectedMode, onGoBack }: GameInterfaceProps) {
   const [currentWordIndex, setCurrentWordIndex] = useState(0);
   const [userInput, setUserInput] = useState('');
@@ -59,7 +92,7 @@ export default function GameInterface({ selectedMode, onGoBack }: GameInterfaceP
 
   const resetTimer = useCallback(() => {
     let duration = MAX_TIME_PER_QUESTION;
-    if (selectedMode === 'advanced') duration = 20; // Stays 20 for high pressure
+    if (selectedMode === 'advanced') duration = 20;
     else if (selectedMode === 'intermediate') duration = 78;
     setTimeLeft(duration);
   }, [selectedMode]);
@@ -82,18 +115,6 @@ export default function GameInterface({ selectedMode, onGoBack }: GameInterfaceP
       hiddenInputRef.current?.focus();
     }
   }, [currentWordIndex, selectedMode, resetTimer, gameOver]);
-
-  useEffect(() => {
-    if (gameOver) return;
-    if (timeLeft <= 0) {
-      handleSkip();
-      return;
-    }
-    const timerId = setInterval(() => {
-      setTimeLeft(prev => prev - 1);
-    }, 1000);
-    return () => clearInterval(timerId);
-  }, [timeLeft, gameOver, handleSkip]); // Added handleSkip as dependency
 
   const proceedToNextOrEnd = useCallback(() => {
     if (currentWordIndex < wordsForMode.length - 1) {
@@ -125,20 +146,11 @@ export default function GameInterface({ selectedMode, onGoBack }: GameInterfaceP
     }, 1500);
   }, [currentWordData, userInput, selectedMode, feedbackMessage, proceedToNextOrEnd]);
 
-
   const handleOptionSelect = (option: string) => {
     if (feedbackMessage) return;
     setUserInput(option);
-    // For basic mode, handleSubmitAnswer is called immediately after setting userInput
-    // This useEffect handles the submission:
-    // useEffect(() => {
-    // if (selectedMode === 'basic' && userInput && !feedbackMessage) {
-    // handleSubmitAnswer();
-    // }
-    // }, [userInput, selectedMode, feedbackMessage, handleSubmitAnswer]);
-    // For clarity, let's call it directly IF basic mode.
     if (selectedMode === 'basic') {
-        handleSubmitAnswer();
+        handleSubmitAnswer(); // Submit immediately for basic mode
     }
   };
 
@@ -155,6 +167,18 @@ export default function GameInterface({ selectedMode, onGoBack }: GameInterfaceP
     const seconds = totalSeconds % 60;
     return `${minutes}:${String(seconds).padStart(2, '0')}`;
   };
+  
+   useEffect(() => {
+    if (gameOver) return;
+    if (timeLeft <= 0) {
+      handleSkip();
+      return;
+    }
+    const timerId = setInterval(() => {
+      setTimeLeft(prev => prev - 1);
+    }, 1000);
+    return () => clearInterval(timerId);
+  }, [timeLeft, gameOver, handleSkip]);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -173,7 +197,7 @@ export default function GameInterface({ selectedMode, onGoBack }: GameInterfaceP
         } else if (event.key === 'Backspace') {
           setUserInput(prev => prev.slice(0, -1));
         } else if (event.key.length === 1 && /^[a-zA-Z]$/.test(event.key) && userInput.length < (currentWordData?.correctAnswer.length || 20)) {
-          setUserInput(prev => prev + event.key.toUpperCase()); // Store as uppercase for display consistency
+          setUserInput(prev => prev + event.key.toUpperCase());
         }
       }
     };
@@ -183,7 +207,6 @@ export default function GameInterface({ selectedMode, onGoBack }: GameInterfaceP
       window.removeEventListener('keydown', handleKeyDown);
     };
   }, [gameOver, feedbackMessage, selectedMode, userInput, handleSubmitAnswer, handleSkip, currentWordData]);
-
 
   useEffect(() => {
     if (
@@ -199,20 +222,33 @@ export default function GameInterface({ selectedMode, onGoBack }: GameInterfaceP
 
   if (gameOver) {
     return (
-      <Card className="w-full max-w-lg mx-auto text-center shadow-xl animate-in fade-in-50">
-        <CardHeader>
-          <Star className="mx-auto h-12 w-12 text-yellow-400 mb-2" />
-          <CardTitle className="text-2xl font-bold">Game Over!</CardTitle>
-          <CardDescription>Mode: {gameModesDetails[selectedMode]?.title || selectedMode}</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <p className="text-4xl font-bold text-primary mb-4">{score}</p>
-          <p className="text-muted-foreground">You answered {score / 10} out of {wordsForMode.length} questions correctly.</p>
-        </CardContent>
-        <CardFooter className="flex flex-col sm:flex-row gap-2 justify-center">
-          <Button onClick={onGoBack} variant="outline">Play Again</Button>
-        </CardFooter>
-      </Card>
+      <motion.div
+        initial={{ opacity: 0, scale: 0.8 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 0.5, ease: "easeOut" }}
+      >
+        <Card className="w-full max-w-lg mx-auto text-center shadow-xl">
+          <CardHeader>
+            <Star className="mx-auto h-12 w-12 text-yellow-400 mb-2" />
+            <CardTitle className="text-2xl font-bold">Game Over!</CardTitle>
+            <CardDescription>Mode: {gameModesDetails[selectedMode]?.title || selectedMode}</CardDescription>
+          </CardHeader>
+          <CardContent>
+             <motion.p
+                className="text-4xl font-bold text-primary mb-4"
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2, duration: 0.3 }}
+              >
+                {score}
+              </motion.p>
+            <p className="text-muted-foreground">You answered {score / 10} out of {wordsForMode.length} questions correctly.</p>
+          </CardContent>
+          <CardFooter className="flex flex-col sm:flex-row gap-2 justify-center">
+            <Button onClick={onGoBack} variant="outline">Play Again</Button>
+          </CardFooter>
+        </Card>
+      </motion.div>
     );
   }
 
@@ -224,7 +260,16 @@ export default function GameInterface({ selectedMode, onGoBack }: GameInterfaceP
     switch (currentWordData.clueType) {
       case 'image':
         return (
-          <img src={currentWordData.clue} alt="Word Clue" className="rounded-md shadow-md max-w-xs mx-auto h-auto" data-ai-hint="game clue image" />
+          <motion.img
+            key={`clue-image-${currentWordIndex}`}
+            src={currentWordData.clue}
+            alt="Word Clue"
+            className="rounded-md shadow-md max-w-xs mx-auto h-auto"
+            data-ai-hint="game clue image"
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.3 }}
+          />
         );
       case 'definition':
       case 'fill-in-the-blank':
@@ -241,15 +286,18 @@ export default function GameInterface({ selectedMode, onGoBack }: GameInterfaceP
     return (
       <div className="flex justify-center space-x-1.5 sm:space-x-2">
         {Array.from({ length: wordLength }).map((_, index) => (
-          <div
+          <motion.div
             key={index}
             className={cn(
               "flex items-center justify-center h-10 w-8 sm:h-12 sm:w-10 md:h-14 md:w-12 text-xl sm:text-2xl font-semibold border-2 rounded",
               userInput[index] ? "border-primary text-primary bg-primary/10" : "border-muted-foreground/50 bg-muted/20"
             )}
+            initial={{ opacity: 0, y: 5 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: index * 0.03, duration: 0.2 }}
           >
             {userInput[index]?.toUpperCase() || ''}
-          </div>
+          </motion.div>
         ))}
       </div>
     );
@@ -270,83 +318,107 @@ export default function GameInterface({ selectedMode, onGoBack }: GameInterfaceP
       </div>
 
       <div className="flex-grow grid grid-cols-1 md:grid-cols-2 min-h-[calc(100vh-150px)]">
-        <motion.div
-          key={`clue-panel-${currentWordIndex}`}
-          initial={{ opacity: 0, x: -30 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.4, ease: "easeOut" }}
-          className="bg-card text-card-foreground p-6 sm:p-8 md:p-10 lg:p-12 flex flex-col justify-between relative"
-        >
-          <div className="absolute top-4 left-4 text-sm text-muted-foreground flex items-center">
-            Your clue <ArrowRightToLine className="ml-1 h-4 w-4" />
-          </div>
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={`clue-panel-${currentWordIndex}`}
+            custom="left"
+            variants={panelVariants}
+            initial="initial"
+            animate="animate"
+            exit="exit"
+            className="bg-card text-card-foreground p-6 sm:p-8 md:p-10 lg:p-12 flex flex-col justify-between relative"
+          >
+            <div className="absolute top-4 left-4 text-sm text-muted-foreground flex items-center">
+              Your clue <ArrowRightToLine className="ml-1 h-4 w-4" />
+            </div>
 
-          <div className="my-auto flex items-center justify-center h-full">
-            {renderClueContent()}
-          </div>
+            <div className="my-auto flex items-center justify-center h-full">
+              {renderClueContent()}
+            </div>
 
-          <div className="mt-auto">
-            <div className="flex justify-between items-end">
-              <div className="flex items-center space-x-2 sm:space-x-3">
-                 <Button
-                    variant="default"
-                    size="sm"
-                    onClick={handleSkip}
-                    disabled={!!feedbackMessage || gameOver}
-                    className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs sm:text-sm px-3 py-1.5 h-auto"
-                >
-                    <span className="bg-indigo-700/80 px-1.5 py-0.5 rounded-sm text-xs mr-1.5">esc</span> Skip
-                </Button>
-                <div className="flex items-center text-muted-foreground text-sm">
-                    <HelpCircle className="h-4 w-4 mr-1" /> 0
+            <div className="mt-auto">
+              <div className="flex justify-between items-end">
+                <div className="flex items-center space-x-2 sm:space-x-3">
+                  <Button
+                      variant="default"
+                      size="sm"
+                      onClick={handleSkip}
+                      disabled={!!feedbackMessage || gameOver}
+                      className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs sm:text-sm px-3 py-1.5 h-auto"
+                  >
+                      <span className="bg-indigo-700/80 px-1.5 py-0.5 rounded-sm text-xs mr-1.5">esc</span> Skip
+                  </Button>
+                  <div className="flex items-center text-muted-foreground text-sm">
+                      <HelpCircle className="h-4 w-4 mr-1" /> 0
+                  </div>
+                  <div className="flex items-center text-muted-foreground text-sm">
+                      <Flame className="h-4 w-4 mr-1" /> 0
+                  </div>
                 </div>
-                <div className="flex items-center text-muted-foreground text-sm">
-                    <Flame className="h-4 w-4 mr-1" /> 0
+                <div className="text-right">
+                  <div className="text-4xl sm:text-5xl font-bold tabular-nums text-foreground">{formatTimeForDisplay(timeLeft)}</div>
+                  <div className="text-xs text-muted-foreground">Time remaining <ChevronsRight className="inline h-3 w-3" /></div>
                 </div>
-              </div>
-              <div className="text-right">
-                <div className="text-4xl sm:text-5xl font-bold tabular-nums text-foreground">{formatTimeForDisplay(timeLeft)}</div>
-                <div className="text-xs text-muted-foreground">Time remaining <ChevronsRight className="inline h-3 w-3" /></div>
               </div>
             </div>
-          </div>
-        </motion.div>
+          </motion.div>
+        </AnimatePresence>
 
+        <AnimatePresence mode="wait">
         <motion.div
            key={`input-panel-${currentWordIndex}`}
-           initial={{ opacity: 0, x: 30 }}
-           animate={{ opacity: 1, x: 0 }}
-           transition={{ duration: 0.4, ease: "easeOut", delay: 0.1 }}
+           custom="right"
+           variants={panelVariants}
+           initial="initial"
+           animate="animate"
+           exit="exit"
           className="bg-muted/30 p-6 sm:p-8 flex flex-col justify-center items-center"
         >
           {selectedMode === 'basic' && currentWordData.options ? (
-            <div className="space-y-3 w-full max-w-sm">
+            <motion.div
+              className="space-y-3 w-full max-w-sm"
+              initial="hidden"
+              animate="visible"
+              variants={{ visible: { transition: { staggerChildren: 0.05 }}}}
+            >
               {shuffledOptions.map((option, index) => (
-                <Button
+                <motion.div
                   key={option}
-                  variant="outline"
-                  className={cn(
-                    "w-full h-auto py-4 sm:py-5 text-base sm:text-lg justify-between items-center text-left whitespace-normal hover:bg-primary/10 hover:border-primary",
-                    userInput === option && !feedbackMessage && "bg-primary/20 border-primary ring-2 ring-primary",
-                    feedbackMessage && option === currentWordData.correctAnswer && "bg-green-500/20 border-green-500 ring-2 ring-green-500",
-                    feedbackMessage && userInput === option && option !== currentWordData.correctAnswer && "bg-red-500/20 border-red-500 ring-2 ring-red-500"
-                  )}
-                  onClick={() => handleOptionSelect(option)}
-                  disabled={!!feedbackMessage}
+                  custom={index}
+                  variants={optionVariants}
+                  whileHover={{ scale: 1.03, transition: { duration: 0.15 } }}
+                  whileTap={{ scale: 0.97 }}
                 >
-                  <span>{option}</span>
-                  <span className="text-xs font-mono text-muted-foreground border border-border rounded-full h-5 w-5 flex items-center justify-center ml-2">
-                    {index + 1}
-                  </span>
-                </Button>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "w-full h-auto py-4 sm:py-5 text-base sm:text-lg justify-between items-center text-left whitespace-normal",
+                      userInput === option && !feedbackMessage && "bg-primary/20 border-primary ring-2 ring-primary",
+                      feedbackMessage && option === currentWordData.correctAnswer && "bg-green-500/20 border-green-500 ring-2 ring-green-500 text-green-700 dark:text-green-300",
+                      feedbackMessage && userInput === option && option !== currentWordData.correctAnswer && "bg-red-500/20 border-red-500 ring-2 ring-red-500 text-red-700 dark:text-red-300"
+                    )}
+                    onClick={() => handleOptionSelect(option)}
+                    disabled={!!feedbackMessage}
+                  >
+                    <span>{option}</span>
+                    <span className="text-xs font-mono text-muted-foreground border border-border rounded-full h-5 w-5 flex items-center justify-center ml-2">
+                      {index + 1}
+                    </span>
+                  </Button>
+                </motion.div>
               ))}
-            </div>
+            </motion.div>
           ) : (selectedMode === 'intermediate' || selectedMode === 'advanced') ? (
             <div className="w-full max-w-md text-center space-y-6">
               {currentWordData.hint && (
-                <p className="text-2xl sm:text-3xl font-semibold text-foreground/80">
+                <motion.p
+                  className="text-2xl sm:text-3xl font-semibold text-foreground/80"
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.1 }}
+                >
                   {currentWordData.hint}
-                </p>
+                </motion.p>
               )}
               {renderLetterBoxes()}
               <input
@@ -362,21 +434,31 @@ export default function GameInterface({ selectedMode, onGoBack }: GameInterfaceP
             <p className="text-muted-foreground">Game mode not fully configured for display.</p>
           )}
 
-           {feedbackMessage && (
-            <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                className={cn(
-                    "mt-6 p-3 rounded-md text-center font-semibold text-sm w-full max-w-sm",
-                    feedbackMessage.includes('Correct') ? "bg-green-100 text-green-700 dark:bg-green-800/30 dark:text-green-300"
-                                                        : "bg-red-100 text-red-700 dark:bg-red-800/30 dark:text-red-300"
-                )}
-            >
-                {feedbackMessage}
-            </motion.div>
-          )}
+          <AnimatePresence>
+            {feedbackMessage && (
+              <motion.div
+                  key="feedback"
+                  variants={feedbackVariants}
+                  initial="initial"
+                  animate="animate"
+                  exit="exit"
+                  className={cn(
+                      "mt-6 p-3 rounded-md text-center font-semibold text-sm w-full max-w-sm",
+                      feedbackMessage.includes('Correct') ? "bg-green-100 text-green-700 dark:bg-green-800/30 dark:text-green-300"
+                                                          : "bg-red-100 text-red-700 dark:bg-red-800/30 dark:text-red-300"
+                  )}
+              >
+                  {feedbackMessage.includes('Correct') && <CheckCircle className="inline mr-1.5 h-5 w-5" />}
+                  {feedbackMessage.includes('Oops') && <XCircle className="inline mr-1.5 h-5 w-5" />}
+                  {feedbackMessage.includes('Skipped') && <SkipForward className="inline mr-1.5 h-5 w-5" />}
+                  {feedbackMessage}
+              </motion.div>
+            )}
+          </AnimatePresence>
         </motion.div>
+        </AnimatePresence>
       </div>
     </div>
   );
 }
+
