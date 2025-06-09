@@ -7,7 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Button } from '@/components/ui/button';
-import { Sparkles, ListChecks, HelpCircle, CheckCircle, XCircle, Lightbulb, ClipboardList, FileText, Download, Loader2, Brain, Share2, SaveAll, FileOutput, Printer, ChevronDown, ChevronUp } from 'lucide-react';
+import { Sparkles, ListChecks, HelpCircle, CheckCircle, XCircle, Lightbulb, ClipboardList, FileText, Download, Loader2, Brain, Share2, SaveAll, FileOutput, Printer, ChevronDown, ChevronUp, Copy as CopyIcon, Mail as MailIcon } from 'lucide-react';
 import type { SummarizeStudyMaterialOutput, MCQ } from '@/ai/flows/summarize-study-material';
 import { cn } from '@/lib/utils';
 import { jsPDF } from 'jspdf';
@@ -15,6 +15,8 @@ import html2canvas from 'html2canvas';
 import { useToast } from '@/hooks/use-toast';
 import { motion, AnimatePresence } from 'framer-motion';
 import { renderMarkdownToHtml } from '@/lib/markdown-utils';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { Textarea } from '@/components/ui/textarea';
 
 interface MCQWithUserAnswer extends MCQ {
   userSelectedOption?: number;
@@ -29,9 +31,11 @@ interface SummarizerResultsDisplayProps {
   handleShowAnswer: (questionIndex: number) => Promise<void>;
 }
 
-const MAX_NOTES_LENGTH_DISPLAY = 1000; // Characters to show before truncation
-const INITIAL_COLLAPSED_MAX_HEIGHT = '300px'; // CSS max-height for collapsed view
-const EXPANDED_MAX_HEIGHT = '5000px'; // Large pixel value for expanded state
+const MAX_NOTES_LENGTH_DISPLAY = 1000;
+const INITIAL_COLLAPSED_MAX_HEIGHT = '300px'; 
+const EXPANDED_MAX_HEIGHT = '5000px';
+
+const APP_URL = "https://studytrack.app"; // Placeholder - Replace with your actual app URL
 
 export default function SummarizerResultsDisplay({
   analysisResult,
@@ -46,33 +50,45 @@ export default function SummarizerResultsDisplay({
   const [isNotesExpanded, setIsNotesExpanded] = React.useState(false);
   const [showToggleNotesButton, setShowToggleNotesButton] = React.useState(false);
 
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+  const [promotionalMessage, setPromotionalMessage] = useState("");
+
   useEffect(() => {
     if (analysisResult.structuredNotes.length > MAX_NOTES_LENGTH_DISPLAY) {
       setShowToggleNotesButton(true);
-      setIsNotesExpanded(false); // Default to collapsed if long
+      setIsNotesExpanded(false); 
     } else {
       setShowToggleNotesButton(false);
-      setIsNotesExpanded(true); // Always expanded if short
+      setIsNotesExpanded(true);
     }
   }, [analysisResult.structuredNotes]);
 
-  const handleShare = async () => {
-    const shareData = {
-      title: `Study Notes: ${topic}`,
-      text: `Check out these AI-generated study notes for "${topic}" from StudyTrack!\nSummary: ${analysisResult.summary.substring(0,100)}...`,
-      url: window.location.href, 
-    };
-    try {
-      if (navigator.share) {
-        await navigator.share(shareData);
-      } else {
-        await navigator.clipboard.writeText(`${shareData.title}\n${shareData.url}`);
-        toast({ title: "Link Copied!", description: "Link to these notes copied to clipboard." });
-      }
-    } catch (err) {
-      console.error("Share failed:", err);
-      toast({ title: "Sharing Error", description: "Could not share at this moment.", variant: "destructive" });
-    }
+  const generatePromotionalMessage = () => {
+    return `Hey there! Check out these amazing AI-generated study notes for "${topic}" from StudyTrack! 🚀 It transformed my study material into concise, personalized content. You can supercharge your learning too! Try StudyTrack today: ${APP_URL}`;
+  };
+
+  const openShareModal = () => {
+    setPromotionalMessage(generatePromotionalMessage());
+    setIsShareModalOpen(true);
+  };
+
+  const handleCopyPromotionalMessage = () => {
+    navigator.clipboard.writeText(promotionalMessage)
+      .then(() => {
+        toast({ title: "Message Copied!", description: "Ready to paste into your favorite app." });
+        setIsShareModalOpen(false); 
+      })
+      .catch(err => {
+        console.error("Copy failed:", err);
+        toast({ title: "Copy Failed", description: "Could not copy message. Please try again.", variant: "destructive" });
+      });
+  };
+
+  const handleShareViaEmail = () => {
+    const subject = `Check out these StudyTrack notes for: ${topic}`;
+    const body = `${promotionalMessage}\n\n(Remember to attach the PDF if you downloaded it!)`;
+    window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    setIsShareModalOpen(false);
   };
 
   const handlePrint = () => {
@@ -112,8 +128,8 @@ export default function SummarizerResultsDisplay({
         useCORS: true, 
         backgroundColor: formattedCardBg || '#ffffff',
         logging: false, 
-        windowWidth: notesElement.scrollWidth, // Use scrollWidth for full content width
-        windowHeight: notesElement.scrollHeight, // Use scrollHeight for full content height
+        windowWidth: notesElement.scrollWidth,
+        windowHeight: notesElement.scrollHeight,
       });
       const imgData = canvas.toDataURL('image/png');
       const pdf = new jsPDF({
@@ -126,16 +142,16 @@ export default function SummarizerResultsDisplay({
       const pdfHeight = pdf.internal.pageSize.getHeight();
       const imgProps= pdf.getImageProperties(imgData);
       
-      let imgWidth = pdfWidth - 20; // 10mm margin on each side
+      let imgWidth = pdfWidth - 20; 
       let imgHeight = (imgProps.height * imgWidth) / imgProps.width;
       let heightLeft = imgHeight;
-      let position = 10; // Initial y position with 10mm margin
+      let position = 10; 
 
       pdf.addImage(imgData, 'PNG', 10, position, imgWidth, imgHeight);
-      heightLeft -= (pdfHeight - 20); // Subtract usable page height (with margins)
+      heightLeft -= (pdfHeight - 20); 
 
       while (heightLeft > 0) {
-        position = heightLeft - imgHeight + 10; // Move to next page content start
+        position = heightLeft - imgHeight + 10; 
         pdf.addPage();
         pdf.addImage(imgData, 'PNG', 10, position, imgWidth, imgHeight);
         heightLeft -= (pdfHeight - 20);
@@ -153,6 +169,41 @@ export default function SummarizerResultsDisplay({
   
   return (
     <div className="space-y-6 sm:space-y-8">
+      <Dialog open={isShareModalOpen} onOpenChange={setIsShareModalOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center">
+              <Share2 className="mr-2 h-5 w-5 text-primary" /> Share these Notes
+            </DialogTitle>
+            <DialogDescription>
+              Share these AI-generated notes and help others discover StudyTrack!
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <Textarea
+              value={promotionalMessage}
+              readOnly
+              rows={6}
+              className="text-sm bg-muted/50"
+            />
+            <p className="text-xs text-muted-foreground">
+              For email sharing, you can download the PDF first using the download button on the notes tab, then attach it manually.
+            </p>
+          </div>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" onClick={() => setIsShareModalOpen(false)}>Cancel</Button>
+            <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+              <Button onClick={handleCopyPromotionalMessage} className="w-full sm:w-auto">
+                <CopyIcon className="mr-2 h-4 w-4" /> Copy Message
+              </Button>
+              <Button onClick={handleShareViaEmail} className="w-full sm:w-auto">
+                <MailIcon className="mr-2 h-4 w-4" /> Share via Email
+              </Button>
+            </div>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <Tabs defaultValue="structuredNotes" className="w-full animate-in fade-in-50 duration-500">
         <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 text-xs sm:text-sm h-auto rounded-xl shadow-md bg-muted/70 p-1">
           <TabsTrigger value="structuredNotes" className="py-2.5 sm:py-3 flex items-center gap-1.5 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-lg rounded-lg transition-all"><FileText className="h-4 w-4" />Notes</TabsTrigger>
@@ -174,7 +225,7 @@ export default function SummarizerResultsDisplay({
                   <Button onClick={handleDownloadPdf} variant="outline" size="icon" title="Download as PDF" disabled={isDownloadingPdf} className="h-8 w-8 sm:h-9 sm:w-9 text-primary border-primary hover:bg-primary/10">
                     {isDownloadingPdf ? <Loader2 className="h-4 w-4 animate-spin"/> : <Download className="h-4 w-4" />}
                   </Button>
-                  <Button onClick={handleShare} variant="outline" size="icon" title="Share Notes" className="h-8 w-8 sm:h-9 sm:w-9 text-primary border-primary hover:bg-primary/10">
+                  <Button onClick={openShareModal} variant="outline" size="icon" title="Share Notes" className="h-8 w-8 sm:h-9 sm:w-9 text-primary border-primary hover:bg-primary/10">
                     <Share2 className="h-4 w-4" />
                   </Button>
                   <Button onClick={() => toast({ title: "Coming Soon!", description: "Saving to 'My Notes' will be available shortly." })} variant="outline" size="icon" title="Save to My Notes (Coming Soon)" className="h-8 w-8 sm:h-9 sm:w-9 text-primary border-primary hover:bg-primary/10">
@@ -189,7 +240,6 @@ export default function SummarizerResultsDisplay({
               </div>
             </CardHeader>
             <CardContent className="p-4 md:p-6 bg-background min-h-[200px] relative">
-              {/* Hidden div for full content PDF generation */}
               <div style={{ position: 'absolute', left: '-9999px', top: '-9999px', width: '800px' }}>
                 <div 
                   id="structured-notes-content-for-pdf" 
@@ -197,8 +247,6 @@ export default function SummarizerResultsDisplay({
                   dangerouslySetInnerHTML={{ __html: renderMarkdownToHtml(analysisResult.structuredNotes) }}
                 />
               </div>
-
-              {/* Visible, collapsible content */}
               <motion.div
                 animate={{ maxHeight: isNotesExpanded ? EXPANDED_MAX_HEIGHT : INITIAL_COLLAPSED_MAX_HEIGHT }}
                 transition={{ duration: 0.5, ease: "easeInOut" }}
@@ -351,4 +399,3 @@ export default function SummarizerResultsDisplay({
     </div>
   );
 }
-
