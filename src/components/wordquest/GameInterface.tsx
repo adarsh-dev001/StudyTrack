@@ -13,22 +13,20 @@ import { cn } from '@/lib/utils';
 import { generateWordQuestSession, type GenerateWordQuestSessionInput, type WordQuestSessionOutput, type SingleWordQuestChallenge } from '@/ai/flows/generate-wordquest-challenge-flow';
 import { useToast } from '@/hooks/use-toast';
 
-// Consistent Game Mode Details
 const gameModesDetails: Record<GameMode, GameModeDetails> = {
   basic: { title: 'Basic', description: 'Multiple Choice Questions', icon: ListChecks, colorClass: 'border-green-500/30 bg-green-500/5 hover:shadow-green-500/10', iconColorClass: 'text-green-500' },
   intermediate: { title: 'Intermediate', description: 'Fill-in-the-blanks/Definitions', icon: Library, colorClass: 'border-teal-500/30 bg-teal-500/5 hover:shadow-teal-500/10', iconColorClass: 'text-teal-500' },
   advanced: { title: 'Advanced', description: 'Challenging Definitions - Timed', icon: Flame, colorClass: 'border-orange-500/30 bg-orange-500/5 hover:shadow-orange-500/10', iconColorClass: 'text-orange-500' },
 };
 
-// Represents a single challenge after AI processing, adapted for UI
 export interface ChallengeDataForGame {
-  id: string; // Will use the 'word' itself as ID from AI
+  id: string; 
   word: string;
   clueType: 'definition' | 'fill-in-the-blank';
   clue: string;
-  options?: string[]; // For basic mode, shuffled
-  correctAnswer: string; // Always the 'word'
-  hint?: string; // For intermediate/advanced
+  options?: string[]; 
+  correctAnswer: string; 
+  hint?: string; 
 }
 
 
@@ -71,7 +69,6 @@ const feedbackVariants = {
   exit: { opacity: 0, scale: 0.8, y: -10, transition: { duration: 0.2 } }
 };
 
-// Fisher-Yates shuffle function
 function shuffleArray<T>(array: T[]): T[] {
   if (!array) return [];
   const shuffled = [...array];
@@ -94,7 +91,7 @@ export default function GameInterface({ selectedMode, onGoBack }: GameInterfaceP
   const [gameOver, setGameOver] = useState(false);
   const [feedbackMessage, setFeedbackMessage] = useState<string | null>(null);
   const [isLoadingSession, setIsLoadingSession] = useState(true);
-  const [previousWordsForAI, setPreviousWordsForAI] = useState<string[]>([]); // To avoid repeats across sessions
+  const [previousWordsForAI, setPreviousWordsForAI] = useState<string[]>([]); 
 
   const { toast } = useToast();
   const hiddenInputRef = useRef<HTMLInputElement>(null);
@@ -137,7 +134,11 @@ export default function GameInterface({ selectedMode, onGoBack }: GameInterfaceP
       const aiResult: WordQuestSessionOutput = await generateWordQuestSession(aiInput);
       
       if (!aiResult.challenges || aiResult.challenges.length === 0) {
-        throw new Error("AI did not return any challenges for the session.");
+        console.error("AI returned no challenges, flow should have thrown an error.");
+        toast({ title: "Game Error", description: "AI failed to provide any challenges. Please try again.", variant: "destructive" });
+        setGameOver(true);
+        setIsLoadingSession(false);
+        return;
       }
 
       const newSessionChallenges: ChallengeDataForGame[] = aiResult.challenges.map((challenge: SingleWordQuestChallenge) => ({
@@ -150,14 +151,21 @@ export default function GameInterface({ selectedMode, onGoBack }: GameInterfaceP
         hint: challenge.hint,
       }));
       
+      if (newSessionChallenges.length === 0 || !newSessionChallenges[0] || !newSessionChallenges[0].word || !newSessionChallenges[0].clue) {
+        console.error("First challenge data is invalid after mapping:", newSessionChallenges[0]);
+        toast({ title: "Game Error", description: "Received invalid first challenge. Please try again.", variant: "destructive" });
+        setGameOver(true);
+        setIsLoadingSession(false);
+        return;
+      }
+      
       setGameSessionChallenges(newSessionChallenges);
       setCurrentChallengeData(newSessionChallenges[0]);
-      setCurrentQuestionNum(0); // Reset question number for new session
-      setScore(0); // Reset score for new session
-      setGameOver(false); // Reset game over state
+      setCurrentQuestionNum(0); 
+      setScore(0); 
+      setGameOver(false); 
       setTimeLeft(getTimeLimitForMode(selectedMode));
-      // Add words from this session to previousWordsForAI for next potential game
-      setPreviousWordsForAI(prev => [...new Set([...prev, ...newSessionChallenges.map(c => c.word)])].slice(-50)); // Keep last 50 unique words
+      setPreviousWordsForAI(prev => [...new Set([...prev, ...newSessionChallenges.map(c => c.word)])].slice(-50)); 
 
     } catch (error: any) {
       console.error("Error fetching game session from AI:", error);
@@ -185,7 +193,7 @@ export default function GameInterface({ selectedMode, onGoBack }: GameInterfaceP
     setUserInput('');
     setIsHintUsedForQuestion(false);
 
-    if (currentQuestionNum < MAX_QUESTIONS_PER_SESSION - 1 && currentQuestionNum < gameSessionChallenges.length -1) {
+    if (currentQuestionNum < gameSessionChallenges.length -1) {
       const nextQuestionIndex = currentQuestionNum + 1;
       setCurrentQuestionNum(nextQuestionIndex);
       setCurrentChallengeData(gameSessionChallenges[nextQuestionIndex]);
@@ -327,10 +335,10 @@ export default function GameInterface({ selectedMode, onGoBack }: GameInterfaceP
               >
                 {score}
               </motion.p>
-            <p className="text-muted-foreground">You answered {score / 10} out of {MAX_QUESTIONS_PER_SESSION} questions correctly.</p>
+            <p className="text-muted-foreground">You answered {score / 10} out of {gameSessionChallenges.length > 0 ? gameSessionChallenges.length : MAX_QUESTIONS_PER_SESSION} questions correctly.</p>
           </CardContent>
           <CardFooter className="flex flex-col sm:flex-row gap-2 justify-center">
-            <Button onClick={() => { onGoBack(); fetchNewGameSession(); }} variant="outline">Play Again (Same Mode)</Button>
+            <Button onClick={() => { fetchNewGameSession(); }} variant="outline">Play Again (Same Mode)</Button>
             <Button onClick={onGoBack} variant="default">Change Mode</Button>
           </CardFooter>
         </Card>
@@ -383,7 +391,7 @@ export default function GameInterface({ selectedMode, onGoBack }: GameInterfaceP
           <ArrowLeft className="mr-2 h-4 w-4" /> WordQuest Modes
         </Button>
         <div className="text-sm text-muted-foreground">
-          Question: {currentQuestionNum + 1} / {MAX_QUESTIONS_PER_SESSION} | Score: <span className="font-semibold text-primary">{score}</span>
+          Question: {currentQuestionNum + 1} / {gameSessionChallenges.length > 0 ? gameSessionChallenges.length : MAX_QUESTIONS_PER_SESSION} | Score: <span className="font-semibold text-primary">{score}</span>
         </div>
         <div className="flex items-center space-x-2">
           <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground"><KeyboardIcon className="h-5 w-5" /></Button>
@@ -554,4 +562,3 @@ export default function GameInterface({ selectedMode, onGoBack }: GameInterfaceP
     </div>
   );
 }
-

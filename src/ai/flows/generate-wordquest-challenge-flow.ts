@@ -12,7 +12,7 @@ import { ai } from '@/ai/genkit';
 import {
   GenerateWordQuestSessionInputSchema,
   WordQuestSessionOutputSchema,
-  SingleWordQuestChallengeSchema, // We'll use this internally for prompt structure
+  SingleWordQuestChallengeSchema, 
   type GenerateWordQuestSessionInput,
   type WordQuestSessionOutput,
 } from '@/ai/schemas/wordquest-ai-schemas';
@@ -26,9 +26,9 @@ export async function generateWordQuestSession(input: GenerateWordQuestSessionIn
 const generateSessionPrompt = ai.definePrompt({
   name: 'generateWordQuestSessionPrompt',
   input: { schema: GenerateWordQuestSessionInputSchema },
-  output: { schema: WordQuestSessionOutputSchema }, // Output is now a session with multiple challenges
+  output: { schema: WordQuestSessionOutputSchema }, 
   prompt: `You are an expert lexicographer and quiz master creating challenges for a word game called WordQuest.
-Your goal is to generate a set of {{numChallenges}} unique and engaging word challenges based on the specified game mode.
+Your goal is to generate a set of {{numChallenges}} unique and engaging word challenges based on the specified game mode. Ensure each challenge is distinct within this session.
 
 Game Mode: {{gameMode}}
 Number of Challenges to Generate: {{numChallenges}}
@@ -44,37 +44,44 @@ For EACH of the {{numChallenges}} challenges, adhere to the following:
     *   'basic': Choose a common to moderately common English word.
     *   'intermediate': Choose a moderately difficult English word.
     *   'advanced': Choose a difficult, less common, or nuanced English word.
-    The word MUST be a single word (no phrases). Ensure words are unique within this generated set.
+    The word MUST be a single word (no phrases). Ensure the word is non-empty.
 
 2.  **Clue Generation (clue & clueType)**:
-    *   'basic': Provide a clear, concise 'definition' for the word.
-    *   'intermediate': Provide either a 'definition' or a 'fill-in-the-blank' sentence where the blank represents the word. Example for fill-in-the-blank: "A ____ is a place where books are kept."
-    *   'advanced': Provide a 'definition'. It can be slightly more challenging or require deeper understanding than intermediate.
+    *   Provide a non-empty 'clue' for the word.
+    *   'basic': The 'clueType' should be 'definition'. The 'clue' should be a clear, concise definition.
+    *   'intermediate': The 'clueType' can be 'definition' or 'fill-in-the-blank'. For 'fill-in-the-blank', the clue should be a sentence where the blank represents the word (e.g., "A ____ is a place where books are kept.").
+    *   'advanced': The 'clueType' should be 'definition'. It can be slightly more challenging.
 
 3.  **Options Generation (options array - ONLY for 'basic' mode for each challenge)**:
-    *   If gameMode is 'basic', generate an array of 3 to 4 unique strings:
+    *   If gameMode is 'basic', generate an array of 3 to 4 unique strings for 'options':
         *   One string MUST be the correct target 'word'.
         *   The other strings MUST be plausible but incorrect distractor words (single words, not phrases).
-        *   For distractor options, choose words that are related in category or sound but are clearly incorrect. Avoid direct synonyms or antonyms of the target word.
-        *   Ensure options are distinct and make sense in the context of a vocabulary game.
-    *   If gameMode is 'intermediate' or 'advanced', DO NOT provide the 'options' field (or provide an empty array) for that challenge.
+        *   Distractors should be somewhat related (e.g., category, sound) but clearly incorrect. Avoid direct synonyms or antonyms as distractors.
+        *   Ensure all options are distinct and single words.
+    *   If gameMode is 'intermediate' or 'advanced', DO NOT provide the 'options' field or provide an empty array.
 
 4.  **Hint Generation (hint string - ONLY for 'intermediate' and 'advanced' modes for each challenge)**:
-    *   If gameMode is 'intermediate' or 'advanced', provide a short, helpful hint.
-        *   Examples: "Starts with P", "Rhymes with rain", "Related to science", "A type of emotion".
-        *   The hint should NOT give away the answer directly.
-    *   If gameMode is 'basic', DO NOT provide the 'hint' field for that challenge.
+    *   If gameMode is 'intermediate' or 'advanced', provide a short, helpful 'hint' (e.g., "Starts with P", "Rhymes with rain", "Related to science"). The hint should NOT directly give away the answer.
+    *   If gameMode is 'basic', DO NOT provide the 'hint' field.
 
 Ensure your output is a single JSON object strictly adhering to the WordQuestSessionOutputSchema.
 The output JSON should have a "challenges" field, which is an array of challenge objects.
-Each challenge object in the array must conform to: word, clue, clueType, and conditionally options or hint.
+Each challenge object must contain: 'word' (string), 'clue' (string), 'clueType' (enum: 'definition' | 'fill-in-the-blank').
+Conditionally, it must contain 'options' (array of strings, for basic mode) or 'hint' (string, for intermediate/advanced).
 
-Example for a single challenge object within the 'challenges' array (if gameMode was 'basic'):
+Example for a single 'basic' challenge:
 {
   "word": "Happy",
   "clue": "Feeling or showing pleasure or contentment.",
   "clueType": "definition",
   "options": ["Joyful", "Happy", "Glad", "Content"]
+}
+Example for a single 'intermediate' challenge:
+{
+  "word": "Serendipity",
+  "clue": "The occurrence of events by chance in a happy or beneficial way.",
+  "clueType": "definition",
+  "hint": "Starts with S, relates to fortunate discoveries."
 }
 
 Now, generate the set of {{numChallenges}} word challenges.
@@ -88,8 +95,7 @@ const generateWordQuestSessionFlow = ai.defineFlow(
     outputSchema: WordQuestSessionOutputSchema,
   },
   async (input) => {
-    // Ensure numChallenges has a default if not provided by input, though schema does this.
-    const effectiveInput = { ...input, numChallenges: input.numChallenges || 3 }; // Using 3 from schema default
+    const effectiveInput = { ...input, numChallenges: input.numChallenges || 3 };
     const { output } = await generateSessionPrompt(effectiveInput);
     
     if (!output || !output.challenges || output.challenges.length === 0) {
@@ -97,38 +103,75 @@ const generateWordQuestSessionFlow = ai.defineFlow(
     }
     if (output.challenges.length < effectiveInput.numChallenges) {
         console.warn(`AI returned ${output.challenges.length} challenges, but ${effectiveInput.numChallenges} were requested.`);
-        // Decide if this is an error or acceptable. For now, proceed with what was returned.
     }
 
-    // Validate each challenge
     output.challenges.forEach((challenge, index) => {
-      if (input.gameMode === 'basic' && (!challenge.options || challenge.options.length < 3)) {
-        console.warn(`Challenge ${index + 1} ('${challenge.word}') for basic mode has insufficient options.`);
-        // Consider correcting or removing the challenge, or throwing an error
-      }
-      if ((input.gameMode === 'intermediate' || input.gameMode === 'advanced') && !challenge.hint) {
-         console.warn(`Challenge ${index + 1} ('${challenge.word}') for ${input.gameMode} mode is missing a hint.`);
-         // challenge.hint = "No hint available."; // Or provide a default
-      }
-      if (challenge.word.includes(" ")) {
-          console.warn(`Challenge ${index + 1} has a multi-word 'word': "${challenge.word}". Attempting to pick first word.`);
+      // Validate and clean word
+      if (!challenge.word || challenge.word.trim() === "") {
+        console.warn(`Challenge ${index + 1} has an empty word. Setting to 'DefaultWord'.`);
+        challenge.word = `DefaultWord${index+1}`;
+      } else if (challenge.word.includes(" ")) {
+          console.warn(`Challenge ${index + 1} ('${challenge.word}') has a multi-word 'word'. Attempting to pick first word.`);
           challenge.word = challenge.word.split(" ")[0];
       }
-      if (challenge.options) {
-          challenge.options = challenge.options.map(opt => opt.includes(" ") ? opt.split(" ")[0] : opt);
-          if (input.gameMode === 'basic' && !challenge.options.includes(challenge.word)) {
-              console.warn(`Challenge ${index + 1} ('${challenge.word}') for basic mode did not include the correct word in options. Adding it.`);
-              if (challenge.options.length > 0) {
-                  challenge.options.pop(); 
-              }
-              challenge.options.push(challenge.word);
-              // Ensure there are enough options after correction
-              while (challenge.options.length < 3) {
-                challenge.options.push(`Placeholder${Math.random().toString(36).substring(7)}`); // Add unique placeholder
-              }
+
+      // Ensure clue is present and clueType is valid
+      if (!challenge.clue || challenge.clue.trim() === "") {
+          console.warn(`Challenge ${index + 1} ('${challenge.word}') is missing a clue. Providing default.`);
+          challenge.clue = `What is the definition or context for "${challenge.word}"?`;
+      }
+      if (!challenge.clueType || (challenge.clueType !== 'definition' && challenge.clueType !== 'fill-in-the-blank')) {
+          console.warn(`Challenge ${index + 1} ('${challenge.word}') has invalid clueType '${challenge.clueType}'. Defaulting to 'definition'.`);
+          challenge.clueType = 'definition';
+      }
+
+
+      if (input.gameMode === 'basic') {
+        challenge.options = challenge.options || []; // Ensure options array exists
+        challenge.options = challenge.options.map(opt => opt.includes(" ") ? opt.split(" ")[0] : opt); // Ensure single words
+
+        if (!challenge.options.includes(challenge.word)) {
+          console.warn(`Challenge ${index + 1} ('${challenge.word}') for basic mode options did not include the correct word. Adding it.`);
+          if (challenge.options.length >= 4) { // Max 4 options, replace one if full
+            challenge.options.pop(); 
           }
+          challenge.options.push(challenge.word);
+        }
+        
+        // Ensure at least 3 options by adding unique placeholders
+        let placeholderAttempt = 0;
+        while (challenge.options.length < 3 && placeholderAttempt < 10) {
+          let placeholder = `Choice${challenge.options.length + 1 + placeholderAttempt}`;
+          if (!challenge.options.includes(placeholder) && placeholder !== challenge.word) {
+            challenge.options.push(placeholder);
+          }
+          placeholderAttempt++;
+        }
+        if (challenge.options.length < 3) {
+            console.error(`Failed to create enough unique options for basic mode challenge: ${challenge.word}`);
+            // Throw error or handle as critical failure
+        }
+        
+        challenge.options = challenge.options.slice(0, 4); // Ensure max 4 options
+        challenge.hint = undefined; // Basic mode should not have hints
+
+      } else { // Intermediate or Advanced
+        if (challenge.options && challenge.options.length > 0) {
+            console.warn(`Challenge ${index + 1} ('${challenge.word}') for ${input.gameMode} mode unexpectedly has options. Clearing them.`);
+            challenge.options = [];
+        }
+        if (!challenge.hint || challenge.hint.trim() === "") {
+           console.warn(`Challenge ${index + 1} ('${challenge.word}') for ${input.gameMode} mode is missing a hint. Providing a default.`);
+           challenge.hint = "Think carefully!"; 
+        }
       }
     });
+    
+    // Filter out challenges that might still be malformed after trying to fix (e.g., empty word from AI)
+    output.challenges = output.challenges.filter(c => c.word && c.word.trim() !== "" && c.clue && c.clue.trim() !== "");
+    if (output.challenges.length === 0) {
+        throw new Error('AI generated challenges, but all were invalid after processing.');
+    }
 
     return output;
   }
