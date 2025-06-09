@@ -10,7 +10,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Loader2, Wand2, Sparkles, UploadCloud } from 'lucide-react';
+import { Loader2, Wand2, Sparkles, UploadCloud, FileText } from 'lucide-react'; // Added FileText
 import { summarizeStudyMaterial, type SummarizeStudyMaterialOutput, type MCQ } from '@/ai/flows/summarize-study-material';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/auth-context';
@@ -36,9 +36,9 @@ const SummarizerResultsDisplayFallback = React.lazy(() => import('@/components/a
 
 
 const summarizerFormSchema = z.object({
-  material: z.string().min(50, { message: 'Study material must be at least 50 characters long.' }).max(30000, { message: 'Study material cannot exceed 30,000 characters due to processing limits.' }), // Increased max length
+  material: z.string().min(50, { message: 'Study material must be at least 50 characters long.' }).max(30000, { message: 'Study material cannot exceed 30,000 characters due to processing limits.' }),
   topic: z.string().min(3, { message: 'Topic must be at least 3 characters long.' }).max(100, { message: 'Topic cannot exceed 100 characters.' }),
-  pdfFile: z.any().optional(), // For the file input
+  pdfFile: z.any().optional(),
 });
 
 type SummarizerFormData = z.infer<typeof summarizerFormSchema>;
@@ -159,7 +159,7 @@ export default function MaterialSummarizerPage() {
           for (let i = 1; i <= pdf.numPages; i++) {
             const page = await pdf.getPage(i);
             const text = await page.getTextContent();
-            textContent += text.items.map((s: any) => s.str).join(' ') + '\n'; // Added type assertion for s.str
+            textContent += text.items.map((s: any) => s.str).join(' ') + '\n';
           }
           form.setValue('material', textContent.trim());
           if (!form.getValues('topic')) {
@@ -178,7 +178,6 @@ export default function MaterialSummarizerPage() {
       toast({ title: 'Error Processing PDF', description: 'Could not extract text from the PDF.', variant: 'destructive' });
     } finally {
       setIsProcessingPdf(false);
-      // Reset file input so the same file can be re-selected if needed
       event.target.value = '';
     }
   };
@@ -229,6 +228,9 @@ export default function MaterialSummarizerPage() {
         title: 'Material Processed! ✨',
         description: 'The AI has generated summary, key concepts, and a quiz.',
       });
+      if (currentUser?.uid) {
+        await recordPlatformInteraction(currentUser.uid);
+      }
     } catch (error: any) {
       console.error('Error processing material:', error);
       setAnalysisResult(null);
@@ -305,10 +307,10 @@ export default function MaterialSummarizerPage() {
     <div className="w-full space-y-6 max-w-3xl mx-auto">
       <div>
         <h1 className="text-2xl sm:text-3xl font-bold tracking-tight md:text-4xl flex items-center">
-          <Wand2 className="mr-2 sm:mr-3 h-7 w-7 sm:h-8 sm:w-8 text-primary" /> AI Study Assistant
+          <FileText className="mr-2 sm:mr-3 h-7 w-7 sm:h-8 sm:w-8 text-primary" /> AI Material Processor
         </h1>
         <p className="text-md sm:text-lg text-muted-foreground">
-          Upload a PDF or paste study material to get a summary, key concepts, and a quick quiz. 📚
+          Upload a PDF or paste study material to get structured notes, summary, key concepts, and a quick quiz. 📚
         </p>
       </div>
 
@@ -423,4 +425,3 @@ export default function MaterialSummarizerPage() {
     </div>
   );
 }
-

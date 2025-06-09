@@ -19,7 +19,8 @@ import {
   Lock,
   HelpCircle,
   ArrowRight,
-  Youtube, // Added Youtube icon
+  Youtube, 
+  FileText, // Added FileText
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -31,7 +32,8 @@ const iconMap: { [key: string]: LucideIcon } = {
   MessageSquare: MessageSquare,
   Lock: Lock,
   HelpCircle: HelpCircle,
-  Youtube: Youtube, // Added Youtube to map
+  Youtube: Youtube,
+  FileText: FileText, // Added FileText to map
 };
 
 interface AiTool {
@@ -57,17 +59,17 @@ const aiTools: AiTool[] = [
     actionText: "Use Suggester",
   },
   {
-    id: "material-summarizer",
-    title: "Study Material Summarizer",
-    description: "Quickly grasp key concepts by summarizing your study materials.",
-    iconName: "Sparkles", 
+    id: "material-summarizer", // Changed ID and content for the new notes generator
+    title: "AI Notes Generator",
+    description: "Generate structured notes, summaries & quizzes from text or PDFs.",
+    iconName: "FileText", // Changed icon
     iconColorClass: "text-amber-500",
     link: "/ai-tools/material-summarizer",
     status: "Active",
-    actionText: "Use Summarizer",
+    actionText: "Generate Notes",
   },
   {
-    id: "youtube-summarizer", // New Tool
+    id: "youtube-summarizer",
     title: "YouTube Video Summarizer",
     description: "Generate notes, summaries, and quizzes from YouTube video transcripts.",
     iconName: "Youtube", 
@@ -176,7 +178,7 @@ export default function AiToolsPage() {
         <CardContent className="p-0">
           <ul className="list-disc list-outside space-y-2 text-sm sm:text-base text-muted-foreground pl-5">
             <li><span className="font-medium text-foreground">Personalized Study Plans:</span> Get syllabi tailored to your exam, subjects, and available time.</li>
-            <li><span className="font-medium text-foreground">Efficient Learning:</span> Summarize long texts or video transcripts quickly and grasp key concepts faster.</li>
+            <li><span className="font-medium text-foreground">Efficient Learning:</span> Summarize long texts, PDF documents, or video transcripts quickly and grasp key concepts faster.</li>
             <li><span className="font-medium text-foreground">Targeted Assessment:</span> Generate custom quizzes to test your knowledge on specific topics and difficulties.</li>
             <li><span className="font-medium text-foreground">Productivity Insights:</span> Understand your study habits and get AI-driven advice to optimize your focus.</li>
             <li><span className="font-medium text-foreground">Instant Doubt Resolution:</span> Get clear explanations for academic questions, personalized to your context.</li>
