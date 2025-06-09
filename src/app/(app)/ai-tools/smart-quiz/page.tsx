@@ -226,6 +226,12 @@ export default function SmartQuizPage() {
     }
   };
 
+  const handlePreviousQuestion = () => {
+    if (quizState === 'submitted' && currentQuestionIndex > 0) {
+      setCurrentQuestionIndex(prev => prev - 1);
+    }
+  };
+
   const handleSubmitQuiz = async () => {
     if (!quizData) return;
     let correctAnswers = 0;
