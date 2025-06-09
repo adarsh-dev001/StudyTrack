@@ -142,7 +142,7 @@ export default function SummarizerResultsDisplay({
             </CardHeader>
             <CardContent className="p-4 md:p-6">
               <div id="structured-notes-content-for-pdf" className="prose prose-base lg:prose-lg max-w-none dark:prose-invert text-foreground leading-relaxed dark:text-gray-100">
-                <div dangerouslySetInnerHTML={renderBasicMarkdown(analysisResult.structuredNotes)} />
+                <div dangerouslySetInnerHTML={{ __html: renderBasicMarkdown(analysisResult.structuredNotes) }} />
               </div>
             </CardContent>
           </Card>
@@ -270,3 +270,4 @@ export default function SummarizerResultsDisplay({
   );
 }
 
+    
