@@ -165,14 +165,14 @@ export default function SmartQuizPage() {
         initialAnswers[index] = { selectedOption: undefined, skipped: false };
       });
       setUserAnswers(initialAnswers);
-      setQuizState('inProgress'); 
+      setQuizState('inProgress');
       toast({
         title: '🧠 Quiz Generated!',
         description: `Your quiz on "${result.quizTitle}" is ready. Good luck!`,
       });
     } catch (error: any) {
       console.error('Error generating quiz:', error);
-      setQuizState('idle'); 
+      setQuizState('idle');
       toast({
         title: 'Error Generating Quiz 😥',
         description: error.message || 'An unexpected error occurred. Please try adjusting your inputs or try again later.',
@@ -488,3 +488,4 @@ export default function SmartQuizPage() {
   );
 }
 
+    
