@@ -59,7 +59,7 @@ const navSections: NavSection[] = [
     title: 'Learning Zone', // Renamed section
     items: [
       { href: '/ai-tools', label: 'AI Tools Hub', icon: BrainCircuit },
-      { href: '/wordquest', label: 'WordQuest', icon: Puzzle }, // Added WordQuest
+      { href: '/wordquest', label: 'WordQuest AI', icon: Puzzle }, // Updated Label
       { href: '/ai-tools/youtube-summarizer', label: 'Video Summarizer', icon: Youtube },
       { href: '/ai-tools/smart-quiz', label: 'SmartQuiz AI', icon: HelpCircle },
       { href: '/ai-recommendations', label: 'AI Coach', icon: Brain },
