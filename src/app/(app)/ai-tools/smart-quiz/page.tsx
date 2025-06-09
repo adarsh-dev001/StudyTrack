@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useState, useEffect, useRef, Suspense } from 'react';
+import React, { useState, useEffect, useRef, Suspense, useCallback } from 'react';
 import { useForm, type SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Button } from '@/components/ui/button';
@@ -11,7 +11,7 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { motion } from 'framer-motion';
-import { Loader2, Sparkles, Brain, HelpCircle, Award, Wand2, Edit } from 'lucide-react'; // Added Edit
+import { Loader2, Sparkles, Brain, HelpCircle, Award, Wand2, Edit } from 'lucide-react';
 import { generateQuiz } from '@/ai/flows/generate-quiz-flow';
 import type { GenerateQuizInput, GenerateQuizOutput } from '@/ai/schemas/quiz-tool-schemas';
 import { GenerateQuizInputSchema } from '@/ai/schemas/quiz-tool-schemas';
@@ -188,20 +188,29 @@ export default function SmartQuizPage() {
     }));
   };
 
-  const handleSkipQuestion = () => {
-    if (!quizData || quizState !== 'inProgress') return;
-    setUserAnswers(prev => ({
-        ...prev,
-        [currentQuestionIndex]: { selectedOption: undefined, skipped: true },
-    }));
-    if (currentQuestionIndex < quizData.questions.length - 1) {
-        setCurrentQuestionIndex(prev => prev + 1);
-    } else {
-        handleSubmitQuiz();
-    }
-  };
+  const handleSubmitQuiz = useCallback(async () => {
+    if (!quizData) return;
+    let correctAnswers = 0;
+    quizData.questions.forEach((q, index) => {
+      if (userAnswers[index]?.selectedOption === q.correctAnswerIndex && !userAnswers[index]?.skipped) {
+        correctAnswers++;
+      }
+    });
+    setScore(correctAnswers);
+    setQuizState('submitted');
+    setCurrentQuestionIndex(0); // Reset to first question for review
 
-  const handleNextQuestion = () => {
+    if (currentUser?.uid) {
+      await recordPlatformInteraction(currentUser.uid);
+    }
+
+    toast({
+      title: '🎉 Quiz Results! 🎉',
+      description: `You scored ${correctAnswers} out of ${quizData.questions.length}. Review your answers below.`,
+    });
+  }, [quizData, userAnswers, currentUser, toast]);
+
+  const handleNextQuestion = useCallback(() => {
     if (!quizData) return;
 
     if (quizState === 'inProgress') {
@@ -224,37 +233,30 @@ export default function SmartQuizPage() {
         setCurrentQuestionIndex(prev => prev + 1);
       }
     }
-  };
+  }, [quizData, quizState, userAnswers, currentQuestionIndex, handleSubmitQuiz, toast]);
 
-  const handlePreviousQuestion = () => {
+
+  const handleSkipQuestion = useCallback(() => {
+    if (!quizData || quizState !== 'inProgress') return;
+    setUserAnswers(prev => ({
+        ...prev,
+        [currentQuestionIndex]: { selectedOption: undefined, skipped: true },
+    }));
+    if (currentQuestionIndex < quizData.questions.length - 1) {
+        setCurrentQuestionIndex(prev => prev + 1);
+    } else {
+        handleSubmitQuiz();
+    }
+  }, [quizData, quizState, currentQuestionIndex, handleSubmitQuiz]);
+
+
+  const handlePreviousQuestion = useCallback(() => {
     if (quizState === 'submitted' && currentQuestionIndex > 0) {
       setCurrentQuestionIndex(prev => prev - 1);
     }
-  };
+  }, [quizState, currentQuestionIndex]);
 
-  const handleSubmitQuiz = async () => {
-    if (!quizData) return;
-    let correctAnswers = 0;
-    quizData.questions.forEach((q, index) => {
-      if (userAnswers[index]?.selectedOption === q.correctAnswerIndex && !userAnswers[index]?.skipped) {
-        correctAnswers++;
-      }
-    });
-    setScore(correctAnswers);
-    setQuizState('submitted');
-    setCurrentQuestionIndex(0);
-
-    if (currentUser?.uid) {
-      await recordPlatformInteraction(currentUser.uid);
-    }
-
-    toast({
-      title: '🎉 Quiz Results! 🎉',
-      description: `You scored ${correctAnswers} out of ${quizData.questions.length}. Review your answers below.`,
-    });
-  };
-
-  const handleRetakeQuiz = () => {
+  const handleRetakeQuiz = useCallback(() => {
     if (!quizData) return;
     const initialAnswers: Record<number, UserAnswer> = {};
     quizData.questions.forEach((_, index) => {
@@ -264,9 +266,9 @@ export default function SmartQuizPage() {
     setCurrentQuestionIndex(0);
     setScore(0);
     setQuizState('inProgress');
-  };
+  }, [quizData]);
 
-  const handleCreateNewQuiz = () => {
+  const handleCreateNewQuiz = useCallback(() => {
     form.reset();
     form.setValue('examType', userProfile?.targetExams?.[0] || 'general'); // Pre-fill from profile if available
     setQuizData(null);
@@ -274,7 +276,7 @@ export default function SmartQuizPage() {
     setCurrentQuestionIndex(0);
     setScore(0);
     setQuizState('idle');
-  };
+  }, [form, userProfile]);
 
   const isLastQuestionDuringQuiz = quizData && quizState === 'inProgress' ? currentQuestionIndex === quizData.questions.length - 1 : false;
 
