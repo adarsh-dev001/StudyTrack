@@ -34,7 +34,7 @@ const iconMap: { [key: string]: LucideIcon } = {
   HelpCircle: HelpCircle,
   Youtube: Youtube,
   FileText: FileText,
-  BrainCircuit: BrainCircuit, // Added BrainCircuit to map as it's used as a default
+  BrainCircuit: BrainCircuit, 
 };
 
 interface AiTool {
@@ -43,7 +43,7 @@ interface AiTool {
   description: string;
   iconName: keyof typeof iconMap; 
   iconColorClass?: string;
-  cardBgClass?: string; // For subtle card background tint
+  cardBgClass?: string; 
   link: string;
   status: "Active" | "Coming Soon" | "Unlockable";
   actionText: string;
@@ -138,7 +138,7 @@ export default function AiToolsPage() {
               key={tool.id}
               className={cn(
                 "shadow-lg hover:shadow-2xl transition-all duration-300 ease-out transform hover:-translate-y-1.5 flex flex-col rounded-xl",
-                tool.cardBgClass || "bg-card", // Apply subtle card background or default
+                tool.cardBgClass || "bg-card", 
                 tool.status === "Coming Soon" && "opacity-70 bg-muted/30",
                 tool.status === "Unlockable" && "border-purple-500/30" 
               )}
