@@ -38,7 +38,7 @@ import {
   query,
   where,
   onSnapshot,
-  select, // Added select
+  select, 
 } from "firebase/firestore"
 import { Skeleton } from "@/components/ui/skeleton";
 import type { Task, Priority } from "./planner-types"; 
@@ -196,15 +196,15 @@ export function PlannerView({ selectedDate, selectedSubjectFilter, onDateChange,
 
     setIsLoadingTasks(true);
     const tasksCollectionRef = collection(db, "users", currentUser.uid, "plannerTasks");
-    let queryConstraints = [
-        select("title", "subject", "topic", "description", "duration", "priority", "status", "startHour", "day") // Select only necessary fields
-    ];
+    
+    const selectFields = select("title", "subject", "topic", "description", "duration", "priority", "status", "startHour", "day");
+    let q;
 
     if (selectedSubjectFilter && selectedSubjectFilter !== "all") {
-      queryConstraints.push(where("subject", "==", selectedSubjectFilter));
+      q = query(tasksCollectionRef, where("subject", "==", selectedSubjectFilter), selectFields);
+    } else {
+      q = query(tasksCollectionRef, selectFields);
     }
-    
-    const q = query(tasksCollectionRef, ...queryConstraints);
     
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
       const fetchedTasks: Task[] = [];

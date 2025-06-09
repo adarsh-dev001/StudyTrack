@@ -36,7 +36,7 @@ import {
   query,
   where,
   onSnapshot,
-  select, // Added select
+  select, 
 } from "firebase/firestore";
 import { format } from "date-fns";
 import type { Task, Priority } from "./planner-types";
@@ -161,17 +161,15 @@ export default function DayView({ selectedDate, selectedSubjectFilter }: DayView
     const tasksCollectionRef = collection(db, "users", currentUser.uid, "plannerTasks");
     
     const dayOfWeek = selectedDate.getDay();
-    const queryConstraints = [
-        where("day", "==", dayOfWeek),
-        select("title", "subject", "topic", "description", "duration", "priority", "status", "startHour", "day") // Select only necessary fields
-    ];
+    const selectFields = select("title", "subject", "topic", "description", "duration", "priority", "status", "startHour", "day");
+    let q;
 
     if (selectedSubjectFilter && selectedSubjectFilter !== "all") {
-      queryConstraints.push(where("subject", "==", selectedSubjectFilter));
+      q = query(tasksCollectionRef, where("day", "==", dayOfWeek), where("subject", "==", selectedSubjectFilter), selectFields);
+    } else {
+      q = query(tasksCollectionRef, where("day", "==", dayOfWeek), selectFields);
     }
     
-    const q = query(tasksCollectionRef, ...queryConstraints);
-
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
       const fetchedTasks: Task[] = [];
       querySnapshot.forEach((doc) => {
