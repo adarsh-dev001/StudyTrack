@@ -12,7 +12,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"; // For language dropdown
 
-const GameInterface = React.lazy(() => import('@/components/wordquest/GameInterface'));
+// Changed from React.lazy to direct import
+import GameInterface from '@/components/wordquest/GameInterface';
 
 function GameInterfaceFallback() {
   return (
@@ -153,4 +154,3 @@ export default function WordQuestPage() {
     </div>
   );
 }
-
