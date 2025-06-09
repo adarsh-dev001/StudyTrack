@@ -17,7 +17,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import { format, addDays } from "date-fns";
-import { Loader2, ListTree, CalendarIcon, Sparkles, BookOpen, CalendarDays, Target, Lightbulb, Brain, Users, FileText, Goal } from 'lucide-react';
+import { Loader2, ListTree, CalendarIcon, Sparkles, BookOpen, CalendarDays, Target, Lightbulb, Brain, Users, FileText, Goal, Edit } from 'lucide-react'; // Added Edit icon
 import { suggestStudyTopics, type SuggestStudyTopicsInput, type SuggestStudyTopicsOutput } from '@/ai/flows/suggest-study-topics';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/auth-context';
@@ -29,6 +29,7 @@ import OnboardingForm from '@/components/onboarding/onboarding-form';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/ui/skeleton';
 import { TARGET_EXAMS as PREDEFINED_EXAMS_CONST, PREPARATION_LEVELS, DAILY_STUDY_HOURS_OPTIONS, LANGUAGE_MEDIUMS, STUDY_MODES, EXAM_SUBJECT_MAP } from '@/lib/constants';
+import { motion } from 'framer-motion'; // Added framer-motion
 
 
 // Lazy load result display
@@ -84,6 +85,7 @@ export default function SyllabusSuggesterPage() {
   const [isLoadingProfile, setIsLoadingProfile] = useState(true);
   const [userProfile, setUserProfile] = useState<UserProfileData | null>(null);
   const [showOnboardingModal, setShowOnboardingModal] = useState(false);
+  const [isInputFormCollapsed, setIsInputFormCollapsed] = useState(false); // State for collapsing form
 
   const form = useForm<SyllabusFormData>({
     resolver: zodResolver(syllabusFormSchema),
@@ -205,6 +207,7 @@ export default function SyllabusSuggesterPage() {
       const result: SuggestStudyTopicsOutput = await suggestStudyTopics(inputForAI);
       setGeneratedSyllabus(result.generatedSyllabus);
       setOverallFeedback(result.overallFeedback || null);
+      setIsInputFormCollapsed(true); // Collapse form on success
       toast({
         title: 'Syllabus Suggested! 🚀',
         description: `Your personalized syllabus for ${data.examType} has been generated.`,
@@ -213,6 +216,7 @@ export default function SyllabusSuggesterPage() {
       console.error('Error suggesting topics:', error);
       setGeneratedSyllabus(null);
       setOverallFeedback(null);
+      setIsInputFormCollapsed(false); // Keep form open on error
       toast({
         title: 'Error Generating Suggestions 😥',
         description: error.message || 'An unexpected error occurred.',
@@ -263,11 +267,14 @@ export default function SyllabusSuggesterPage() {
     label: exam.label 
   }));
   
-  const isOtherExamSelectedInitial = predefinedExams.find(ex => ex.value === form.getValues('examType'))?.label === 'Other';
+  const inputFormVariants = {
+    expanded: { opacity: 1, height: 'auto', scaleY: 1, marginTop: '0rem', marginBottom: '0rem', transition: { duration: 0.4, ease: "easeInOut" } },
+    collapsed: { opacity: 0, height: 0, scaleY: 0.95, marginTop: '0rem', marginBottom: '0rem', transition: { duration: 0.4, ease: "easeInOut" } }
+  };
 
 
   return (
-    <div className="w-full space-y-6">
+    <div className="w-full space-y-6 max-w-3xl mx-auto">
       <div>
         <h1 className="text-2xl sm:text-3xl font-bold tracking-tight md:text-4xl flex items-center">
           <ListTree className="mr-2 sm:mr-3 h-7 w-7 sm:h-8 sm:w-8 text-primary" /> AI Syllabus Suggester
@@ -277,279 +284,310 @@ export default function SyllabusSuggesterPage() {
         </p>
       </div>
 
-      <Card className="shadow-lg">
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)}>
-            <CardHeader className="p-4 sm:p-6">
-              <CardTitle className="text-lg sm:text-xl">Your Study Profile 🧑‍🎓</CardTitle>
-              <CardDescription className="text-xs sm:text-sm">Provide details to generate a tailored syllabus. Required fields are marked with <span className="text-destructive">*</span>.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4 sm:space-y-6 p-4 sm:p-6">
-              <FormField
-                control={form.control}
-                name="examType"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-sm sm:text-base">Exam Type <span className="text-destructive">*</span></FormLabel>
-                     <Select 
-                        onValueChange={(value) => {
-                            field.onChange(value);
-                            form.setValue('subjects', [], { shouldValidate: true }); 
-                        }} 
-                        value={field.value || ''}
-                     >
-                      <FormControl>
-                        <SelectTrigger className="text-sm sm:text-base">
-                          <SelectValue placeholder="Select the exam you're preparing for" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {predefinedExams.map((exam) => (
-                          <SelectItem key={exam.value} value={exam.value} className="text-sm sm:text-base">
-                            {exam.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    {watchedExamType === 'other' && ( 
-                        <Input
-                            placeholder="Specify other exam type"
-                            onChange={(e) => field.onChange(e.target.value)} // This might need to be handled differently if Select expects value to be one of predefinedExams keys
-                            className="mt-2 text-sm sm:text-base"
-                        />
-                    )}
-                    <FormDescription className="text-xs sm:text-sm">
-                      Choose the competitive exam you are targeting.
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+      {isInputFormCollapsed && (
+        <motion.div
+          className="flex justify-center pt-2"
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3 }}
+        >
+          <Button
+            onClick={() => {
+              setIsInputFormCollapsed(false);
+              setGeneratedSyllabus(null);
+              setOverallFeedback(null);
+              // Optionally reset form if desired, or keep previous inputs for tweaking
+              // form.reset(); // Uncomment to fully reset form
+            }}
+            variant="outline"
+            size="lg"
+            className="w-full sm:w-auto text-sm sm:text-base py-2.5 px-5 shadow-md hover:bg-accent/50"
+          >
+            <Edit className="mr-2 h-4 w-4 sm:h-5 sm:w-5" /> Create New Syllabus or Modify
+          </Button>
+        </motion.div>
+      )}
 
-              <FormField
-                control={form.control}
-                name="subjects"
-                render={({ field }) => (
-                  <FormItem>
-                    <div className="mb-1 sm:mb-2">
-                      <FormLabel className="text-sm sm:text-base font-semibold">Subjects <span className="text-destructive">*</span></FormLabel>
-                      <FormDescription className="text-xs sm:text-sm">
-                        Select subjects relevant to your chosen exam.
-                      </FormDescription>
-                    </div>
-                    {availableSubjectsForForm.length > 0 ? (
-                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-x-3 gap-y-2 sm:gap-x-4 sm:gap-y-2.5 pt-1 sm:pt-2">
-                        {availableSubjectsForForm.map((item) => (
-                        <FormItem
-                            key={item.id}
-                            className="flex flex-row items-center space-x-2 space-y-0"
-                        >
-                            <FormControl>
-                            <Checkbox
-                                id={`subject-checkbox-${item.id}`}
-                                checked={field.value?.includes(item.id)}
-                                onCheckedChange={(checked) => {
-                                const currentSelection = field.value || [];
-                                return checked
-                                    ? field.onChange([...currentSelection, item.id])
-                                    : field.onChange(currentSelection.filter(value => value !== item.id));
-                                }}
-                            />
-                            </FormControl>
-                            <Label htmlFor={`subject-checkbox-${item.id}`} className="font-normal text-xs sm:text-sm cursor-pointer">
-                                {item.name}
-                            </Label>
-                        </FormItem>
-                        ))}
-                        </div>
-                    ) : (
-                        <p className="text-xs text-muted-foreground pt-1">Select an exam type to see relevant subjects, or subjects for "Other" will be shown.</p>
-                    )}
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+      <motion.div
+        animate={isInputFormCollapsed ? "collapsed" : "expanded"}
+        variants={inputFormVariants}
+        style={{ overflow: 'hidden', transformOrigin: 'top' }}
+        className={isInputFormCollapsed ? "mt-0" : ""}
+      >
+        <Card className="shadow-lg">
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)}>
+              <CardHeader className="p-4 sm:p-6">
+                <CardTitle className="text-lg sm:text-xl">Your Study Profile 🧑‍🎓</CardTitle>
+                <CardDescription className="text-xs sm:text-sm">Provide details to generate a tailored syllabus. Required fields are marked with <span className="text-destructive">*</span>.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4 sm:space-y-6 p-4 sm:p-6">
                 <FormField
                   control={form.control}
-                  name="timeAvailablePerDay"
+                  name="examType"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-sm sm:text-base">Daily Study Time (Hours) <span className="text-destructive">*</span> ⏳</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="number"
-                          step="0.5"
-                          placeholder="e.g., 4.5"
-                          {...field}
-                          value={isNaN(field.value as number) ? '' : field.value}
-                          className="text-sm sm:text-base"
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                 <FormField
-                  control={form.control}
-                  name="targetDate"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-col">
-                      <FormLabel className="text-sm sm:text-base">Target Completion Date <span className="text-destructive">*</span> 🎯</FormLabel>
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <FormControl>
-                            <Button
-                              variant={"outline"}
-                              className={cn(
-                                "w-full pl-3 text-left font-normal text-sm sm:text-base",
-                                !field.value && "text-muted-foreground"
-                              )}
-                            >
-                              {field.value ? (
-                                format(field.value, "PPP")
-                              ) : (
-                                <span>Pick a date</span>
-                              )}
-                              <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                            </Button>
-                          </FormControl>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                          <Calendar
-                            mode="single"
-                            selected={field.value}
-                            onSelect={field.onChange}
-                            disabled={(date) =>
-                              date <= new Date() || date < new Date("1900-01-01")
-                            }
-                            initialFocus
-                          />
-                        </PopoverContent>
-                      </Popover>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
-                <FormField
-                  control={form.control}
-                  name="preparationLevel"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-sm sm:text-base">Current Preparation Level <span className="text-destructive">*</span> <Brain className="inline h-4 w-4 text-muted-foreground" /></FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
-                        <FormControl><SelectTrigger className="text-sm sm:text-base"><SelectValue placeholder="Select your level" /></SelectTrigger></FormControl>
+                      <FormLabel className="text-sm sm:text-base">Exam Type <span className="text-destructive">*</span></FormLabel>
+                      <Select 
+                          onValueChange={(value) => {
+                              field.onChange(value);
+                              form.setValue('subjects', [], { shouldValidate: true }); 
+                          }} 
+                          value={field.value || ''}
+                      >
+                        <FormControl>
+                          <SelectTrigger className="text-sm sm:text-base">
+                            <SelectValue placeholder="Select the exam you're preparing for" />
+                          </SelectTrigger>
+                        </FormControl>
                         <SelectContent>
-                          {(PREPARATION_LEVELS || []).map(level => (
-                            <SelectItem key={level.value} value={level.value} className="text-sm sm:text-base">{level.label}</SelectItem>
+                          {predefinedExams.map((exam) => (
+                            <SelectItem key={exam.value} value={exam.value} className="text-sm sm:text-base">
+                              {exam.label}
+                            </SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
+                      {watchedExamType === 'other' && ( 
+                          <Input
+                              placeholder="Specify other exam type"
+                              onChange={(e) => field.onChange(e.target.value)} 
+                              className="mt-2 text-sm sm:text-base"
+                          />
+                      )}
+                      <FormDescription className="text-xs sm:text-sm">
+                        Choose the competitive exam you are targeting.
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="subjects"
+                  render={({ field }) => (
+                    <FormItem>
+                      <div className="mb-1 sm:mb-2">
+                        <FormLabel className="text-sm sm:text-base font-semibold">Subjects <span className="text-destructive">*</span></FormLabel>
+                        <FormDescription className="text-xs sm:text-sm">
+                          Select subjects relevant to your chosen exam.
+                        </FormDescription>
+                      </div>
+                      {availableSubjectsForForm.length > 0 ? (
+                          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-x-3 gap-y-2 sm:gap-x-4 sm:gap-y-2.5 pt-1 sm:pt-2">
+                          {availableSubjectsForForm.map((item) => (
+                          <FormItem
+                              key={item.id}
+                              className="flex flex-row items-center space-x-2 space-y-0"
+                          >
+                              <FormControl>
+                              <Checkbox
+                                  id={`subject-checkbox-${item.id}`}
+                                  checked={field.value?.includes(item.id)}
+                                  onCheckedChange={(checked) => {
+                                  const currentSelection = field.value || [];
+                                  return checked
+                                      ? field.onChange([...currentSelection, item.id])
+                                      : field.onChange(currentSelection.filter(value => value !== item.id));
+                                  }}
+                              />
+                              </FormControl>
+                              <Label htmlFor={`subject-checkbox-${item.id}`} className="font-normal text-xs sm:text-sm cursor-pointer">
+                                  {item.name}
+                              </Label>
+                          </FormItem>
+                          ))}
+                          </div>
+                      ) : (
+                          <p className="text-xs text-muted-foreground pt-1">Select an exam type to see relevant subjects, or subjects for "Other" will be shown.</p>
+                      )}
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+                  <FormField
+                    control={form.control}
+                    name="timeAvailablePerDay"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-sm sm:text-base">Daily Study Time (Hours) <span className="text-destructive">*</span> ⏳</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            step="0.5"
+                            placeholder="e.g., 4.5"
+                            {...field}
+                            value={isNaN(field.value as number) ? '' : field.value}
+                            className="text-sm sm:text-base"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="targetDate"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-col">
+                        <FormLabel className="text-sm sm:text-base">Target Completion Date <span className="text-destructive">*</span> 🎯</FormLabel>
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <FormControl>
+                              <Button
+                                variant={"outline"}
+                                className={cn(
+                                  "w-full pl-3 text-left font-normal text-sm sm:text-base",
+                                  !field.value && "text-muted-foreground"
+                                )}
+                              >
+                                {field.value ? (
+                                  format(field.value, "PPP")
+                                ) : (
+                                  <span>Pick a date</span>
+                                )}
+                                <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                              </Button>
+                            </FormControl>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0" align="start">
+                            <Calendar
+                              mode="single"
+                              selected={field.value}
+                              onSelect={field.onChange}
+                              disabled={(date) =>
+                                date <= new Date() || date < new Date("1900-01-01")
+                              }
+                              initialFocus
+                            />
+                          </PopoverContent>
+                        </Popover>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+                  <FormField
+                    control={form.control}
+                    name="preparationLevel"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-sm sm:text-base">Current Preparation Level <span className="text-destructive">*</span> <Brain className="inline h-4 w-4 text-muted-foreground" /></FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value}>
+                          <FormControl><SelectTrigger className="text-sm sm:text-base"><SelectValue placeholder="Select your level" /></SelectTrigger></FormControl>
+                          <SelectContent>
+                            {(PREPARATION_LEVELS || []).map(level => (
+                              <SelectItem key={level.value} value={level.value} className="text-sm sm:text-base">{level.label}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="studyMode"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-sm sm:text-base">Preferred Study Mode <Users className="inline h-4 w-4 text-muted-foreground" /></FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value || ''}>
+                          <FormControl><SelectTrigger className="text-sm sm:text-base"><SelectValue placeholder="e.g., Self-study" /></SelectTrigger></FormControl>
+                          <SelectContent>
+                            {(STUDY_MODES || []).map(m => <SelectItem key={m.value} value={m.value} className="text-sm sm:text-base">{m.label}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+                
+                <FormField
+                  control={form.control}
+                  name="weakTopics"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-sm sm:text-base">Weak Topics/Areas (Optional) <Lightbulb className="inline h-4 w-4 text-muted-foreground" /></FormLabel>
+                      <FormControl>
+                        <Textarea
+                          placeholder="List topics you find challenging, separated by commas (e.g., Organic Chemistry, Modern Physics)"
+                          className="min-h-[70px] resize-y text-sm sm:text-base"
+                          value={Array.isArray(field.value) ? field.value.join(', ') : field.value || ''}
+                          onChange={(e) => field.onChange(e.target.value.split(',').map(s=>s.trim()).filter(s=>s))}
+                        />
+                      </FormControl>
+                      <FormDescription className="text-xs sm:text-sm">Helps AI tailor the plan to your needs.</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
                 <FormField
                   control={form.control}
-                  name="studyMode"
+                  name="preferredLanguage"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-sm sm:text-base">Preferred Study Mode <Users className="inline h-4 w-4 text-muted-foreground" /></FormLabel>
+                      <FormLabel className="text-sm sm:text-base">Preferred Language (Optional) <FileText className="inline h-4 w-4 text-muted-foreground" /></FormLabel>
                       <Select onValueChange={field.onChange} value={field.value || ''}>
-                        <FormControl><SelectTrigger className="text-sm sm:text-base"><SelectValue placeholder="e.g., Self-study" /></SelectTrigger></FormControl>
+                        <FormControl><SelectTrigger className="text-sm sm:text-base"><SelectValue placeholder="Select language" /></SelectTrigger></FormControl>
                         <SelectContent>
-                          {(STUDY_MODES || []).map(m => <SelectItem key={m.value} value={m.value} className="text-sm sm:text-base">{m.label}</SelectItem>)}
+                          {(LANGUAGE_MEDIUMS || []).map(lang => (
+                            <SelectItem key={lang.value} value={lang.value} className="text-sm sm:text-base">{lang.label}</SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
+                      <FormDescription className="text-xs sm:text-sm">If relevant for study material suggestions.</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
-              </div>
-              
-              <FormField
-                control={form.control}
-                name="weakTopics"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-sm sm:text-base">Weak Topics/Areas (Optional) <Lightbulb className="inline h-4 w-4 text-muted-foreground" /></FormLabel>
-                    <FormControl>
-                      <Textarea
-                        placeholder="List topics you find challenging, separated by commas (e.g., Organic Chemistry, Modern Physics)"
-                        className="min-h-[70px] resize-y text-sm sm:text-base"
-                        value={Array.isArray(field.value) ? field.value.join(', ') : field.value || ''}
-                        onChange={(e) => field.onChange(e.target.value.split(',').map(s=>s.trim()).filter(s=>s))}
-                      />
-                    </FormControl>
-                    <FormDescription className="text-xs sm:text-sm">Helps AI tailor the plan to your needs.</FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="preferredLanguage"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-sm sm:text-base">Preferred Language (Optional) <FileText className="inline h-4 w-4 text-muted-foreground" /></FormLabel>
-                     <Select onValueChange={field.onChange} value={field.value || ''}>
-                      <FormControl><SelectTrigger className="text-sm sm:text-base"><SelectValue placeholder="Select language" /></SelectTrigger></FormControl>
-                      <SelectContent>
-                        {(LANGUAGE_MEDIUMS || []).map(lang => (
-                          <SelectItem key={lang.value} value={lang.value} className="text-sm sm:text-base">{lang.label}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormDescription className="text-xs sm:text-sm">If relevant for study material suggestions.</FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-               <FormField
-                control={form.control}
-                name="goals"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-sm sm:text-base">Overall Study Goals (Optional) <Goal className="inline h-4 w-4 text-muted-foreground" /></FormLabel>
-                    <FormControl>
-                      <Textarea
-                        placeholder="e.g., Cover 70% syllabus in 3 months, Achieve 95th percentile in mocks..."
-                        className="min-h-[70px] resize-y text-sm sm:text-base"
-                        {...field}
-                        value={field.value || ''}
-                      />
-                    </FormControl>
-                    <FormDescription className="text-xs sm:text-sm">What are your broader objectives for this preparation period?</FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+                <FormField
+                  control={form.control}
+                  name="goals"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-sm sm:text-base">Overall Study Goals (Optional) <Goal className="inline h-4 w-4 text-muted-foreground" /></FormLabel>
+                      <FormControl>
+                        <Textarea
+                          placeholder="e.g., Cover 70% syllabus in 3 months, Achieve 95th percentile in mocks..."
+                          className="min-h-[70px] resize-y text-sm sm:text-base"
+                          {...field}
+                          value={field.value || ''}
+                        />
+                      </FormControl>
+                      <FormDescription className="text-xs sm:text-sm">What are your broader objectives for this preparation period?</FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
 
-            </CardContent>
-            <CardFooter className="p-4 sm:p-6">
-              <Button type="submit" disabled={isLoading || !watchedExamType} size="default" className="w-full sm:w-auto text-sm sm:text-base">
-                {isLoading ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 sm:h-5 sm:w-5 animate-spin" />
-                    Generating Syllabus...
-                  </>
-                ) : (
-                  <>
-                    <Sparkles className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />
-                    Generate Personalized Syllabus
-                  </>
-                )}
-              </Button>
-            </CardFooter>
-          </form>
-        </Form>
-      </Card>
+              </CardContent>
+              <CardFooter className="p-4 sm:p-6">
+                <Button type="submit" disabled={isLoading || !watchedExamType} size="default" className="w-full sm:w-auto text-sm sm:text-base">
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 sm:h-5 sm:w-5 animate-spin" />
+                      Generating Syllabus...
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />
+                      Generate Personalized Syllabus
+                    </>
+                  )}
+                </Button>
+              </CardFooter>
+            </form>
+          </Form>
+        </Card>
+      </motion.div>
 
       <div ref={syllabusResultRef}>
         {(isLoading && form.formState.isSubmitted) && (
