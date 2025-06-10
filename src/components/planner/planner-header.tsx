@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { CalendarIcon, Plus, Filter, ChevronLeft, ChevronRight } from "lucide-react" // Added ChevronLeft, ChevronRight
-import { format, addMonths, subMonths, startOfWeek, endOfWeek } from "date-fns"
+import { format, addDays, addMonths, subMonths, startOfWeek, endOfWeek } from "date-fns"
 import { cn } from "@/lib/utils"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { 
