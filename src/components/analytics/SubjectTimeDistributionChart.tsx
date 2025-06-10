@@ -49,12 +49,13 @@ export default function SubjectTimeDistributionChart() {
       try {
         const tasksCollectionRef = Firestore.collection(Firestore.db, "users", currentUser.uid, "plannerTasks");
         
-        const q = Firestore.query(tasksCollectionRef, Firestore.select("subject", "duration")); 
+        // Removed Firestore.select("subject", "duration") from the query
+        const q = Firestore.query(tasksCollectionRef); 
         const querySnapshot = await Firestore.getDocs(q);
 
         const subjectHours: Record<string, number> = {};
         querySnapshot.forEach((doc) => {
-          const task = doc.data() as Pick<Task, 'subject' | 'duration'>;
+          const task = doc.data() as Pick<Task, 'subject' | 'duration'>; // Still type as Pick for clarity on what's used
           if (task.subject && typeof task.duration === 'number') {
             const subjectName = allSubjects.find(s => s.id === task.subject)?.name || task.subject;
             subjectHours[subjectName] = (subjectHours[subjectName] || 0) + task.duration;
