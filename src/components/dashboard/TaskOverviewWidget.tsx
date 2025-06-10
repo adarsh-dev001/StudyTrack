@@ -5,7 +5,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import type { Task } from '@/components/tasks/task-item'; // Assuming Task type is here
+import type { Task } from '@/components/tasks/task-item';
 import { parseISO, compareAsc, format, isPast } from 'date-fns';
 import { getSubjectInfo, getPriorityBadgeInfo } from '@/components/planner/planner-utils';
 import { Badge } from '@/components/ui/badge';
@@ -29,7 +29,7 @@ const TaskDisplayItem = React.memo(function TaskDisplayItem({ task }: TaskDispla
     <div
       className={cn(
         "p-2.5 rounded-md border flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5",
-        subjectInfo.color?.replace('bg-', 'border-') // Use border color from subject
+        subjectInfo.color?.replace('bg-', 'border-')
       )}
     >
       <div className="flex-grow overflow-hidden">
@@ -52,7 +52,12 @@ const TaskDisplayItem = React.memo(function TaskDisplayItem({ task }: TaskDispla
   );
 });
 
-export default function TaskOverviewWidget() {
+interface TaskOverviewWidgetProps {
+  title?: string;
+  description?: string;
+}
+
+export default function TaskOverviewWidget({ title = "Urgent Tasks", description = "Your next few pending tasks." }: TaskOverviewWidgetProps) {
   const [pendingTasks, setPendingTasks] = useState<Task[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -62,7 +67,7 @@ export default function TaskOverviewWidget() {
       try {
         const savedTasksRaw = localStorage.getItem('studyTrackTasks');
         const allTasks: Task[] = savedTasksRaw ? JSON.parse(savedTasksRaw) : [];
-        
+
         const filteredAndSorted = allTasks
           .filter(task => !task.completed)
           .sort((a, b) => {
@@ -88,7 +93,7 @@ export default function TaskOverviewWidget() {
       <Card className="shadow-lg">
         <CardHeader>
           <CardTitle className="text-lg sm:text-xl font-semibold flex items-center">
-            <ListChecks className="mr-2 h-5 w-5 text-primary" /> Urgent Tasks
+            <ListChecks className="mr-2 h-5 w-5 text-primary" /> {title}
           </CardTitle>
         </CardHeader>
         <CardContent className="h-[200px] flex items-center justify-center">
@@ -107,9 +112,9 @@ export default function TaskOverviewWidget() {
       <Card className="shadow-lg h-full flex flex-col">
         <CardHeader>
           <CardTitle className="text-lg sm:text-xl font-semibold flex items-center">
-            <ListChecks className="mr-2 h-5 w-5 text-primary" /> Urgent Tasks
+            <ListChecks className="mr-2 h-5 w-5 text-primary" /> {title}
           </CardTitle>
-          <CardDescription className="text-xs sm:text-sm">Your next few pending tasks.</CardDescription>
+          <CardDescription className="text-xs sm:text-sm">{description}</CardDescription>
         </CardHeader>
         <CardContent className="flex-grow p-0">
           {pendingTasks.length > 0 ? (
