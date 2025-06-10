@@ -158,8 +158,8 @@ export default function DayView({ selectedDate, selectedSubjectFilter }: DayView
     
     const q = Firestore.query(
       tasksCollectionRef,
-      ...queryConstraints,
-      Firestore.select("title", "subject", "topic", "description", "duration", "priority", "status", "startHour", "day")
+      ...queryConstraints
+      // Firestore.select("title", "subject", "topic", "description", "duration", "priority", "status", "startHour", "day") // Removed select
     );
     
     const unsubscribe = Firestore.onSnapshot(q, (querySnapshot) => {
