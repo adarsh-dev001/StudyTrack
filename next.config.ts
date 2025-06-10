@@ -30,7 +30,7 @@ const nextConfig: NextConfig = {
       { protocol: 'https', hostname: 'i0.wp.com', pathname: '/**' },
     ],
   },
-  pageExtensions: ['js', 'jsx', 'ts', 'tsx', 'mdx'], // Added 'mdx'
+  pageExtensions: ['js', 'jsx', 'ts', 'tsx'], 
 };
 
 export default withPWA({
