@@ -1,4 +1,4 @@
-
+import { SpeedInsights } from "@vercel/speed-insights/next"
 import type {Metadata, Viewport} from 'next'; // Added Viewport type
 import './globals.css';
 import { Toaster } from "@/components/ui/toaster";
