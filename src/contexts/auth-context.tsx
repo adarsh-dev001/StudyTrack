@@ -7,18 +7,21 @@ import {
   onAuthStateChanged,
   signInWithEmailAndPassword,
   signOut,
-  updateProfile, 
+  updateProfile,
+  GoogleAuthProvider, // Added
+  signInWithPopup,      // Added
+  getAdditionalUserInfo // Added
 } from 'firebase/auth';
 import { useRouter } from 'next/navigation';
 import type { ReactNode } from 'react';
 import React, { createContext, useContext, useEffect, useState, useCallback, useMemo } from 'react';
 import { auth, db } from '@/lib/firebase'; 
-import { doc, setDoc, getDoc, updateDoc, deleteDoc, Timestamp } from 'firebase/firestore'; // Added deleteDoc, Timestamp
+import { doc, setDoc, getDoc, updateDoc, deleteDoc, Timestamp } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { DEFAULT_THEME_ID } from '@/lib/themes'; 
 import type { UserProfileData } from '@/lib/profile-types'; 
 
-const ANON_USER_ID_KEY = 'anonUserId_studytrack'; // Consistent key
+const ANON_USER_ID_KEY = 'anonUserId_studytrack';
 
 interface AuthContextType {
   currentUser: User | null;
@@ -26,16 +29,16 @@ interface AuthContextType {
   error: string | null;
   signUp: (email_param: string, password_param: string) => Promise<void>; 
   signIn: (email_param: string, password_param: string) => Promise<void>;
+  signInWithGoogle: () => Promise<void>; // Added
   logOut: () => Promise<void>;
 }
 
-// For data from anonymousProfiles/{anonId}
 interface QuickOnboardingDataFromAnon {
   targetExam?: string;
   otherExamName?: string;
   strugglingSubject?: string;
   studyTimePerDay?: string;
-  quickOnboardingCompleted?: boolean; // Should be true
+  quickOnboardingCompleted?: boolean;
   createdAt?: Timestamp;
 }
 
@@ -75,13 +78,11 @@ export function AuthProvider({ children }: AuthProviderProps) {
         const userProfileSnap = await getDoc(userProfileRef);
         let existingUserProfile = userProfileSnap.exists() ? userProfileSnap.data() as UserProfileData : null;
 
-        // Merge logic: Only apply anon data if full onboarding hasn't been completed OR if quick onboarding hasn't been marked
-        // Or if this is a brand new profile
         if (!existingUserProfile || !existingUserProfile.onboardingCompleted || !existingUserProfile.quickOnboardingCompleted) {
           const updatePayload: Partial<UserProfileData> = {
-            email: existingUserProfile?.email || userEmail || '', // Ensure email is set
+            email: existingUserProfile?.email || userEmail || '',
             quickOnboardingCompleted: true,
-            onboardingCompleted: existingUserProfile?.onboardingCompleted || false, // Preserve full onboarding status
+            onboardingCompleted: existingUserProfile?.onboardingCompleted || false,
           };
 
           if (anonData.targetExam) {
@@ -89,7 +90,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
             if (anonData.targetExam === "Other" && anonData.otherExamName) {
               updatePayload.otherExamName = anonData.otherExamName;
             } else if (anonData.targetExam === "Other") {
-              updatePayload.otherExamName = "User Specified"; // Default if not provided
+              updatePayload.otherExamName = "User Specified";
             }
           }
           if (anonData.strugglingSubject && anonData.strugglingSubject !== "None/Other") {
@@ -99,7 +100,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
             updatePayload.dailyStudyHours = anonData.studyTimePerDay;
           }
           
-          // Initialize other fields if it's a new profile from anonymous data
           if (!existingUserProfile) {
             updatePayload.xp = 0;
             updatePayload.coins = 0;
@@ -114,20 +114,18 @@ export function AuthProvider({ children }: AuthProviderProps) {
           if (userProfileSnap.exists()) {
             await updateDoc(userProfileRef, updatePayload);
           } else {
-            await setDoc(userProfileRef, updatePayload); // Creates if doesn't exist
+            await setDoc(userProfileRef, updatePayload); 
           }
           
           toast({ title: "Welcome!", description: "Your previous preferences have been linked to your account." });
         }
         
-        // Cleanup anonymous data
         await deleteDoc(anonProfileRef);
         localStorage.removeItem(ANON_USER_ID_KEY);
       }
     } catch (migrationError) {
       console.error("Error migrating anonymous data:", migrationError);
       toast({ title: "Data Migration Issue", description: "Could not fully link previous preferences.", variant: "default" });
-      // Still remove anonId to prevent repeated attempts if migration itself fails but user is valid
       localStorage.removeItem(ANON_USER_ID_KEY);
     }
   }, [toast]);
@@ -136,11 +134,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(
       auth,
-      async (user) => { // Made async to handle migration
+      async (user) => { 
         if (user) {
           setCurrentUser(user);
-          // Perform migration check here as well, in case user logs in on a different browser
-          // where they had an anonymous session.
           await migrateAnonymousData(user.uid, user.email); 
         } else {
           setCurrentUser(null);
@@ -166,12 +162,11 @@ export function AuthProvider({ children }: AuthProviderProps) {
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email_param, password_param);
       
-      // Initial profile setup (will be potentially merged/overwritten by migration)
       const userProfileRef = doc(db, 'users', userCredential.user.uid, 'userProfile', 'profile');
       const initialProfileData: UserProfileData = {
         email: email_param,
-        onboardingCompleted: false, // Will be updated by migration if needed
-        quickOnboardingCompleted: false, // Will be updated by migration if needed
+        onboardingCompleted: false, 
+        quickOnboardingCompleted: false, 
         xp: 0,
         coins: 0,
         earnedBadgeIds: [],
@@ -180,10 +175,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
         dailyChallengeStatus: {},
         lastInteractionDates: [],
       };
-      await setDoc(userProfileRef, initialProfileData, { merge: true }); // Use merge to be safe
+      await setDoc(userProfileRef, initialProfileData, { merge: true }); 
 
       setCurrentUser(userCredential.user); 
-      await migrateAnonymousData(userCredential.user.uid, userCredential.user.email); // Migrate data after user creation
+      await migrateAnonymousData(userCredential.user.uid, userCredential.user.email); 
 
       toast({
         title: 'Signup Successful!',
@@ -215,7 +210,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
     setError(null);
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email_param, password_param);
-      // setCurrentUser is handled by onAuthStateChanged, but we need the user object for migration
       await migrateAnonymousData(userCredential.user.uid, userCredential.user.email); 
 
       toast({
@@ -234,6 +228,88 @@ export function AuthProvider({ children }: AuthProviderProps) {
         setLoading(false);
       }
     }, [router, toast, migrateAnonymousData]);
+
+  const signInWithGoogle = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    const provider = new GoogleAuthProvider();
+    try {
+      const result = await signInWithPopup(auth, provider);
+      const user = result.user;
+      const additionalUserInfo = getAdditionalUserInfo(result);
+
+      const userProfileRef = doc(db, 'users', user.uid, 'userProfile', 'profile');
+      const profileSnap = await getDoc(userProfileRef);
+
+      // Ensure name from Google is used if available
+      const displayNameFromGoogle = user.displayName || user.email?.split('@')[0] || 'New User';
+
+      if (!profileSnap.exists() || additionalUserInfo?.isNewUser) {
+        const newProfileData: UserProfileData = {
+          email: user.email || '',
+          fullName: displayNameFromGoogle,
+          onboardingCompleted: false,
+          quickOnboardingCompleted: false,
+          xp: 0,
+          coins: 0,
+          earnedBadgeIds: [],
+          purchasedItemIds: [],
+          activeThemeId: DEFAULT_THEME_ID,
+          dailyChallengeStatus: {},
+          lastInteractionDates: [],
+        };
+        await setDoc(userProfileRef, newProfileData, { merge: true });
+        
+        // If new user and has a display name, update Firebase Auth profile too
+        if (user.displayName && user.displayName !== auth.currentUser?.displayName) {
+            await updateProfile(user, { displayName: user.displayName });
+        }
+
+      } else if (profileSnap.exists()) {
+        // User exists, check if their name in Firestore matches Google's, update if different and Firestore is empty
+        const existingProfile = profileSnap.data() as UserProfileData;
+        if (!existingProfile.fullName && user.displayName) {
+          await updateDoc(userProfileRef, { fullName: user.displayName });
+        }
+        // Ensure Firebase Auth profile matches if possible
+        if (user.displayName && user.displayName !== auth.currentUser?.displayName) {
+            await updateProfile(user, { displayName: user.displayName });
+        }
+      }
+      
+      await migrateAnonymousData(user.uid, user.email);
+
+      toast({
+        title: 'Sign In Successful!',
+        description: `Welcome, ${displayNameFromGoogle}!`,
+      });
+      router.push('/dashboard');
+    } catch (err: any) {
+      setError(err.message);
+      console.error("Google Sign-In Error: ", err);
+      if (err.code === 'auth/account-exists-with-different-credential') {
+        toast({
+          title: 'Sign In Failed',
+          description: 'An account already exists with this email address using a different sign-in method. Try logging in with that method.',
+          variant: 'destructive',
+        });
+      } else if (err.code === 'auth/popup-closed-by-user') {
+        toast({
+          title: 'Sign In Cancelled',
+          description: 'You closed the Google Sign-In window.',
+          variant: 'default',
+        });
+      } else {
+        toast({
+          title: 'Sign In Failed',
+          description: err.message || 'Could not sign in with Google.',
+          variant: 'destructive',
+        });
+      }
+    } finally {
+      setLoading(false);
+    }
+  }, [router, toast, migrateAnonymousData]);
   
     const logOut = useCallback(async () => {
       setLoading(true);
@@ -244,8 +320,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
           title: 'Logged Out',
           description: 'You have been successfully logged out.',
         });
-        // Do NOT clear anonUserId from localStorage on logout.
-        // User might log out and want to continue as guest, or log in as different user.
         router.push('/login');
       } catch (err: any) {
         setError(err.message);
@@ -265,8 +339,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
       error,
       signUp,
       signIn,
+      signInWithGoogle, // Added
       logOut,
-    }), [currentUser, loading, error, signUp, signIn, logOut]);
+    }), [currentUser, loading, error, signUp, signIn, signInWithGoogle, logOut]); // Added signInWithGoogle
   
     return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
   }
