@@ -11,7 +11,7 @@ import ChartCardSkeleton from '@/components/analytics/ChartCardSkeleton';
 // Lazy load chart components
 const WeeklyStudyHoursChart = React.lazy(() => import('@/components/analytics/WeeklyStudyHoursChart'));
 const TopicsCompletedChart = React.lazy(() => import('@/components/analytics/TopicsCompletedChart'));
-const SubjectTimeDistributionChart = React.lazy(() => import('@/components/analytics/SubjectTimeDistributionChart'));
+// Removed SubjectTimeDistributionChart import
 
 
 export default function AnalyticsPage() {
@@ -61,10 +61,7 @@ export default function AnalyticsPage() {
           <TopicsCompletedChart />
         </Suspense>
       </div>
-      <Suspense fallback={<ChartCardSkeleton />}>
-        <SubjectTimeDistributionChart />
-      </Suspense>
+      {/* Removed SubjectTimeDistributionChart rendering block */}
     </div>
   );
 }
-
