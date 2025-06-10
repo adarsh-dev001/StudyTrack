@@ -66,3 +66,7 @@ next-env.d.ts
 
 # Misc
 *.pem # Private key files
+StudyTrack_backup/.firebase/studyplanner-4abf5/functions/.next/BUILD_ID
+# Ignore backup builds (like .next inside backups)
+/StudyTrack_backup/
+/StudyTrack_backup/**/.next/
