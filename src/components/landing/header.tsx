@@ -99,7 +99,7 @@ function HeaderComponent() {
           <span className="font-headline text-2xl font-bold text-foreground">StudyTrack</span>
         </Link>
 
-        <nav className="hidden md:flex items-center gap-6 text-sm font-medium">
+        <nav className="hidden md:flex items-center gap-8 text-sm font-medium"> {/* Increased gap from 6 to 8 */}
           {navLinks.map((link) => (
             <Link
               key={link.label}

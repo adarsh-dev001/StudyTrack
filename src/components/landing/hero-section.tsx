@@ -49,7 +49,7 @@ function HeroSectionComponent() {
         <div className="grid gap-8 lg:grid-cols-2 lg:items-center xl:gap-12">
           <div className="flex flex-col justify-center space-y-6 text-center lg:text-left">
             <motion.h1
-              className="font-headline text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl lg:text-7xl text-foreground"
+              className="font-headline text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl lg:text-7xl text-foreground leading-tight md:leading-tight lg:leading-tight"
               variants={headlineVariants}
               initial="hidden"
               animate="visible"
@@ -62,7 +62,7 @@ function HeroSectionComponent() {
               ))}
             </motion.h1>
             <motion.p
-              className="max-w-[600px] text-muted-foreground text-md sm:text-lg md:text-xl xl:text-2xl mx-auto lg:mx-0"
+              className="max-w-[600px] text-muted-foreground text-md sm:text-lg md:text-xl xl:text-2xl mx-auto lg:mx-0 leading-relaxed md:leading-relaxed"
               variants={itemVariants}
             >
               {taglineText}
