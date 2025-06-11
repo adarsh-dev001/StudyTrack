@@ -1,6 +1,6 @@
 
 import type { Timestamp } from 'firebase/firestore';
-import { z } from 'zod'; // Added Zod import
+import { z } from 'zod';
 
 // Definition for subject-specific details
 export const subjectDetailSchema = z.object({
@@ -45,18 +45,29 @@ export interface UserProfileData {
   preferredStudyTime?: string[]; // Stores IDs like 'morning', 'evening'
   distractionStruggles?: string;
   motivationType?: string;
-  weakSubjects?: string[]; // Added
-  strongSubjects?: string[]; // Added
-  preferredLearningStyles?: string[]; // Added
+  weakSubjects?: string[]; 
+  strongSubjects?: string[]; 
+  preferredLearningStyles?: string[]; 
   
   // General
   socialVisibilityPublic?: boolean;
   onboardingCompleted?: boolean;
+  quickOnboardingCompleted?: boolean; // Added for quick onboarding status
 }
 
 export interface StreakData {
   currentStreak: number;
   longestStreak: number;
   lastCheckInDate: Timestamp | null;
+}
+
+// Data structure for anonymous profile storage
+export interface QuickOnboardingDataToStore {
+  targetExam?: string;
+  otherExamName?: string;
+  strugglingSubject?: string;
+  studyTimePerDay?: string;
+  quickOnboardingCompleted: true;
+  createdAt: Timestamp;
 }
 

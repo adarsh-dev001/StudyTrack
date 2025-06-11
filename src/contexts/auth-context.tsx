@@ -8,7 +8,6 @@ import {
   signInWithEmailAndPassword,
   signOut,
   updateProfile,
-  // Removed GoogleAuthProvider, signInWithPopup, getAdditionalUserInfo
 } from 'firebase/auth';
 import { useRouter } from 'next/navigation';
 import type { ReactNode } from 'react';
@@ -17,9 +16,9 @@ import { auth, db } from '@/lib/firebase';
 import { doc, setDoc, getDoc, updateDoc, deleteDoc, Timestamp } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { DEFAULT_THEME_ID } from '@/lib/themes'; 
-import type { UserProfileData } from '@/lib/profile-types'; 
+import type { UserProfileData, QuickOnboardingDataToStore } from '@/lib/profile-types'; // Updated import
 
-const ANON_USER_ID_KEY = 'anonUserId_studytrack';
+const ANON_USER_ID_KEY = 'anonUserId_studytrack_v2'; // Updated key to potentially reset old anonymous data if needed
 
 interface AuthContextType {
   currentUser: User | null;
@@ -27,19 +26,8 @@ interface AuthContextType {
   error: string | null;
   signUp: (email_param: string, password_param: string) => Promise<void>; 
   signIn: (email_param: string, password_param: string) => Promise<void>;
-  // Removed signInWithGoogle
   logOut: () => Promise<void>;
 }
-
-interface QuickOnboardingDataFromAnon {
-  targetExam?: string;
-  otherExamName?: string; 
-  strugglingSubject?: string;
-  studyTimePerDay?: string;
-  quickOnboardingCompleted?: boolean;
-  createdAt?: Timestamp;
-}
-
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
@@ -71,24 +59,25 @@ export function AuthProvider({ children }: AuthProviderProps) {
       const anonProfileSnap = await getDoc(anonProfileRef);
 
       if (anonProfileSnap.exists()) {
-        const anonData = anonProfileSnap.data() as QuickOnboardingDataFromAnon;
+        const anonData = anonProfileSnap.data() as QuickOnboardingDataToStore;
         const userProfileRef = doc(db, 'users', userId, 'userProfile', 'profile');
         const userProfileSnap = await getDoc(userProfileRef);
         let existingUserProfile = userProfileSnap.exists() ? userProfileSnap.data() as UserProfileData : null;
 
-        if (!existingUserProfile || !existingUserProfile.onboardingCompleted || !existingUserProfile.quickOnboardingCompleted) {
+        const shouldMigrate = !existingUserProfile || 
+                              (!existingUserProfile.onboardingCompleted && !existingUserProfile.quickOnboardingCompleted);
+
+        if (shouldMigrate) {
           const updatePayload: Partial<UserProfileData> = {
             email: existingUserProfile?.email || userEmail || '',
-            quickOnboardingCompleted: true,
-            onboardingCompleted: existingUserProfile?.onboardingCompleted || false,
+            quickOnboardingCompleted: true, // Mark quick onboarding as completed
+            onboardingCompleted: existingUserProfile?.onboardingCompleted || false, // Preserve full onboarding
           };
 
           if (anonData.targetExam) {
-            updatePayload.targetExams = [anonData.targetExam.toLowerCase().replace(/\s+/g, '_')];
-            if (anonData.targetExam === "Other" && anonData.otherExamName) {
+            updatePayload.targetExams = [anonData.targetExam]; // Note: targetExam from anonData is already the 'value'
+            if (anonData.targetExam === "other" && anonData.otherExamName) {
               updatePayload.otherExamName = anonData.otherExamName;
-            } else if (anonData.targetExam === "Other") {
-              updatePayload.otherExamName = "User Specified";
             }
           }
           if (anonData.strugglingSubject && anonData.strugglingSubject !== "None/Other") {
@@ -98,6 +87,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
             updatePayload.dailyStudyHours = anonData.studyTimePerDay;
           }
           
+          // Initialize if profile doesn't exist or is minimal
           if (!existingUserProfile) {
             updatePayload.xp = 0;
             updatePayload.coins = 0;
@@ -106,25 +96,30 @@ export function AuthProvider({ children }: AuthProviderProps) {
             updatePayload.activeThemeId = DEFAULT_THEME_ID;
             updatePayload.dailyChallengeStatus = {};
             updatePayload.lastInteractionDates = [];
+          } else { // If profile exists, merge safely
+            updatePayload.xp = existingUserProfile.xp || 0;
+            updatePayload.coins = existingUserProfile.coins || 0;
+            updatePayload.earnedBadgeIds = existingUserProfile.earnedBadgeIds || [];
+            updatePayload.purchasedItemIds = existingUserProfile.purchasedItemIds || [];
+            updatePayload.activeThemeId = existingUserProfile.activeThemeId === undefined ? DEFAULT_THEME_ID : existingUserProfile.activeThemeId;
+            updatePayload.dailyChallengeStatus = existingUserProfile.dailyChallengeStatus || {};
+            updatePayload.lastInteractionDates = existingUserProfile.lastInteractionDates || [];
           }
 
-
-          if (userProfileSnap.exists()) {
-            await updateDoc(userProfileRef, updatePayload);
-          } else {
-            await setDoc(userProfileRef, updatePayload); 
-          }
+          await setDoc(userProfileRef, updatePayload, { merge: true }); // Use merge:true to be safe
           
           toast({ title: "Welcome!", description: "Your previous preferences have been linked to your account." });
         }
         
+        // Delete anonymous profile only if data was successfully used or deemed not needed for migration
         await deleteDoc(anonProfileRef);
         localStorage.removeItem(ANON_USER_ID_KEY);
       }
     } catch (migrationError) {
       console.error("Error migrating anonymous data:", migrationError);
       toast({ title: "Data Migration Issue", description: "Could not fully link previous preferences.", variant: "default" });
-      localStorage.removeItem(ANON_USER_ID_KEY); // Still remove it to avoid repeated attempts
+      // Decide if to remove anonId here or retry later. For now, remove to avoid repeated errors for same issue.
+      localStorage.removeItem(ANON_USER_ID_KEY);
     }
   }, [toast]);
 
@@ -133,13 +128,14 @@ export function AuthProvider({ children }: AuthProviderProps) {
     const unsubscribe = onAuthStateChanged(
       auth,
       async (user) => { 
+        setLoading(true); // Set loading true at the start of auth state change
         if (user) {
           setCurrentUser(user);
           await migrateAnonymousData(user.uid, user.email); 
         } else {
           setCurrentUser(null);
         }
-        setLoading(false);
+        setLoading(false); // Set loading false after processing
       },
       (error) => {
         setError(error.message);
@@ -161,34 +157,39 @@ export function AuthProvider({ children }: AuthProviderProps) {
       const userCredential = await createUserWithEmailAndPassword(auth, email_param, password_param);
       
       const userProfileRef = doc(db, 'users', userCredential.user.uid, 'userProfile', 'profile');
+      // Check if profile already exists from a previous partial creation or anonymous migration attempt
+      const existingProfileSnap = await getDoc(userProfileRef);
+      const existingProfileData = existingProfileSnap.exists() ? existingProfileSnap.data() as UserProfileData : {};
+      
       const initialProfileData: UserProfileData = {
+        ...existingProfileData, // Preserve any data already there (e.g. from failed anon migration)
         email: email_param,
-        onboardingCompleted: false, 
-        quickOnboardingCompleted: false, 
-        xp: 0,
-        coins: 0,
-        earnedBadgeIds: [],
-        purchasedItemIds: [],
-        activeThemeId: DEFAULT_THEME_ID,
-        dailyChallengeStatus: {},
-        lastInteractionDates: [],
+        onboardingCompleted: existingProfileData.onboardingCompleted || false, 
+        quickOnboardingCompleted: existingProfileData.quickOnboardingCompleted || false, 
+        xp: existingProfileData.xp || 0,
+        coins: existingProfileData.coins || 0,
+        earnedBadgeIds: existingProfileData.earnedBadgeIds || [],
+        purchasedItemIds: existingProfileData.purchasedItemIds || [],
+        activeThemeId: existingProfileData.activeThemeId === undefined ? DEFAULT_THEME_ID : existingProfileData.activeThemeId,
+        dailyChallengeStatus: existingProfileData.dailyChallengeStatus || {},
+        lastInteractionDates: existingProfileData.lastInteractionDates || [],
       };
       await setDoc(userProfileRef, initialProfileData, { merge: true }); 
 
-      setCurrentUser(userCredential.user); 
-      await migrateAnonymousData(userCredential.user.uid, userCredential.user.email); 
+      // setCurrentUser(userCredential.user); // Done by onAuthStateChanged
+      // await migrateAnonymousData(userCredential.user.uid, userCredential.user.email); // Done by onAuthStateChanged
 
       toast({
         title: 'Signup Successful!',
-        description: 'Welcome to StudyTrack! Explore your dashboard.',
+        description: 'Welcome to StudyTrack! Redirecting to dashboard...',
       });
-      router.push('/dashboard');
+      router.push('/dashboard'); // Redirect after ensuring state is set by onAuthStateChanged
     } catch (err: any) {
       setError(err.message);
       if (err.code === 'auth/email-already-in-use') {
         toast({
           title: 'Signup Failed',
-          description: 'This email address is already registered. Please use a different email or try logging in.',
+          description: 'This email address is already registered. Please try logging in.',
           variant: 'destructive',
         });
       } else {
@@ -199,17 +200,16 @@ export function AuthProvider({ children }: AuthProviderProps) {
         });
       }
     } finally {
-      setLoading(false);
+      // setLoading(false); // onAuthStateChanged will handle final loading state
     }
-  }, [router, toast, migrateAnonymousData]);
+  }, [router, toast, migrateAnonymousData]); // Removed migrateAnonymousData as it's handled by onAuthStateChanged
 
   const signIn = useCallback(async (email_param: string, password_param: string) => {
     setLoading(true);
     setError(null);
     try {
-      const userCredential = await signInWithEmailAndPassword(auth, email_param, password_param);
-      await migrateAnonymousData(userCredential.user.uid, userCredential.user.email); 
-
+      await signInWithEmailAndPassword(auth, email_param, password_param);
+      // User state set by onAuthStateChanged, which also calls migrateAnonymousData
       toast({
         title: 'Login Successful!',
         description: 'Welcome back!',
@@ -223,9 +223,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
           variant: 'destructive',
         });
       } finally {
-        setLoading(false);
+        setLoading(false); // Set loading false here for signIn
       }
-    }, [router, toast, migrateAnonymousData]);
+    }, [router, toast]); // Removed migrateAnonymousData as it's handled by onAuthStateChanged
   
     const logOut = useCallback(async () => {
       setLoading(true);
@@ -255,9 +255,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
       error,
       signUp,
       signIn,
-      // signInWithGoogle removed
       logOut,
-    }), [currentUser, loading, error, signUp, signIn, logOut]); // signInWithGoogle removed from dependencies
+    }), [currentUser, loading, error, signUp, signIn, logOut]);
   
     return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
   }
