@@ -1,3 +1,4 @@
+
 'use client';
 
 import React from 'react';
@@ -24,7 +25,7 @@ const featureShowcaseData = [
       'Quiz Generator: Test yourself with difficulty & exam filters.',
     ],
     imageSrc: '/images/Ai-Tools.webp',
-    imageAlt: 'AI Tools illustration',
+    imageAlt: 'StudyTrack AI tools interface showing syllabus planner and notes generator',
     dataAiHint: 'artificial intelligence study',
     ctaText: 'Try AI Tools Now',
     ctaLink: '/ai-tools',
@@ -41,7 +42,7 @@ const featureShowcaseData = [
       'Leaderboards: Compete with peers and stay motivated.',
     ],
     imageSrc: '/images/just_learn.jpeg',
-    imageAlt: 'Gamification in learning illustration',
+    imageAlt: 'StudyTrack gamification features with XP, badges, and leaderboards',
     dataAiHint: 'gamification education achievement',
     ctaText: 'See Gamification Features',
     ctaLink: '/streaks',
@@ -58,7 +59,7 @@ const featureShowcaseData = [
       'Weekly Review Panel: Reflect and plan for continuous improvement.',
     ],
     imageSrc: '/images/productiv.png',
-    imageAlt: 'Progress tracking illustration',
+    imageAlt: 'StudyTrack progress wall showing study streaks heatmap and Pomodoro stats',
     dataAiHint: 'progress chart analytics',
     ctaText: 'Visualize Your Growth',
     ctaLink: '/dashboard',
@@ -75,7 +76,7 @@ const featureShowcaseData = [
       'Instant scoring and detailed explanations for learning.',
     ],
     imageSrc: '/images/online-exam-software.jpg',
-    imageAlt: 'Advanced Quiz Generator illustration',
+    imageAlt: 'StudyTrack AI SmartQuiz generator interface',
     dataAiHint: 'quiz test assessment',
     ctaText: 'Create a Quiz', // Updated CTA
     ctaLink: '/ai-tools/smart-quiz', // Updated Link
@@ -93,7 +94,7 @@ const featureShowcaseData = [
       'Personalized Feedback: Actionable insights for optimization.',
     ],
     imageSrc: '/images/TIme.jpg',
-    imageAlt: 'Locked AI Productivity Feature illustration',
+    imageAlt: 'StudyTrack AI Productivity Coach feature providing personalized feedback',
     dataAiHint: 'ai coach productivity',
     ctaText: 'Unlock with Consistency',
     ctaLink: '/ai-tools/productivity-analyzer',
