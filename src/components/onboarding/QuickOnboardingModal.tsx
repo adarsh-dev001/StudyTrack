@@ -11,37 +11,37 @@ import { Loader2, ArrowRight, CheckCircle } from 'lucide-react';
 import { useAuth } from '@/contexts/auth-context';
 import { db } from '@/lib/firebase';
 import { doc, setDoc, getDoc, Timestamp } from 'firebase/firestore';
-import type { UserProfileData } from '@/lib/profile-types';
+import type { UserProfileData, QuickOnboardingDataToStore } from '@/lib/profile-types';
 import { DEFAULT_THEME_ID } from '@/lib/themes';
 import { useToast } from '@/hooks/use-toast';
 import { v4 as uuidv4 } from 'uuid';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogOverlay, DialogPortal, DialogClose } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { TARGET_EXAMS as PREDEFINED_EXAMS_CONST, EXAM_SUBJECT_MAP } from '@/lib/constants'; // Ensure TARGET_EXAMS has Indian context
+import { TARGET_EXAMS as PREDEFINED_EXAMS_CONST, EXAM_SUBJECT_MAP } from '@/lib/constants';
 
 interface QuizQuestion {
   id: number;
   text: string;
   options: string[];
   answerKey: keyof OnboardingAnswers;
-  isMultiSelect?: boolean; // For questions like target exam
+  isMultiSelect?: boolean;
 }
 
 interface OnboardingAnswers {
-  targetExam: string[]; // Changed to array for multi-select if needed, but current form is single select
+  targetExam: string[];
   strugglingSubject: string;
   studyTimePerDay: string;
-  otherExamName?: string; // Added for "Other" exam type
+  otherExamName?: string;
 }
 
 const questions: QuizQuestion[] = [
-  { id: 1, text: "What are you preparing for?", options: PREDEFINED_EXAMS_CONST.map(e => e.label), answerKey: 'targetExam', isMultiSelect: false }, // Using labels for options
+  { id: 1, text: "What are you preparing for?", options: PREDEFINED_EXAMS_CONST.map(e => e.label), answerKey: 'targetExam', isMultiSelect: false },
   { id: 2, text: "Which subject do you find most challenging?", options: ["Physics", "Chemistry", "Biology", "Math", "History", "General Aptitude", "None/Other"], answerKey: 'strugglingSubject' },
   { id: 3, text: "How much time can you dedicate to study per day?", options: ["<1 hr", "1-2 hrs", "2-4 hrs", ">4 hrs"], answerKey: 'studyTimePerDay' },
 ];
 
 const TOTAL_QUESTIONS = questions.length;
-const ANON_USER_ID_KEY = 'anonUserId_studytrack_v2'; // Updated key
+const ANON_USER_ID_KEY = 'anonUserId_studytrack_v2';
 
 interface QuickOnboardingModalProps {
   isOpen: boolean;
@@ -60,9 +60,9 @@ export default function QuickOnboardingModal({ isOpen, onOpenChange, onComplete 
 
   const handleSelectAnswer = useCallback((questionAnswerKey: keyof OnboardingAnswers, answer: string) => {
     if (questionAnswerKey === 'targetExam') {
-      setAnswers(prev => ({ ...prev, targetExam: [answer] })); // For single select exam
+      setAnswers(prev => ({ ...prev, targetExam: [answer] }));
       if (answer.toLowerCase() !== 'other') {
-        setOtherExamNameInput(''); // Clear other input if not "Other"
+        setOtherExamNameInput('');
       }
     } else {
       setAnswers(prev => ({ ...prev, [questionAnswerKey]: answer }));
@@ -85,8 +85,6 @@ export default function QuickOnboardingModal({ isOpen, onOpenChange, onComplete 
       if (currentStep < TOTAL_QUESTIONS) {
         setCurrentStep(prev => prev + 1);
       } else {
-        // This case should ideally be handled by handleSubmit for the final step
-        // For safety, if next is called on last step and is valid, trigger submit
         handleSubmit();
       }
     } else {
@@ -123,17 +121,10 @@ export default function QuickOnboardingModal({ isOpen, onOpenChange, onComplete 
 
     setIsLoading(true);
 
-    const targetExamValue = answers.targetExam?.[0] || '';
-    const targetExamConst = PREDEFINED_EXAMS_CONST.find(e => e.label === targetExamValue);
+    const targetExamLabel = answers.targetExam?.[0] || '';
+    const targetExamConstEntry = PREDEFINED_EXAMS_CONST.find(e => e.label === targetExamLabel);
+    const actualTargetExamValue = targetExamConstEntry ? targetExamConstEntry.value : targetExamLabel;
 
-    const collectedData = {
-      targetExam: targetExamConst ? targetExamConst.value : (targetExamValue.toLowerCase() === 'other' ? 'other' : targetExamValue),
-      otherExamName: targetExamValue.toLowerCase() === 'other' ? otherExamNameInput.trim() : undefined,
-      strugglingSubject: answers.strugglingSubject,
-      studyTimePerDay: answers.studyTimePerDay,
-      quickOnboardingCompleted: true,
-      createdAt: Timestamp.now(),
-    };
 
     if (currentUser) {
       const userProfileRef = doc(db, 'users', currentUser.uid, 'userProfile', 'profile');
@@ -142,12 +133,6 @@ export default function QuickOnboardingModal({ isOpen, onOpenChange, onComplete 
         const currentData = profileSnap.exists() ? profileSnap.data() as UserProfileData : {};
         
         const profileUpdate: Partial<UserProfileData> = {
-          targetExams: collectedData.targetExam ? [collectedData.targetExam] : currentData.targetExams || [],
-          otherExamName: collectedData.otherExamName || currentData.otherExamName,
-          weakSubjects: collectedData.strugglingSubject && collectedData.strugglingSubject !== "None/Other" ? [collectedData.strugglingSubject] : currentData.weakSubjects || [],
-          dailyStudyHours: collectedData.studyTimePerDay || currentData.dailyStudyHours || '',
-          quickOnboardingCompleted: true,
-          onboardingCompleted: currentData.onboardingCompleted || false,
           email: currentUser.email || currentData.email || '',
           coins: currentData.coins || 0,
           xp: currentData.xp || 0,
@@ -156,11 +141,41 @@ export default function QuickOnboardingModal({ isOpen, onOpenChange, onComplete 
           activeThemeId: currentData.activeThemeId === undefined ? DEFAULT_THEME_ID : currentData.activeThemeId,
           dailyChallengeStatus: currentData.dailyChallengeStatus || {},
           lastInteractionDates: currentData.lastInteractionDates || [],
+          quickOnboardingCompleted: true,
+          onboardingCompleted: currentData.onboardingCompleted || false,
         };
-        if (answers.targetExam?.[0]?.toLowerCase() === "other" && otherExamNameInput.trim()) {
-            profileUpdate.otherExamName = otherExamNameInput.trim();
+
+        if (actualTargetExamValue) {
+            profileUpdate.targetExams = [actualTargetExamValue];
+            if (actualTargetExamValue.toLowerCase() === 'other' && otherExamNameInput.trim()) {
+                profileUpdate.otherExamName = otherExamNameInput.trim();
+            } else if (actualTargetExamValue.toLowerCase() !== 'other') {
+                profileUpdate.otherExamName = ''; // Clear if not 'Other'
+            } else {
+                // If 'Other' but no name, keep existing or set to empty
+                profileUpdate.otherExamName = currentData.otherExamName || '';
+            }
+        } else {
+            profileUpdate.targetExams = currentData.targetExams || [];
+            profileUpdate.otherExamName = currentData.otherExamName || '';
         }
 
+        if (answers.strugglingSubject) {
+            if (answers.strugglingSubject !== "None/Other") {
+                profileUpdate.weakSubjects = [answers.strugglingSubject];
+            } else {
+                profileUpdate.weakSubjects = [];
+            }
+        } else {
+             profileUpdate.weakSubjects = currentData.weakSubjects || [];
+        }
+
+        if (answers.studyTimePerDay) {
+            profileUpdate.dailyStudyHours = answers.studyTimePerDay;
+        } else {
+            profileUpdate.dailyStudyHours = currentData.dailyStudyHours || '';
+        }
+        
         await setDoc(userProfileRef, profileUpdate, { merge: true });
         toast({ title: "Preferences Saved!", description: "Your AI experience will now be more personalized." });
         onComplete();
@@ -168,15 +183,29 @@ export default function QuickOnboardingModal({ isOpen, onOpenChange, onComplete 
         console.error("Error saving quick onboarding for logged in user:", error);
         toast({ title: "Save Error", description: "Could not save preferences.", variant: "destructive" });
       }
-    } else {
+    } else { // Anonymous user
       let anonId = localStorage.getItem(ANON_USER_ID_KEY);
       if (!anonId) {
         anonId = uuidv4();
         localStorage.setItem(ANON_USER_ID_KEY, anonId);
       }
       try {
+        const anonProfileData: QuickOnboardingDataToStore = {
+            quickOnboardingCompleted: true,
+            createdAt: Timestamp.now(),
+        };
+        if (actualTargetExamValue) {
+            anonProfileData.targetExam = actualTargetExamValue;
+            if (actualTargetExamValue.toLowerCase() === 'other' && otherExamNameInput.trim()) {
+                anonProfileData.otherExamName = otherExamNameInput.trim();
+            }
+            // If targetExam is not 'other', or 'other' without name, otherExamName is omitted.
+        }
+        if (answers.strugglingSubject) anonProfileData.strugglingSubject = answers.strugglingSubject;
+        if (answers.studyTimePerDay) anonProfileData.studyTimePerDay = answers.studyTimePerDay;
+        
         const anonProfileRef = doc(db, 'anonymousProfiles', anonId);
-        await setDoc(anonProfileRef, collectedData);
+        await setDoc(anonProfileRef, anonProfileData);
         localStorage.setItem('quickOnboardingDone_anon_v2', 'true');
         toast({ title: "Preferences Noted!", description: "Sign up to save your progress and get the full experience!" });
         onComplete();
@@ -230,7 +259,7 @@ export default function QuickOnboardingModal({ isOpen, onOpenChange, onComplete 
                 animate="center"
                 exit="exit"
                 transition={{ x: { type: "spring", stiffness: 300, damping: 30 }, opacity: { duration: 0.2 } }}
-                className="w-full" // Removed absolute positioning
+                className="w-full"
               >
                 <h3 className="text-md sm:text-lg font-semibold mb-3 sm:mb-4 text-center">{currentQuestion.text}</h3>
                 <div className="grid grid-cols-1 gap-2 sm:gap-2.5 max-w-sm mx-auto">
@@ -283,4 +312,3 @@ export default function QuickOnboardingModal({ isOpen, onOpenChange, onComplete 
     </Dialog>
   );
 }
-
