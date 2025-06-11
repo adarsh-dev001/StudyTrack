@@ -24,7 +24,7 @@ function HeroSectionComponent() {
   useEffect(() => {
     const interval = setInterval(() => {
       setOutputIndex((prevIndex) => (prevIndex + 1) % dynamicOutputs.length);
-    }, 2500); // Change word every 2.5 seconds
+    }, 2500); 
 
     return () => clearInterval(interval);
   }, []);
@@ -40,13 +40,11 @@ function HeroSectionComponent() {
         <div className="grid gap-8 lg:grid-cols-2 lg:items-center xl:gap-12">
           <div className="flex flex-col justify-center space-y-6 text-center lg:text-left">
             <motion.h1
-              className="font-headline text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl lg:text-7xl leading-tight md:leading-snug lg:leading-snug text-primary"
+              className="font-headline text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl lg:text-7xl leading-tight md:leading-snug lg:leading-snug"
               variants={itemVariants}
             >
-              <span className="block text-primary"> {/* Entire headline now sky blue */}
-                Ace Your Exams.
-              </span>
-              <span className="block text-primary"> {/* Entire headline now sky blue */}
+              <span className="block text-white">Ace Your Exams.</span>
+              <span className="block text-primary"> 
                 Get AI Generated&nbsp;
                 <AnimatePresence mode="wait">
                   <motion.span
