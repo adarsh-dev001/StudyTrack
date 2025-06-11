@@ -9,7 +9,7 @@ import { ArrowRight, Zap } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 
-const dynamicFeatures = ["Notes", "Quizzes", "Summaries", "Study Plans", "Solutions"];
+const dynamicOutputs = ["Notes", "Quizzes", "Summaries", "Study Plans", "Solutions"];
 
 const taglineText = "Master any subject with personalized study plans, instant doubt solving, and engaging rewards — all on one platform. Crack competitive exams like JEE, NEET, UPSC & more, with confidence,";
 
@@ -19,11 +19,11 @@ const itemVariants = {
 };
 
 function HeroSectionComponent() {
-  const [featureIndex, setFeatureIndex] = useState(0);
+  const [outputIndex, setOutputIndex] = useState(0);
 
   useEffect(() => {
     const interval = setInterval(() => {
-      setFeatureIndex((prevIndex) => (prevIndex + 1) % dynamicFeatures.length);
+      setOutputIndex((prevIndex) => (prevIndex + 1) % dynamicOutputs.length);
     }, 2500); // Change word every 2.5 seconds
 
     return () => clearInterval(interval);
@@ -40,24 +40,24 @@ function HeroSectionComponent() {
         <div className="grid gap-8 lg:grid-cols-2 lg:items-center xl:gap-12">
           <div className="flex flex-col justify-center space-y-6 text-center lg:text-left">
             <motion.h1
-              className="font-headline text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl lg:text-7xl leading-tight md:leading-snug lg:leading-snug text-primary" // Applied text-primary to the whole h1
+              className="font-headline text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl lg:text-7xl leading-tight md:leading-snug lg:leading-snug text-primary"
               variants={itemVariants}
             >
-              <span className="block text-foreground"> {/* Changed to text-foreground for white on dark, black on light */}
+              <span className="block text-primary"> {/* Entire headline now sky blue */}
                 Ace Your Exams.
               </span>
-              <span className="block">
+              <span className="block text-primary"> {/* Entire headline now sky blue */}
                 Get AI Generated&nbsp;
                 <AnimatePresence mode="wait">
                   <motion.span
-                    key={dynamicFeatures[featureIndex]}
+                    key={dynamicOutputs[outputIndex]}
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -10 }}
                     transition={{ duration: 0.4 }}
-                    className="inline-block" // Ensures the word stays on the same line if possible
+                    className="inline-block"
                   >
-                    {dynamicFeatures[featureIndex]}
+                    {dynamicOutputs[outputIndex]}
                   </motion.span>
                 </AnimatePresence>
               </span>
