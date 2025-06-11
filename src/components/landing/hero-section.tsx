@@ -50,13 +50,13 @@ function HeroSectionComponent() {
         <div className="grid gap-8 lg:grid-cols-2 lg:items-center xl:gap-12">
           <div className="flex flex-col justify-center space-y-6 text-center lg:text-left">
             <motion.h1
-              className="font-headline text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl lg:text-7xl text-primary leading-tight md:leading-tight lg:leading-tight"
+              className="font-headline text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl lg:text-7xl leading-tight md:leading-tight lg:leading-tight"
               variants={itemVariants}
               aria-label={`${staticHeadlinePart} ${animatedHeadlinePart}`}
             >
-              <span className="block">{staticHeadlinePart}</span>
+              <span className="block text-white">{staticHeadlinePart}</span>
               <motion.div
-                className="block"
+                className="block text-primary" 
                 variants={headlineVariants}
                 initial="hidden"
                 animate="visible"
