@@ -30,8 +30,25 @@ export default function AppLayout({
 
 
   useEffect(() => {
-    if (!authLoading && !currentUser) {
-      if (pathname !== '/login' && pathname !== '/signup' && !pathname.startsWith('/blog') && pathname !== '/' && pathname !=='/terms' && pathname !=='/privacy') {
+    const isAiToolsPath = pathname.startsWith('/ai-tools');
+    
+    // Define paths that are public and might not require login.
+    // For AppLayout, specific (app) group paths like /ai-tools are relevant here.
+    // Marketing/auth pages are typically outside this layout.
+    const isAllowedAnonymousAppPath = isAiToolsPath; // Add other (app) paths here if they become public
+
+    if (!authLoading && !currentUser && !isAllowedAnonymousAppPath) {
+      // User is not logged in, not loading, and not on an allowed anonymous path within this layout
+      // (e.g., trying to access /dashboard, /settings etc. anonymously)
+      // This check ensures that only truly protected app pages trigger a redirect.
+      // We also exclude common public/auth paths to be safe, though they shouldn't be wrapped by AppLayout.
+      const isMarketingOrAuthPath = pathname === '/login' ||
+                                    pathname === '/signup' ||
+                                    pathname.startsWith('/blog') ||
+                                    pathname === '/' ||
+                                    pathname === '/terms' ||
+                                    pathname === '/privacy';
+      if (!isMarketingOrAuthPath) { // Double check it's not a marketing/auth page
         router.push('/login');
       }
     }
@@ -48,7 +65,6 @@ export default function AppLayout({
         if (docSnap.exists()) {
           setUserProfile(docSnap.data() as UserProfileData);
         } else {
-          // Minimal profile if doc doesn't exist, onboarding is not completed
           setUserProfile({ onboardingCompleted: false } as UserProfileData); 
         }
         setLoadingProfile(false);
@@ -78,22 +94,14 @@ export default function AppLayout({
     );
   }
   
-  if (!currentUser && !authLoading) {
-    const marketingPages = ['/', '/blog', '/terms', '/privacy']; 
-    if (!marketingPages.some(p => pathname === p || (p === '/blog' && pathname.startsWith('/blog')))) {
-         // This case should be caught by the first useEffect.
-    }
-  } else if (!currentUser && authLoading) {
-     return (
-       <div className="flex min-h-screen items-center justify-center bg-background">
-         <Loader2 className="h-12 w-12 animate-spin text-primary" />
-       </div>
-     );
-  }
-
-  // If the user is not logged in and trying to access an app page (not marketing/auth), they will be redirected by the first useEffect.
-  // This check is an additional safeguard or for scenarios where the first useEffect might not have run yet (though unlikely with proper setup).
-  if (!currentUser && pathname !== '/login' && pathname !== '/signup' && !pathname.startsWith('/blog') && pathname !== '/' && pathname !=='/terms' && pathname !=='/privacy') {
+  // If there's no user AND the current path is NOT an AI tools path,
+  // it means it's a protected (app) page. The useEffect above handles redirection.
+  // Returning null here can prevent a flash of the layout for protected routes before redirect.
+  // For AI tools paths, this condition will be false, allowing layout rendering for anonymous users.
+  const isAiToolsPathForRenderCheck = pathname.startsWith('/ai-tools');
+  if (!currentUser && !isAiToolsPathForRenderCheck) {
+    // This implies it's a protected route like /dashboard, /settings, etc., and user is not logged in.
+    // The useEffect should have initiated a redirect.
     return null; 
   }
 
@@ -178,3 +186,4 @@ export default function AppLayout({
     </SidebarProvider>
   );
 }
+    
