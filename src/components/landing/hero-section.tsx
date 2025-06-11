@@ -1,3 +1,4 @@
+
 'use client';
 
 import React from 'react';
@@ -7,13 +8,26 @@ import { Button } from '@/components/ui/button';
 import { ArrowRight, Zap } from 'lucide-react';
 import { motion } from 'framer-motion';
 
-const containerVariants = {
+const headlineText = "Ace Your Exams. Powered by StudyTrack AI.";
+const taglineText = "Master any subject with AI-driven notes, personalized study plans, instant doubt solving, and engaging rewards — all on one platform. Crack competitive exams like JEE, NEET, UPSC & more, with confidence.";
+
+const headlineVariants = {
   hidden: { opacity: 0 },
   visible: {
     opacity: 1,
     transition: {
-      staggerChildren: 0.2,
-      delayChildren: 0.3,
+      staggerChildren: 0.04, // Adjust speed of typing
+    },
+  },
+};
+
+const charVariants = {
+  hidden: { opacity: 0, y: 10 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: {
+      duration: 0.1, // Duration for each character to appear
     },
   },
 };
@@ -28,23 +42,30 @@ function HeroSectionComponent() {
     <section className="w-full py-16 md:py-24 lg:py-32 xl:py-40 bg-gradient-to-br from-sky-100/50 via-background to-background dark:from-sky-900/20">
       <motion.div
         className="container mx-auto px-4 md:px-6"
-        variants={containerVariants}
         initial="hidden"
         animate="visible"
+        variants={{ visible: { transition: { staggerChildren: 0.2, delayChildren: 0.1 }}}}
       >
         <div className="grid gap-8 lg:grid-cols-2 lg:items-center xl:gap-12">
           <div className="flex flex-col justify-center space-y-6 text-center lg:text-left">
             <motion.h1
               className="font-headline text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl lg:text-7xl text-foreground"
-              variants={itemVariants}
+              variants={headlineVariants}
+              initial="hidden"
+              animate="visible"
+              aria-label={headlineText}
             >
-              Study Smarter, Not Harder — <br className="hidden sm:inline"/>Powered by <span className="text-primary">AI & Gamification</span>
+              {headlineText.split("").map((char, index) => (
+                <motion.span key={index} variants={charVariants} className="inline-block">
+                  {char}
+                </motion.span>
+              ))}
             </motion.h1>
             <motion.p
               className="max-w-[600px] text-muted-foreground text-md sm:text-lg md:text-xl xl:text-2xl mx-auto lg:mx-0"
               variants={itemVariants}
             >
-              Ace your exams with XP rewards, AI tools, and a personalized planner — all in one platform.
+              {taglineText}
             </motion.p>
             <motion.div
               className="flex flex-col gap-3 sm:flex-row sm:justify-center lg:justify-start"
@@ -58,7 +79,7 @@ function HeroSectionComponent() {
               </Button>
               <Button variant="outline" size="xl" asChild className="text-base sm:text-lg py-3.5 px-7 border-border hover:bg-accent/10 hover:border-accent">
                 <Link href="/quick-onboarding"> 
-                  Try AI Tools Now
+                  Explore AI Tools
                   <Zap className="ml-2 h-5 w-5 text-accent" />
                 </Link>
               </Button>
@@ -69,9 +90,8 @@ function HeroSectionComponent() {
             variants={itemVariants}
             initial={{ opacity: 0, scale: 0.8 }}
             animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.7, delay: 0.5, ease: "easeOut" }}
+            transition={{ duration: 0.7, delay: 0.3, ease: "easeOut" }}
           >
-            {/* Placeholder for student leveling up animation */}
             <Image
               src="/images/Hero_iamge.png"
               alt="Student achieving goals with StudyTrack"
