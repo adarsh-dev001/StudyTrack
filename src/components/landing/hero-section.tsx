@@ -8,7 +8,8 @@ import { Button } from '@/components/ui/button';
 import { ArrowRight, Zap } from 'lucide-react';
 import { motion } from 'framer-motion';
 
-const headlineText = "Ace Your Exams. Powered by StudyTrack AI.";
+const staticHeadlinePart = "Ace Your Exams.";
+const animatedHeadlinePart = "Powered by StudyTrack AI.";
 const taglineText = "Master any subject with AI-driven notes, personalized study plans, instant doubt solving, and engaging rewards — all on one platform. Crack competitive exams like JEE, NEET, UPSC & more, with confidence.";
 
 const headlineVariants = {
@@ -49,17 +50,23 @@ function HeroSectionComponent() {
         <div className="grid gap-8 lg:grid-cols-2 lg:items-center xl:gap-12">
           <div className="flex flex-col justify-center space-y-6 text-center lg:text-left">
             <motion.h1
-              className="font-headline text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl lg:text-7xl text-foreground leading-tight md:leading-tight lg:leading-tight"
-              variants={headlineVariants}
-              initial="hidden"
-              animate="visible"
-              aria-label={headlineText}
+              className="font-headline text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl lg:text-7xl text-primary leading-tight md:leading-tight lg:leading-tight"
+              variants={itemVariants}
+              aria-label={`${staticHeadlinePart} ${animatedHeadlinePart}`}
             >
-              {headlineText.split("").map((char, index) => (
-                <motion.span key={index} variants={charVariants} className="inline-block">
-                  {char}
-                </motion.span>
-              ))}
+              <span className="block">{staticHeadlinePart}</span>
+              <motion.div
+                className="block"
+                variants={headlineVariants}
+                initial="hidden"
+                animate="visible"
+              >
+                {animatedHeadlinePart.split("").map((char, index) => (
+                  <motion.span key={index} variants={charVariants} className="inline-block">
+                    {char}
+                  </motion.span>
+                ))}
+              </motion.div>
             </motion.h1>
             <motion.p
               className="max-w-[600px] text-muted-foreground text-md sm:text-lg md:text-xl xl:text-2xl mx-auto lg:mx-0 leading-relaxed md:leading-relaxed"
@@ -111,3 +118,4 @@ function HeroSectionComponent() {
 }
 
 export default React.memo(HeroSectionComponent);
+
