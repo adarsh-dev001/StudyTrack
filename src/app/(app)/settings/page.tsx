@@ -2,7 +2,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { useForm, type SubmitHandler, FormProvider } from 'react-hook-form';
+import { useForm, type SubmitHandler, FormProvider, useWatch as useFormWatchHook } from 'react-hook-form'; // Renamed useWatch to avoid conflict
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useAuth } from '@/contexts/auth-context';
@@ -25,12 +25,13 @@ import {
   LANGUAGE_MEDIUMS,
   DAILY_STUDY_HOURS_OPTIONS,
   PREFERRED_STUDY_TIMES,
-  SUBJECT_OPTIONS,
-  PREFERRED_LEARNING_STYLES, // This should be the general list
+  // SUBJECT_OPTIONS, // No longer using the static SUBJECT_OPTIONS
+  PREFERRED_LEARNING_STYLES, 
   MOTIVATION_TYPES,
   STUDY_MODES,
   EXAM_PHASES,
   PREVIOUS_ATTEMPTS_OPTIONS,
+  EXAM_SUBJECT_MAP, // Import EXAM_SUBJECT_MAP
 } from '@/lib/constants';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
@@ -102,8 +103,33 @@ export default function SettingsPage() {
     },
   });
 
-  const { handleSubmit, control, reset, watch, formState: { isSubmitting, dirtyFields } } = methods;
-  const watchedTargetExams = watch('targetExams');
+  const { handleSubmit, control, reset, watch, formState: { isSubmitting, dirtyFields }, setValue } = methods;
+  const watchedTargetExams = useFormWatchHook({ control, name: 'targetExams' }); // Use aliased import
+
+  const subjectsForForm = React.useMemo(() => {
+    const primaryExamValue = watchedTargetExams?.[0]?.toLowerCase();
+    return EXAM_SUBJECT_MAP[primaryExamValue || 'other'] || EXAM_SUBJECT_MAP['other'] || [];
+  }, [watchedTargetExams]);
+
+  // Effect to clear/filter selected weak/strong subjects if targetExams changes
+  useEffect(() => {
+    if (!dirtyFields.targetExams) return; // Only run if targetExams was changed by user
+
+    const currentWeakSubjects = methods.getValues('weakSubjects') || [];
+    const currentStrongSubjects = methods.getValues('strongSubjects') || [];
+    const validSubjectIds = subjectsForForm.map(s => s.id);
+
+    const filteredWeakSubjects = currentWeakSubjects.filter(id => validSubjectIds.includes(id));
+    if (filteredWeakSubjects.length !== currentWeakSubjects.length) {
+      setValue('weakSubjects', filteredWeakSubjects, { shouldDirty: true });
+    }
+
+    const filteredStrongSubjects = currentStrongSubjects.filter(id => validSubjectIds.includes(id));
+    if (filteredStrongSubjects.length !== currentStrongSubjects.length) {
+      setValue('strongSubjects', filteredStrongSubjects, { shouldDirty: true });
+    }
+  }, [subjectsForForm, methods, dirtyFields.targetExams, setValue]);
+
 
   useEffect(() => {
     if (currentUser) {
@@ -332,29 +358,34 @@ export default function SettingsPage() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel className="text-sm sm:text-base font-semibold">Weak Subject(s)</FormLabel>
-                    <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-2 md:grid-cols-3 gap-x-3 gap-y-2 sm:gap-x-4 sm:gap-y-3 pt-1 sm:pt-2">
-                      {(SUBJECT_OPTIONS || []).map((subjectOption) => (
-                         <FormItem key={subjectOption.id + "-weak"} className="flex flex-row items-center space-x-2 space-y-0">
-                          <FormControl>
-                            <Checkbox
-                              checked={field.value?.includes(subjectOption.id)}
-                              onCheckedChange={(checked) => {
-                                const currentSelectedSubjects = field.value || [];
-                                const newSelectedSubjects = checked
-                                  ? [...currentSelectedSubjects, subjectOption.id]
-                                  : currentSelectedSubjects.filter(
-                                      (value) => value !== subjectOption.id
-                                    );
-                                field.onChange(newSelectedSubjects);
-                              }}
-                            />
-                          </FormControl>
-                          <FormLabel className="font-normal text-xs sm:text-sm">
-                            {subjectOption.label}
-                          </FormLabel>
-                        </FormItem>
-                      ))}
-                    </div>
+                    <FormDescription className="text-xs sm:text-sm">Select subjects you find challenging from the list relevant to your primary exam.</FormDescription>
+                    {subjectsForForm.length > 0 ? (
+                      <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-2 md:grid-cols-3 gap-x-3 gap-y-2 sm:gap-x-4 sm:gap-y-3 pt-1 sm:pt-2">
+                        {(subjectsForForm || []).map((subjectOption) => (
+                           <FormItem key={subjectOption.id + "-weak-settings"} className="flex flex-row items-center space-x-2 space-y-0">
+                            <FormControl>
+                              <Checkbox
+                                checked={field.value?.includes(subjectOption.id)}
+                                onCheckedChange={(checked) => {
+                                  const currentSelectedSubjects = field.value || [];
+                                  const newSelectedSubjects = checked
+                                    ? [...currentSelectedSubjects, subjectOption.id]
+                                    : currentSelectedSubjects.filter(
+                                        (value) => value !== subjectOption.id
+                                      );
+                                  field.onChange(newSelectedSubjects);
+                                }}
+                              />
+                            </FormControl>
+                            <FormLabel className="font-normal text-xs sm:text-sm">
+                              {subjectOption.name}
+                            </FormLabel>
+                          </FormItem>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-xs text-muted-foreground pt-1">Select a target exam to see relevant subjects.</p>
+                    )}
                     <FormMessage />
                   </FormItem>
                 )}
@@ -365,29 +396,32 @@ export default function SettingsPage() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel className="text-sm sm:text-base font-semibold">Strong Subject(s)</FormLabel>
-                    <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-2 md:grid-cols-3 gap-x-3 gap-y-2 sm:gap-x-4 sm:gap-y-3 pt-1 sm:pt-2">
-                      {(SUBJECT_OPTIONS || []).map((subjectOption) => (
-                        <FormItem key={subjectOption.id + "-strong"} className="flex flex-row items-center space-x-2 space-y-0">
-                          <FormControl>
-                            <Checkbox
-                              checked={field.value?.includes(subjectOption.id)}
-                              onCheckedChange={(checked) => {
-                                const currentSelectedSubjects = field.value || [];
-                                const newSelectedSubjects = checked
-                                  ? [...currentSelectedSubjects, subjectOption.id]
-                                  : currentSelectedSubjects.filter(
-                                      (value) => value !== subjectOption.id
-                                    );
-                                field.onChange(newSelectedSubjects);
-                              }}
-                            />
-                          </FormControl>
-                          <FormLabel className="font-normal text-xs sm:text-sm">
-                            {subjectOption.label}
-                          </FormLabel>
-                        </FormItem>
-                      ))}
-                    </div>
+                    <FormDescription className="text-xs sm:text-sm">Select subjects you are confident in from the list relevant to your primary exam.</FormDescription>
+                     {subjectsForForm.length > 0 ? (
+                      <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-2 md:grid-cols-3 gap-x-3 gap-y-2 sm:gap-x-4 sm:gap-y-3 pt-1 sm:pt-2">
+                        {(subjectsForForm || []).map((subjectOption) => (
+                          <FormItem key={subjectOption.id + "-strong-settings"} className="flex flex-row items-center space-x-2 space-y-0">
+                            <FormControl>
+                              <Checkbox
+                                checked={field.value?.includes(subjectOption.id)}
+                                onCheckedChange={(checked) => {
+                                  const currentSelectedSubjects = field.value || [];
+                                  const newSelectedSubjects = checked
+                                    ? [...currentSelectedSubjects, subjectOption.id]
+                                    : currentSelectedSubjects.filter(
+                                        (value) => value !== subjectOption.id
+                                      );
+                                  field.onChange(newSelectedSubjects);
+                                }}
+                              />
+                            </FormControl>
+                            <FormLabel className="font-normal text-xs sm:text-sm">{subjectOption.name}</FormLabel>
+                          </FormItem>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-xs text-muted-foreground pt-1">Select a target exam to see relevant subjects.</p>
+                    )}
                     <FormMessage />
                   </FormItem>
                 )}
@@ -463,5 +497,5 @@ export default function SettingsPage() {
     </div>
   );
 }
-
     
+
