@@ -1,18 +1,44 @@
-
 'use client';
 
 import React from 'react';
-import { useFormContext } from 'react-hook-form';
+import { useFormContext, useWatch } from 'react-hook-form';
 import { FormField, FormItem, FormLabel, FormControl, FormMessage, FormDescription } from '@/components/ui/form';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Textarea } from '@/components/ui/textarea';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { DAILY_STUDY_HOURS_OPTIONS, PREFERRED_STUDY_TIMES, MOTIVATION_TYPES, SUBJECT_OPTIONS, PREFERRED_LEARNING_STYLES } from '@/lib/constants';
+import { DAILY_STUDY_HOURS_OPTIONS, PREFERRED_STUDY_TIMES, MOTIVATION_TYPES, PREFERRED_LEARNING_STYLES, EXAM_SUBJECT_MAP } from '@/lib/constants';
 import type { OnboardingFormData } from './onboarding-form';
 
 function Step4StudyPreferencesComponent() {
-  const { control } = useFormContext<OnboardingFormData>();
+  const { control, setValue, getValues } = useFormContext<OnboardingFormData>();
+  const watchedTargetExams = useWatch({ control, name: 'targetExams' });
+
+  const subjectsForForm = React.useMemo(() => {
+    const primaryExamValue = watchedTargetExams?.[0]?.toLowerCase();
+    // If no exam is selected, or if it's 'other' and not further specified,
+    // it might be better to default to a generic list or an empty list.
+    // For now, using 'other' as a fallback if primaryExamValue isn't found.
+    return EXAM_SUBJECT_MAP[primaryExamValue || 'other'] || EXAM_SUBJECT_MAP['other'] || [];
+  }, [watchedTargetExams]);
+
+  // Effect to clear/filter selected weak/strong subjects if targetExams changes
+  React.useEffect(() => {
+    const currentWeakSubjects = getValues('weakSubjects') || [];
+    const currentStrongSubjects = getValues('strongSubjects') || [];
+    const validSubjectIds = subjectsForForm.map(s => s.id);
+
+    const filteredWeakSubjects = currentWeakSubjects.filter(id => validSubjectIds.includes(id));
+    if (filteredWeakSubjects.length !== currentWeakSubjects.length) {
+      setValue('weakSubjects', filteredWeakSubjects, { shouldDirty: true });
+    }
+
+    const filteredStrongSubjects = currentStrongSubjects.filter(id => validSubjectIds.includes(id));
+    if (filteredStrongSubjects.length !== currentStrongSubjects.length) {
+      setValue('strongSubjects', filteredStrongSubjects, { shouldDirty: true });
+    }
+  }, [subjectsForForm, getValues, setValue]);
+
 
   return (
     <div className="space-y-4 md:space-y-6">
@@ -75,25 +101,29 @@ function Step4StudyPreferencesComponent() {
         render={({ field }) => (
           <FormItem>
             <FormLabel className="text-sm sm:text-base font-semibold">Weak Subject(s) (Optional)</FormLabel>
-            <FormDescription className="text-xs sm:text-sm">Select subjects you find challenging.</FormDescription>
-            <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-2 md:grid-cols-3 gap-x-3 gap-y-2 sm:gap-x-4 sm:gap-y-3 pt-1 sm:pt-2">
-              {(SUBJECT_OPTIONS || []).map((subjectOption) => (
-                <FormItem key={subjectOption.id + "-weak-onboarding"} className="flex flex-row items-center space-x-2 space-y-0">
-                  <FormControl>
-                    <Checkbox
-                      checked={field.value?.includes(subjectOption.id)}
-                      onCheckedChange={(checked) => {
-                        const currentSelectedSubjects = field.value || [];
-                        return checked
-                          ? field.onChange([...currentSelectedSubjects, subjectOption.id])
-                          : field.onChange(currentSelectedSubjects.filter((value) => value !== subjectOption.id));
-                      }}
-                    />
-                  </FormControl>
-                  <FormLabel className="font-normal text-xs sm:text-sm">{subjectOption.label}</FormLabel>
-                </FormItem>
-              ))}
-            </div>
+            <FormDescription className="text-xs sm:text-sm">Select subjects you find challenging from the list relevant to your exam.</FormDescription>
+            {subjectsForForm.length > 0 ? (
+              <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-2 md:grid-cols-3 gap-x-3 gap-y-2 sm:gap-x-4 sm:gap-y-3 pt-1 sm:pt-2">
+                {(subjectsForForm || []).map((subjectOption) => (
+                  <FormItem key={subjectOption.id + "-weak-onboarding"} className="flex flex-row items-center space-x-2 space-y-0">
+                    <FormControl>
+                      <Checkbox
+                        checked={field.value?.includes(subjectOption.id)}
+                        onCheckedChange={(checked) => {
+                          const currentSelectedSubjects = field.value || [];
+                          return checked
+                            ? field.onChange([...currentSelectedSubjects, subjectOption.id])
+                            : field.onChange(currentSelectedSubjects.filter((value) => value !== subjectOption.id));
+                        }}
+                      />
+                    </FormControl>
+                    <FormLabel className="font-normal text-xs sm:text-sm">{subjectOption.name}</FormLabel>
+                  </FormItem>
+                ))}
+              </div>
+            ) : (
+              <p className="text-xs text-muted-foreground pt-1">Select an exam in Step 2 to see relevant subjects here.</p>
+            )}
             <FormMessage />
           </FormItem>
         )}
@@ -105,25 +135,29 @@ function Step4StudyPreferencesComponent() {
         render={({ field }) => (
           <FormItem>
             <FormLabel className="text-sm sm:text-base font-semibold">Strong Subject(s) (Optional)</FormLabel>
-            <FormDescription className="text-xs sm:text-sm">Select subjects you are confident in.</FormDescription>
-            <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-2 md:grid-cols-3 gap-x-3 gap-y-2 sm:gap-x-4 sm:gap-y-3 pt-1 sm:pt-2">
-              {(SUBJECT_OPTIONS || []).map((subjectOption) => (
-                <FormItem key={subjectOption.id + "-strong-onboarding"} className="flex flex-row items-center space-x-2 space-y-0">
-                  <FormControl>
-                    <Checkbox
-                      checked={field.value?.includes(subjectOption.id)}
-                      onCheckedChange={(checked) => {
-                        const currentSelectedSubjects = field.value || [];
-                        return checked
-                          ? field.onChange([...currentSelectedSubjects, subjectOption.id])
-                          : field.onChange(currentSelectedSubjects.filter((value) => value !== subjectOption.id));
-                      }}
-                    />
-                  </FormControl>
-                  <FormLabel className="font-normal text-xs sm:text-sm">{subjectOption.label}</FormLabel>
-                </FormItem>
-              ))}
-            </div>
+            <FormDescription className="text-xs sm:text-sm">Select subjects you are confident in from the list relevant to your exam.</FormDescription>
+             {subjectsForForm.length > 0 ? (
+              <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-2 md:grid-cols-3 gap-x-3 gap-y-2 sm:gap-x-4 sm:gap-y-3 pt-1 sm:pt-2">
+                {(subjectsForForm || []).map((subjectOption) => (
+                  <FormItem key={subjectOption.id + "-strong-onboarding"} className="flex flex-row items-center space-x-2 space-y-0">
+                    <FormControl>
+                      <Checkbox
+                        checked={field.value?.includes(subjectOption.id)}
+                        onCheckedChange={(checked) => {
+                          const currentSelectedSubjects = field.value || [];
+                          return checked
+                            ? field.onChange([...currentSelectedSubjects, subjectOption.id])
+                            : field.onChange(currentSelectedSubjects.filter((value) => value !== subjectOption.id));
+                        }}
+                      />
+                    </FormControl>
+                    <FormLabel className="font-normal text-xs sm:text-sm">{subjectOption.name}</FormLabel>
+                  </FormItem>
+                ))}
+              </div>
+            ) : (
+              <p className="text-xs text-muted-foreground pt-1">Select an exam in Step 2 to see relevant subjects here.</p>
+            )}
             <FormMessage />
           </FormItem>
         )}
@@ -159,7 +193,6 @@ function Step4StudyPreferencesComponent() {
         )}
       />
 
-
       <FormField
         control={control}
         name="distractionStruggles"
@@ -186,21 +219,12 @@ function Step4StudyPreferencesComponent() {
         render={({ field }) => (
           <FormItem className="space-y-2 sm:space-y-3">
             <FormLabel className="text-sm sm:text-base font-semibold">What Motivates You Most? <span className="text-destructive">*</span></FormLabel>
-            <FormControl>
-              <RadioGroup
-                onValueChange={field.onChange}
-                value={field.value || ''}
-                className="flex flex-col space-y-1.5 sm:space-y-2"
-              >
+            <FormControl><RadioGroup onValueChange={field.onChange} value={field.value || ''} className="flex flex-col space-y-1.5 sm:space-y-2">
                 {(MOTIVATION_TYPES || []).map(type => (
                   <FormItem key={type.value} className="flex items-center space-x-3 space-y-0">
-                    <FormControl><RadioGroupItem value={type.value} /></FormControl>
-                    <FormLabel className="font-normal text-xs sm:text-sm">{type.label}</FormLabel>
-                  </FormItem>
-                ))}
-              </RadioGroup>
-            </FormControl>
-            <FormMessage />
+                    <FormControl><RadioGroupItem value={type.value} /></FormControl><FormLabel className="font-normal text-xs sm:text-sm">{type.label}</FormLabel>
+                  </FormItem>))}
+            </RadioGroup></FormControl><FormMessage />
           </FormItem>
         )}
       />
@@ -212,18 +236,15 @@ function Step4StudyPreferencesComponent() {
           <FormItem className="flex flex-row items-start sm:items-center space-x-3 space-y-0 rounded-md border p-3 sm:p-4 shadow-sm bg-background">
             <FormControl>
               <Checkbox
-                checked={!!field.value} // Ensure it's a boolean
+                checked={!!field.value} 
                 onCheckedChange={field.onChange}
               />
             </FormControl>
-            <div className="space-y-0.5 sm:space-y-1 leading-none">
-              <FormLabel className="text-sm sm:text-base font-semibold">
+            <div className="space-y-0.5 sm:space-y-1 leading-none"><FormLabel className="text-sm sm:text-base font-semibold">
                 Make Profile Public (Optional)
-              </FormLabel>
-              <FormDescription className="text-xs sm:text-sm">
+              </FormLabel><FormDescription className="text-xs sm:text-sm">
                 Allow others to see your anonymized progress on leaderboards or community features.
-              </FormDescription>
-            </div>
+              </FormDescription></div>
           </FormItem>
         )}
       />
