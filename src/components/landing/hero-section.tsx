@@ -7,6 +7,7 @@ import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { ArrowRight, Zap } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { cn } from '@/lib/utils';
 
 const dynamicWords = ["Notes", "Quizzes", "Summaries", "Plans", "Solutions"];
 
@@ -23,7 +24,7 @@ function HeroSectionComponent() {
   useEffect(() => {
     const interval = setInterval(() => {
       setCurrentIndex((prevIndex) => (prevIndex + 1) % dynamicWords.length);
-    }, 2500); // Change word every 2.5 seconds
+    }, 2500); 
 
     return () => clearInterval(interval);
   }, []);
@@ -39,11 +40,11 @@ function HeroSectionComponent() {
         <div className="grid gap-8 lg:grid-cols-2 lg:items-center xl:gap-12">
           <div className="flex flex-col justify-center space-y-6 text-center lg:text-left">
             <motion.h1
-              className="font-headline text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl lg:text-7xl leading-tight md:leading-tight lg:leading-tight text-primary"
+              className="font-headline text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl lg:text-7xl leading-tight md:leading-tight lg:leading-tight"
               variants={itemVariants}
             >
-              <span className="block">Ace Your Exams.</span>
-              <span className="block">
+              <span className="block text-white">Ace Your Exams.</span>
+              <span className="block text-primary">
                 Powered by&nbsp;
                 <AnimatePresence mode="wait">
                   <motion.span
@@ -52,7 +53,7 @@ function HeroSectionComponent() {
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -10 }}
                     transition={{ duration: 0.3 }}
-                    className="inline-block" // Ensures smooth animation flow with surrounding text
+                    className="inline-block"
                   >
                     {dynamicWords[currentIndex]}
                   </motion.span>
