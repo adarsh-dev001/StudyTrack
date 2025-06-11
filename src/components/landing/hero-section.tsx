@@ -9,9 +9,9 @@ import { ArrowRight, Zap } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 
-const dynamicWords = ["Notes", "Quizzes", "Summaries", "Plans", "Solutions"];
+const dynamicFeatures = ["Notes", "Quizzes", "Summaries", "Study Plans", "Solutions"];
 
-const taglineText = "Master any subject with AI-driven content, personalized study plans, instant doubt solving, and engaging rewards — all on one platform. Crack competitive exams like JEE, NEET, UPSC & more, with confidence.";
+const taglineText = "Master any subject with personalized study plans, instant doubt solving, and engaging rewards — all on one platform. Crack competitive exams like JEE, NEET, UPSC & more, with confidence,";
 
 const itemVariants = {
   hidden: { opacity: 0, y: 20 },
@@ -19,12 +19,12 @@ const itemVariants = {
 };
 
 function HeroSectionComponent() {
-  const [currentIndex, setCurrentIndex] = useState(0);
+  const [featureIndex, setFeatureIndex] = useState(0);
 
   useEffect(() => {
     const interval = setInterval(() => {
-      setCurrentIndex((prevIndex) => (prevIndex + 1) % dynamicWords.length);
-    }, 2500); 
+      setFeatureIndex((prevIndex) => (prevIndex + 1) % dynamicFeatures.length);
+    }, 2500); // Change word every 2.5 seconds
 
     return () => clearInterval(interval);
   }, []);
@@ -40,22 +40,24 @@ function HeroSectionComponent() {
         <div className="grid gap-8 lg:grid-cols-2 lg:items-center xl:gap-12">
           <div className="flex flex-col justify-center space-y-6 text-center lg:text-left">
             <motion.h1
-              className="font-headline text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl lg:text-7xl leading-tight md:leading-tight lg:leading-tight"
+              className="font-headline text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl lg:text-7xl leading-tight md:leading-snug lg:leading-snug text-primary" // Applied text-primary to the whole h1
               variants={itemVariants}
             >
-              <span className="block text-white">Ace Your Exams.</span>
-              <span className="block text-primary">
-                Powered by&nbsp;
+              <span className="block text-foreground"> {/* Changed to text-foreground for white on dark, black on light */}
+                Ace Your Exams.
+              </span>
+              <span className="block">
+                Get AI Generated&nbsp;
                 <AnimatePresence mode="wait">
                   <motion.span
-                    key={dynamicWords[currentIndex]}
+                    key={dynamicFeatures[featureIndex]}
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -10 }}
-                    transition={{ duration: 0.3 }}
-                    className="inline-block"
+                    transition={{ duration: 0.4 }}
+                    className="inline-block" // Ensures the word stays on the same line if possible
                   >
-                    {dynamicWords[currentIndex]}
+                    {dynamicFeatures[featureIndex]}
                   </motion.span>
                 </AnimatePresence>
               </span>
