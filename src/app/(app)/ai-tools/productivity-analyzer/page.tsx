@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useState, useEffect, Suspense } from 'react';
+import React, { useState, useEffect, Suspense, useCallback } from 'react'; // Added useCallback
 import { useForm, type SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Loader2, Lightbulb, Zap, Brain, Award, TrendingUp, Rocket, Target as TargetIcon, Lock, Info, ListChecks, BarChart3, Edit } from 'lucide-react';
+import { Loader2, Lightbulb, Zap, Brain, Award, TrendingUp, Rocket, Target as TargetIcon, Lock, Info, ListChecks, BarChart3, Edit, UserCircle } from 'lucide-react'; // Added UserCircle
 import { analyzeProductivityData, type AnalyzeProductivityDataInput, type AnalyzeProductivityDataOutput } from '@/ai/flows/analyze-productivity-data';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/auth-context';
@@ -19,10 +19,11 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { db } from '@/lib/firebase'; 
 import { doc, getDoc, onSnapshot, Unsubscribe } from 'firebase/firestore'; 
 import type { UserProfileData } from '@/lib/profile-types'; 
-import OnboardingForm from '@/components/onboarding/onboarding-form';
+// Removed OnboardingForm import
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/ui/skeleton';
-import { motion } from 'framer-motion'; // Added framer-motion
+import { motion } from 'framer-motion';
+import Link from 'next/link'; // Added Link
 
 
 const productivityAnalyzerFormSchema = z.object({
@@ -39,35 +40,17 @@ const productivityAnalyzerFormSchema = z.object({
 
 type ProductivityAnalyzerFormData = z.infer<typeof productivityAnalyzerFormSchema>;
 
-function OnboardingFormFallback() {
-  return (
-    <div className="p-6 space-y-6">
-      <Skeleton className="h-8 w-3/4 mx-auto mb-2" />
-      <Skeleton className="h-4 w-full mb-6" />
-      {[...Array(3)].map((_, i) => (
-        <div key={i} className="space-y-2">
-          <Skeleton className="h-5 w-1/3" />
-          <Skeleton className="h-10 w-full" />
-        </div>
-      ))}
-      <div className="flex justify-end gap-2 pt-4">
-        <Skeleton className="h-10 w-24" />
-        <Skeleton className="h-10 w-24" />
-      </div>
-    </div>
-  );
-}
-
+// Removed OnboardingFormFallback function
 
 export default function ProductivityAnalyzerPage() {
-  const { currentUser } = useAuth();
+  const { currentUser, loading: authLoading } = useAuth(); // Added authLoading
   const { toast } = useToast();
   const [analysisResult, setAnalysisResult] = useState<AnalyzeProductivityDataOutput | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   
   const [isLoadingProfile, setIsLoadingProfile] = useState(true);
   const [userProfile, setUserProfile] = useState<UserProfileData | null>(null);
-  const [showOnboardingModal, setShowOnboardingModal] = useState(false);
+  // Removed showOnboardingModal state
   
   const [unlockState, setUnlockState] = useState<UnlockStatus | null>(null);
   const [isLoadingUnlockStatus, setIsLoadingUnlockStatus] = useState(true); 
@@ -82,16 +65,9 @@ export default function ProductivityAnalyzerPage() {
       const profileDocRef = doc(db, 'users', currentUser.uid, 'userProfile', 'profile');
       unsubscribeProfile = onSnapshot(profileDocRef, (profileSnap) => {
         if (profileSnap.exists()) {
-          const data = profileSnap.data() as UserProfileData;
-          setUserProfile(data);
-          if (!data.onboardingCompleted) {
-            setShowOnboardingModal(true);
-          } else {
-            setShowOnboardingModal(false);
-          }
+          setUserProfile(profileSnap.data() as UserProfileData);
         } else {
-          setUserProfile(null);
-          setShowOnboardingModal(true); 
+          setUserProfile(null); 
         }
         setIsLoadingProfile(false);
       }, (err) => {
@@ -100,21 +76,20 @@ export default function ProductivityAnalyzerPage() {
         setIsLoadingProfile(false);
       });
     } else {
-      setIsLoadingProfile(false);
+      setIsLoadingProfile(false); // Not logged in, so no profile to load
+      setUserProfile(null);
     }
     return () => {
       if (unsubscribeProfile) unsubscribeProfile();
     };
   }, [currentUser?.uid, toast]);
 
-  const handleOnboardingSuccess = () => {
-    setShowOnboardingModal(false);
-  };
-
+  // Removed handleOnboardingSuccess function
 
   useEffect(() => {
-    if (!userProfile?.onboardingCompleted || !currentUser?.uid) { 
+    if (!currentUser?.uid) { 
       setIsLoadingUnlockStatus(false); 
+      setUnlockState(null);
       return;
     }
 
@@ -130,8 +105,17 @@ export default function ProductivityAnalyzerPage() {
         setHasShownUnlockToast(true);
       }
       setIsLoadingUnlockStatus(false);
+    }).catch(error => {
+        console.error("Error fetching unlock status:", error);
+        toast({ title: "Error", description: "Could not determine access status for AI Analyzer.", variant: "destructive" });
+        setIsLoadingUnlockStatus(false);
+        setUnlockState({ // Default to locked on error
+            unlocked: false, displayProgress: 0, progressTarget: 7, 
+            message: "Error checking unlock status.", unlockReason: 'none', 
+            studyStreakCount: 0, interactionStreakCount: 0
+        });
     });
-  }, [currentUser?.uid, toast, hasShownUnlockToast, unlockState, userProfile?.onboardingCompleted]); 
+  }, [currentUser?.uid, toast, hasShownUnlockToast, unlockState]); // unlockState was in deps, keeping it to re-evaluate if it changes externally
 
   const form = useForm<ProductivityAnalyzerFormData>({
     resolver: zodResolver(productivityAnalyzerFormSchema),
@@ -170,7 +154,7 @@ export default function ProductivityAnalyzerPage() {
     try {
       const result: AnalyzeProductivityDataOutput = await analyzeProductivityData(inputForAI);
       setAnalysisResult(result);
-      setIsInputFormCollapsed(true); // Collapse form on success
+      setIsInputFormCollapsed(true); 
       toast({
         title: 'Analysis Complete! 📊',
         description: 'Your productivity insights are ready.',
@@ -178,7 +162,7 @@ export default function ProductivityAnalyzerPage() {
     } catch (error: any) {
       console.error('Error analyzing productivity data:', error);
       setAnalysisResult(null);
-      setIsInputFormCollapsed(false); // Keep form open on error
+      setIsInputFormCollapsed(false); 
       toast({
         title: 'Error Analyzing Data 😥',
         description: error.message || 'An unexpected error occurred.',
@@ -189,49 +173,67 @@ export default function ProductivityAnalyzerPage() {
     }
   };
 
-  if (isLoadingProfile) {
+  if (authLoading || (currentUser && isLoadingProfile)) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[calc(100vh-200px)] text-center p-6">
         <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
-        <p className="text-muted-foreground">Checking profile status...</p>
+        <p className="text-muted-foreground">Loading AI Productivity Analyzer...</p>
       </div>
     );
   }
 
-  if (showOnboardingModal && currentUser) {
-     return (
-      <Dialog open={showOnboardingModal} onOpenChange={(isOpen) => {
-          if (!currentUser) return;
-          if (!isOpen && userProfile && !userProfile.onboardingCompleted) {
-             setShowOnboardingModal(true); return;
-          }
-          setShowOnboardingModal(isOpen);
-        }}>
-        <DialogContent className="max-w-2xl w-[95vw] max-h-[90vh] p-0">
-          <DialogHeader className="p-4 sm:p-6 border-b text-center shrink-0">
-            <DialogTitle className="text-xl sm:text-2xl">Complete Your Profile</DialogTitle>
-            <DialogDescription className="text-xs sm:text-sm">
-               Please provide your details to personalize your StudyTrack experience and unlock AI features.
-            </DialogDescription>
-          </DialogHeader>
-           <ScrollArea className="h-[calc(90vh-8rem)] p-4 sm:p-6">
-             <Suspense fallback={<OnboardingFormFallback />}>
-                <OnboardingForm userId={currentUser.uid} onComplete={handleOnboardingSuccess} />
-             </Suspense>
-          </ScrollArea>
-        </DialogContent>
-      </Dialog>
+  if (!currentUser && !authLoading) {
+    return (
+        <div className="flex flex-col items-center justify-center min-h-[calc(100vh-200px)] text-center p-6">
+            <Card className="max-w-md w-full shadow-xl">
+                <CardHeader>
+                    <div className="mx-auto bg-primary/10 p-3 rounded-full w-fit mb-3">
+                        <UserCircle className="h-10 w-10 text-primary" />
+                    </div>
+                    <CardTitle className="text-2xl">Access Denied</CardTitle>
+                    <CardDescription>Please log in to use the AI Productivity Analyzer.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <Button asChild className="w-full sm:w-auto">
+                        <Link href="/login">Log In</Link>
+                    </Button>
+                </CardContent>
+            </Card>
+        </div>
     );
   }
   
-  if (!userProfile?.onboardingCompleted && !isLoadingProfile && currentUser) { 
-     return (
-        <div className="flex flex-col items-center justify-center min-h-[calc(100vh-200px)] text-center p-6">
-            <p className="text-muted-foreground">Please complete your profile to access the Productivity Analyzer.</p>
-        </div>
-     );
+  // This explicit check for userProfile might seem redundant due to isLoadingProfile,
+  // but it ensures userProfile is not null before trying to access its properties.
+  if (currentUser && !isLoadingProfile && userProfile === null) {
+      // This case means the profile doc doesn't exist in Firestore yet, but the user is logged in.
+      // Gentle guidance for initial setup.
+      return (
+          <div className="flex flex-col items-center justify-center min-h-[calc(100vh-200px)] text-center p-6">
+              <Card className="max-w-md w-full shadow-xl">
+                  <CardHeader>
+                       <div className="mx-auto bg-primary/10 p-3 rounded-full w-fit mb-3">
+                           <Lightbulb className="h-10 w-10 text-primary" />
+                       </div>
+                      <CardTitle className="text-2xl">Profile Setup Needed</CardTitle>
+                      <CardDescription>
+                          To use AI tools effectively, please complete a quick profile setup.
+                      </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                       <p className="text-sm text-muted-foreground">
+                          You can do this by visiting the homepage and clicking "Explore AI Tools", or by going to your <Link href="/settings" className="text-primary underline hover:text-primary/80">Settings</Link>.
+                       </p>
+                      <Button asChild className="w-full sm:w-auto">
+                          <Link href="/">Go to Homepage</Link>
+                      </Button>
+                  </CardContent>
+              </Card>
+          </div>
+      );
   }
-  
+
+
   if (isLoadingUnlockStatus || !unlockState) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[calc(100vh-200px)] text-center p-6">
@@ -314,6 +316,21 @@ export default function ProductivityAnalyzerPage() {
         </p>
       </div>
       
+      {currentUser && userProfile && !userProfile.onboardingCompleted && !userProfile.quickOnboardingCompleted && (
+        <Card className="border-amber-500/50 bg-amber-500/10">
+          <CardHeader>
+            <CardTitle className="text-amber-700 dark:text-amber-300 text-md flex items-center">
+              <Lightbulb className="mr-2 h-5 w-5" /> Enhance Your Experience
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-amber-600 dark:text-amber-400">
+              To get even more personalized AI insights across all tools, consider completing your full profile in <Link href="/settings" className="underline hover:text-amber-500">Settings</Link> or use the 'Explore AI Tools' feature on the homepage for a quick setup.
+            </p>
+          </CardContent>
+        </Card>
+      )}
+
       {isInputFormCollapsed && (
         <motion.div
           className="flex justify-center pt-2"
