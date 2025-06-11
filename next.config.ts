@@ -1,3 +1,4 @@
+
 // next.config.ts
 
 import type { NextConfig } from 'next';
@@ -29,7 +30,7 @@ const nextConfig: NextConfig = {
       { protocol: 'https', hostname: 'i0.wp.com', pathname: '/**' },
     ],
   },
-  pageExtensions: ['js', 'jsx', 'ts', 'tsx'],
+  pageExtensions: ['js', 'jsx', 'ts', 'tsx'], 
 };
 
 export default withPWA({
@@ -135,3 +136,4 @@ export default withPWA({
     },
   ],
 })(nextConfig);
+
