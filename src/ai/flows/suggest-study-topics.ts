@@ -66,13 +66,28 @@ const SuggestStudyTopicsOutputSchema = z.object({
 });
 export type SuggestStudyTopicsOutput = z.infer<typeof SuggestStudyTopicsOutputSchema>;
 
+// Simple in-memory cache with TTL
+const topicSuggestionsCache = new Map<string, { data: SuggestStudyTopicsOutput, timestamp: number }>();
+const CACHE_TTL_MS = 1 * 60 * 60 * 1000; // 1 hour
+
 export async function suggestStudyTopics(input: SuggestStudyTopicsInput): Promise<SuggestStudyTopicsOutput> {
-  return suggestStudyTopicsFlow(input);
+  const cacheKey = JSON.stringify(Object.entries(input).sort()); // Create a stable cache key
+  const cachedEntry = topicSuggestionsCache.get(cacheKey);
+
+  if (cachedEntry && (Date.now() - cachedEntry.timestamp < CACHE_TTL_MS)) {
+    console.log('Returning cached study topic suggestions for key:', cacheKey);
+    return cachedEntry.data;
+  }
+
+  console.log('Fetching fresh study topic suggestions for key:', cacheKey);
+  const result = await suggestStudyTopicsFlow(input);
+  topicSuggestionsCache.set(cacheKey, { data: result, timestamp: Date.now() });
+  return result;
 }
 
 const prompt = ai.definePrompt({
   name: 'suggestStudyTopicsPrompt',
-  input: {schema: SuggestStudyTopicsPromptInputSchema}, 
+  input: {schema: SuggestStudyTopicsPromptInputSchema},
   output: {schema: SuggestStudyTopicsOutputSchema},
   prompt: `You are an AI study assistant for students preparing for competitive exams like JEE, NEET, CAT, SSC, and Banking exams.
 {{#if userName}}Hello {{userName}}!{{/if}} Let's craft a study plan for you.
@@ -92,33 +107,31 @@ User Request Type: syllabus_suggester
 User’s Query/Need: "Generate a detailed, topic-wise weekly study plan for EACH selected subject, broken down into manageable phases leading up to the target completion date. Prioritize high-weightage topics first and consider my preparation level, weak areas, and overall goals."
 
 Instructions:
-Based on the above student profile and request type, provide a highly relevant and personalized output. Your response should:
-- Match the syllabus and difficulty level of the user’s exam ({{{examType}}}).
-- Respect their weak areas ({{{weakTopics}}}), study time ({{{timeAvailablePerDay}}} hours/day), preparation level ({{{preparationLevel}}}), target date ({{{targetDate}}}), and stated goals ({{{goals}}}).
-- Be clear, concise, and practical for the user.
-- Break down the syllabus into phases within the weekly schedule for each subject. The topics listed per week should naturally progress through different stages of learning (e.g., foundational, core concepts, advanced topics, revision).
-- Prioritize high-weightage topics typical for the {{{examType}}} exam, adjusted based on the user's preparation level and weak topics.
-- The schedule for each subject must be an array of weekly plan objects, each with 'weekLabel' (e.g., "Week 1", "Phase 1 - Week 2") and 'topics' (array of strings).
-- For each week, list topics under 'topics'. Indicate estimated study time for topics if possible, or ensure the weekly load is reasonable.
-- The number of weeks should be realistic based on the target date, current date, and average daily study time. Calculate total days available from {{{currentDate}}} to {{{targetDate}}} for planning.
+Based on the student profile and request:
+- Syllabus and difficulty must match the exam ({{{examType}}}).
+- Respect weak areas ({{{weakTopics}}}), study time ({{{timeAvailablePerDay}}} hours/day), preparation level ({{{preparationLevel}}}), target date ({{{targetDate}}}), and goals ({{{goals}}}).
+- Plan should be clear, concise, and practical.
+- Break down syllabus into phases within weekly schedule for each subject, with topics progressing (foundational, core, advanced, revision).
+- Prioritize high-weightage topics for {{{examType}}}, adjusted for user's level and weak topics.
+- Schedule for each subject: array of weekly plans ('weekLabel', 'topics' array).
+- List topics under 'topics' per week. Estimate study time or ensure reasonable load.
+- Calculate total days available (from {{{currentDate}}} to {{{targetDate}}}) for realistic week count.
 
 ---
 **Content Generation Guidelines (for string values in JSON):**
 - For \`overallFeedback\`, \`SubjectSyllabusSchema.summary\`, and individual \`topics\` strings:
-    - Use clear, engaging, and motivational language.
+    - Use clear, engaging, motivational language.
     - MAY use **bold** (\`**text**\`) or _italic_ (\`*text*\`) for emphasis.
-    - MAY incorporate relevant emojis (e.g., 💡, ✅, 🚀, 🎯).
-- Example Topic String: "**Newton's Laws** (Core) - *6h* 🚀. Focus on problem-solving."
+    - MAY use relevant emojis (e.g., 💡, ✅, 🚀, 🎯).
+- Example Topic: "**Newton's Laws** (Core) - *6h* 🚀. Focus on problem-solving."
 ---
 
-Output a JSON object strictly conforming to the SuggestStudyTopicsOutputSchema.
-
-The 'generatedSyllabus' array MUST contain one object for EACH subject listed in the user's input (Subjects: {{#each subjects}}{{{this}}}{{#unless @last}}, {{/unless}}{{/each}}).
-Each of these objects within 'generatedSyllabus' MUST have:
-1.  A \`subject\` field (string, exactly matching one of the user's selected subjects).
-2.  A \`schedule\` field (array of weekly plan objects as defined in the schema).
-3.  A \`summary\` field (string, providing a brief summary or key focus for THIS subject's plan. If no specific summary comes to mind, provide a generic encouragement or note about the subject, ensuring this field is never empty).
-
+Output JSON strictly conforming to SuggestStudyTopicsOutputSchema.
+'generatedSyllabus' array MUST contain one object for EACH subject in input (Subjects: {{#each subjects}}{{{this}}}{{#unless @last}}, {{/unless}}{{/each}}).
+Each object in 'generatedSyllabus' MUST have:
+1.  \`subject\` field (string, matching a selected subject).
+2.  \`schedule\` field (array of weekly plan objects as per schema).
+3.  \`summary\` field (string, brief summary/focus for THIS subject's plan. If none, provide generic encouragement/note. MUST NOT be empty).
 Optionally, include an 'overallFeedback' string for the entire plan.
 
 Example for a single subject in 'generatedSyllabus':
@@ -131,17 +144,17 @@ Example for a single subject in 'generatedSyllabus':
   "summary": "Phase 1 focuses on building a strong foundation in mechanics. **Practice numericals daily!** Consider your {{{preparationLevel}}} level when tackling these."
 }
 
-Generate the syllabus now. Ensure all subjects requested by the user are present in the output with all required fields.
+Generate the syllabus now. Ensure all requested subjects are present in the output with all required fields.
 `,
 });
 
 const suggestStudyTopicsFlow = ai.defineFlow(
   {
     name: 'suggestStudyTopicsFlow',
-    inputSchema: SuggestStudyTopicsInputSchema, 
+    inputSchema: SuggestStudyTopicsInputSchema,
     outputSchema: SuggestStudyTopicsOutputSchema,
   },
-  async (input: SuggestStudyTopicsInput) => {
+  async (input: SuggestStudyTopicsInput): Promise<SuggestStudyTopicsOutput> => {
     const currentDateFormatted = format(new Date(), 'yyyy-MM-dd');
     const promptInput = {
       ...input,
@@ -151,7 +164,6 @@ const suggestStudyTopicsFlow = ai.defineFlow(
     if (!output) {
         throw new Error("The AI model did not return valid syllabus data. Please try adjusting your inputs or try again later.");
     }
-    // Basic validation to ensure all requested subjects have an entry with a 'subject' field
     const returnedSubjects = new Set(output.generatedSyllabus.map(s => s.subject));
     for (const requestedSubject of input.subjects) {
         if (!returnedSubjects.has(requestedSubject)) {
@@ -159,14 +171,14 @@ const suggestStudyTopicsFlow = ai.defineFlow(
             throw new Error(`The AI did not generate a syllabus for the subject: ${requestedSubject}. Please try again or adjust inputs.`);
         }
     }
-    // Ensure summary is present for each syllabus item, as per strengthened prompt
     for (const syllabusItem of output.generatedSyllabus) {
         if (syllabusItem.summary === undefined || syllabusItem.summary.trim() === "") {
             console.warn(`AI returned an empty or undefined summary for subject: ${syllabusItem.subject}. Setting a default.`);
-            syllabusItem.summary = `Focus on consistent study for ${syllabusItem.subject}.`; // Provide a default if AI fails
+            syllabusItem.summary = `Focus on consistent study for ${syllabusItem.subject}.`;
         }
     }
     return output;
   }
 );
 
+    

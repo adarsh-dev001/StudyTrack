@@ -49,56 +49,43 @@ const summarizeStudyMaterialPrompt = ai.definePrompt({
   name: 'summarizeStudyMaterialPrompt',
   input: {schema: SummarizeStudyMaterialInputSchema},
   output: {schema: SummarizeStudyMaterialOutputSchema},
-  prompt: `You are an AI study assistant for students preparing for competitive exams.
-{{#if userName}}Hello {{userName}}!{{/if}} Let's break down this study material on '{{topic}}'.
+  prompt: `You are an AI study assistant for competitive exam preparation.
+{{#if userName}}Hello {{userName}}! {{/if}}Process this study material on '{{topic}}'.
 
-Student Profile (Context):
-{{#if examType}}- Exam Focus: {{examType}}{{else}}- Exam Focus: General{{/if}}
-{{#if userLevel}}- Preparation Level: {{userLevel}}{{else}}- Preparation Level: Not specified{{/if}}
+Context:
+{{#if examType}}- Exam: {{examType}}{{else}}- Exam: General{{/if}}
+{{#if userLevel}}- Level: {{userLevel}}{{else}}- Level: Not specified{{/if}}
 
-User Request Type: material_processor
-User's Query/Need (Material to Process):
+Material to Process:
 ---
 {{{material}}}
 ---
 
 Instructions:
-Based on the student's profile context, the topic, and the provided material, please perform the following tasks:
-1.  **Summary**: Write a concise summary of the material (100-200 words). Tailor focus to exam prep for {{#if examType}}{{examType}}{{else}}their exams{{/if}} at a {{#if userLevel}}{{userLevel}}{{else}}general{{/if}} level.
-2.  **Key Concepts**: List 3-7 key concepts. Highlight concepts pertinent to the {{#if examType}}{{examType}}{{else}}general competitive exam{{/if}} context.
-3.  **Structured Notes**: Create comprehensive, well-organized study notes from the material.
-    *   **Formatting**: Use Markdown extensively and correctly.
-        *   Employ headings (e.g., \`## Main Section Title\`) and subheadings (\`### Key Area\`) to structure content logically.
-        *   Use bullet points (\`* \` or \`- \`) for lists, steps, or key details. Nested lists are good for complex topics.
-        *   Use bold (\`**text**\`) for important keywords, definitions, or terms.
-        *   Use italics (\`*text*\`) for emphasis or sub-definitions.
-        *   Ensure notes are easy to read, breaking down complex info into digestible chunks.
-        *   Make it visually appealing and suitable for direct study use.
-    *   **Content**: Notes should be more detailed than the summary, covering main sections comprehensively and accurately reflecting the input material.
-4.  **Multiple Choice Questions**: Generate 3-5 MCQs based *only* on the material. Difficulty and style appropriate for a {{#if userLevel}}{{userLevel}}{{else}}general{{/if}} student aiming for {{#if examType}}{{examType}}{{else}}exams{{/if}}. For each MCQ:
-    *   Provide a clear \`questionText\`.
-    *   Provide 4 distinct answer \`options\`.
-    *   Indicate the 0-based \`correctAnswerIndex\`.
-    *   Provide a brief \`explanation\` for the correct answer.
+Generate the following based on the material:
+1.  **Summary**: Concise (100-200 words). Focus relevant to {{#if examType}}{{examType}}{{else}}exams{{/if}} at {{#if userLevel}}{{userLevel}}{{else}}a general{{/if}} level.
+2.  **Key Concepts**: 3-7 bullet points. Prioritize concepts for {{#if examType}}{{examType}}{{else}}competitive exams{{/if}}.
+3.  **Structured Notes**: Comprehensive, well-organized Markdown notes (headings ##, ###; lists *, -; bold **text**; italic *text*). Notes should be detailed, readable, and cover main sections.
+4.  **Multiple Choice Questions**: 3-5 MCQs *solely from the material*. Difficulty appropriate for {{#if userLevel}}{{userLevel}}{{else}}a general{{/if}} student for {{#if examType}}{{examType}}{{else}}exams{{/if}}. Each MCQ: \`questionText\`, 4 \`options\`, 0-based \`correctAnswerIndex\`, brief \`explanation\`.
 
 ---
-Content Generation Guidelines (for all string values in JSON):
-- Authenticity & Validity: All content must accurately reflect the provided \`material\` and \`topic\`.
-- Structure & Formatting:
-    - For \`structuredNotes\`: Adhere strictly to Markdown (headings, lists, bold, italic).
-    - For \`summary\`, \`keyConcepts\`, MCQ \`questionText\`/\`explanation\`: Use concise language. MAY use **bold** or *italics*.
-    - Relevant emojis (e.g., 💡, ✅, 🎯, 🤔, 📚, 🔑) MAY be used sparingly and thematically to enhance engagement.
-- Tone: Maintain a friendly, focused, and helpful tone.
-- Clarity & Readability: Ensure all text is clear, concise, and easy to understand. MCQs should be unambiguous.
+Content Guidelines (for JSON string values):
+- Authenticity: All content must strictly reflect the input \`material\` and \`topic\`.
+- Markdown for Notes: Use headings, lists, bold, italics correctly.
+- Other Text: Concise. May use **bold** or *italics*. Relevant emojis (💡, ✅, 🎯, 🤔, 📚, 🔑) sparingly.
+- Tone: Friendly, focused, helpful.
+- Clarity: Clear, easy to understand. Unambiguous MCQs.
 ---
 
-Output a JSON object strictly conforming to the SummarizeStudyMaterialOutputSchema.
-Ensure the 'structuredNotes' field is populated with well-formatted Markdown notes.
-Example for structuredNotes field (ensure to use newlines '\\n' correctly within the JSON string value):
-"## Main Topic 1\\n\\n- **Key Point 1.1**: Detail about this point.💡\\n  - *Sub-point 1.1.1*: Further detail.\\n\\n## Main Topic 2 🏛️\\n\\n- **Concept A**: Explanation of Concept A.\\n- **Concept B**: Explanation of Concept B."
-Focus on extracting the most important information and creating relevant, challenging MCQs and notes.
+Output JSON strictly conforming to SummarizeStudyMaterialOutputSchema.
+'structuredNotes' must be well-formatted Markdown. Example:
+"## Topic 1\\n\\n- **Point 1.1**: Detail 💡.\\n  - *Sub-point 1.1.1*: More detail.\\n\\n## Topic 2 🏛️\\n\\n- **Concept A**: Explanation."
+Extract crucial information for relevant, challenging notes and MCQs.
 `,
 });
+
+const MAX_RETRIES = 3;
+const INITIAL_DELAY_MS = 1000;
 
 const summarizeStudyMaterialFlow = ai.defineFlow(
   {
@@ -107,22 +94,44 @@ const summarizeStudyMaterialFlow = ai.defineFlow(
     outputSchema: SummarizeStudyMaterialOutputSchema,
   },
   async input => {
-    const {output} = await summarizeStudyMaterialPrompt(input);
-    if (!output) {
-      throw new Error('The AI model did not return a valid output. Please try again.');
-    }
-    // Validate that options array length matches correctAnswerIndex bounds
-    output.multipleChoiceQuestions.forEach((mcq, index) => {
-      if (mcq.correctAnswerIndex < 0 || mcq.correctAnswerIndex >= mcq.options.length) {
-         console.error(`Invalid correctAnswerIndex for question ${index + 1}: "${mcq.questionText}". Index: ${mcq.correctAnswerIndex}, Options: ${mcq.options.length}. Setting to 0.`);
-        mcq.correctAnswerIndex = 0; // Fallback to first option to prevent crash
+    let attempts = 0;
+    let delay = INITIAL_DELAY_MS;
+
+    while (attempts < MAX_RETRIES) {
+      try {
+        const { output } = await summarizeStudyMaterialPrompt(input);
+        if (!output) {
+          throw new Error('AI model did not return a valid output structure.');
+        }
+        // Validate that options array length matches correctAnswerIndex bounds
+        output.multipleChoiceQuestions.forEach((mcq, index) => {
+          if (mcq.correctAnswerIndex < 0 || mcq.correctAnswerIndex >= mcq.options.length) {
+            console.error(`Invalid correctAnswerIndex for question ${index + 1}: "${mcq.questionText}". Index: ${mcq.correctAnswerIndex}, Options: ${mcq.options.length}. Setting to 0.`);
+            mcq.correctAnswerIndex = 0; // Fallback to first option to prevent crash
+          }
+        });
+        if (!output.structuredNotes || output.structuredNotes.trim() === "") {
+            console.warn("AI did not return structured notes or returned empty notes. Setting a default placeholder.");
+            output.structuredNotes = "## Notes\n\n- The AI could not generate structured notes for this material at the moment. Please try again or with different material.\n- Ensure the input material is clear and sufficiently long.";
+        }
+        return output; // Success
+      } catch (error: any) {
+        attempts++;
+        console.error(`Attempt ${attempts} failed for summarizeStudyMaterialFlow: ${error.message}`);
+        if (attempts >= MAX_RETRIES) {
+          // Log the final error and re-throw to be caught by the caller
+          console.error(`Failed to summarize material after ${MAX_RETRIES} attempts for input:`, input);
+          throw new Error(`Failed to summarize material after ${MAX_RETRIES} attempts: ${error.message}`);
+        }
+        // Wait for the delay before retrying
+        await new Promise(resolve => setTimeout(resolve, delay));
+        delay *= 2; // Exponential backoff
       }
-    });
-    if (!output.structuredNotes || output.structuredNotes.trim() === "") {
-        console.warn("AI did not return structured notes or returned empty notes. Setting a default placeholder.");
-        output.structuredNotes = "## Notes\n\n- The AI could not generate structured notes for this material at the moment. Please try again or with different material.\n- Ensure the input material is clear and sufficiently long.";
     }
-    return output;
+    // This line should theoretically not be reached if the loop logic correctly re-throws the error.
+    // Added as a safeguard.
+    throw new Error('Exhausted retries for summarizeStudyMaterialFlow without success.');
   }
 );
 
+    
