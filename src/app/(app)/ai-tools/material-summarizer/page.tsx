@@ -20,7 +20,7 @@ import { doc, getDoc, onSnapshot, Unsubscribe } from 'firebase/firestore';
 import type { UserProfileData } from '@/lib/profile-types';
 import { motion, AnimatePresence } from 'framer-motion'; 
 import * as pdfjsLib from 'pdfjs-dist';
-import OnboardingGate from '@/components/onboarding/onboarding-gate';
+import OnboardingGate from '@/components/onboarding/OnboardingRequiredGate'; // Corrected import path
 import { Skeleton } from '@/components/ui/skeleton'; // Re-added for fallbacks
 
 const SummarizerResultsDisplay = React.lazy(() => import('@/components/ai-tools/material-summarizer/SummarizerResultsDisplay'));

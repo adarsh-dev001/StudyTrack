@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
-import { BookOpenText, Loader2, Mail, Lock, Eye, EyeOff } from 'lucide-react';
+import { BookOpenText, Loader2, Mail, Lock, Eye, EyeOff, X } from 'lucide-react'; // Added X
 import { useAuth } from '@/contexts/auth-context';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import React, { useState } from 'react';
@@ -56,10 +56,27 @@ export default function SignupPage() {
   const togglePasswordVisibility = () => setShowPassword(!showPassword);
   const toggleConfirmPasswordVisibility = () => setShowConfirmPassword(!showConfirmPassword);
 
+  const handleClose = () => {
+    if (window.history.length > 1) {
+      router.back();
+    } else {
+      router.push('/');
+    }
+  };
+
   return (
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-sky-100 via-indigo-50 to-purple-100 dark:from-sky-900 dark:via-indigo-950 dark:to-purple-900 p-4">
-      <Card className="w-full max-w-md shadow-xl rounded-lg">
-        <CardHeader className="text-center p-6">
+      <Card className="w-full max-w-md shadow-xl rounded-lg relative">
+        <Button
+            variant="ghost"
+            size="icon"
+            onClick={handleClose}
+            className="absolute top-3 right-3 text-muted-foreground hover:text-destructive z-10 h-7 w-7 sm:h-8 sm:w-8"
+            aria-label="Close"
+        >
+            <X className="h-5 w-5" />
+        </Button>
+        <CardHeader className="text-center p-6 pt-8 sm:pt-10"> {/* Added padding top for close button space */}
           <Link href="/" className="inline-flex items-center justify-center gap-2 mb-4">
             <BookOpenText className="h-8 w-8 text-primary" />
             <span className="font-headline text-3xl font-bold text-foreground">StudyTrack</span>
@@ -201,4 +218,3 @@ export default function SignupPage() {
     </div>
   );
 }
-
