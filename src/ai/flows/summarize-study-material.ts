@@ -39,10 +39,27 @@ const SummarizeStudyMaterialOutputSchema = z.object({
 
 export type SummarizeStudyMaterialOutput = z.infer<typeof SummarizeStudyMaterialOutputSchema>;
 
+// Simple in-memory cache with TTL
+const summaryCache = new Map<string, { data: SummarizeStudyMaterialOutput, timestamp: number }>();
+const CACHE_TTL_MS = 30 * 60 * 1000; // 30 minutes
+
 export async function summarizeStudyMaterial(
   input: SummarizeStudyMaterialInput
 ): Promise<SummarizeStudyMaterialOutput> {
-  return summarizeStudyMaterialFlow(input);
+  // Create a stable cache key (important: order of keys matters if not sorted)
+  // For complex objects or very long strings in input.material, consider a hash for the key.
+  const cacheKey = JSON.stringify(Object.entries(input).sort());
+  const cachedEntry = summaryCache.get(cacheKey);
+
+  if (cachedEntry && (Date.now() - cachedEntry.timestamp < CACHE_TTL_MS)) {
+    console.log('Returning cached summary for topic:', input.topic);
+    return cachedEntry.data;
+  }
+  
+  console.log('Fetching fresh summary for topic:', input.topic);
+  const result = await summarizeStudyMaterialFlow(input);
+  summaryCache.set(cacheKey, { data: result, timestamp: Date.now() });
+  return result;
 }
 
 const summarizeStudyMaterialPrompt = ai.definePrompt({
@@ -120,7 +137,7 @@ const summarizeStudyMaterialFlow = ai.defineFlow(
         console.error(`Attempt ${attempts} failed for summarizeStudyMaterialFlow: ${error.message}`);
         if (attempts >= MAX_RETRIES) {
           // Log the final error and re-throw to be caught by the caller
-          console.error(`Failed to summarize material after ${MAX_RETRIES} attempts for input:`, input);
+          console.error(`Failed to summarize material after ${MAX_RETRIES} attempts for input:`, input.topic);
           throw new Error(`Failed to summarize material after ${MAX_RETRIES} attempts: ${error.message}`);
         }
         // Wait for the delay before retrying
@@ -133,5 +150,3 @@ const summarizeStudyMaterialFlow = ai.defineFlow(
     throw new Error('Exhausted retries for summarizeStudyMaterialFlow without success.');
   }
 );
-
-    
