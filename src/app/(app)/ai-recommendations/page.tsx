@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useEffect, Suspense, useCallback } from 'react';
@@ -22,6 +21,8 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Loader2, Wand2, Brain, ListChecks, CalendarClock, Flag, Target as TargetIcon, Goal, Lightbulb, Zap, ShieldCheck, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
+import OnboardingGate from '@/components/onboarding/onboarding-gate';
+import { useToast } from '@/components/ui/use-toast';
 
 function OnboardingFormFallback() {
   return (
@@ -89,9 +90,12 @@ function RecommendationsSkeleton() {
 
 export default function AiRecommendationsPage() {
   const { currentUser } = useAuth();
-  const [profile, setProfile] = useState<UserProfileData | null>(null);
-  const [recommendations, setRecommendations] = useState<PersonalizedRecommendationsOutput | null>(null);
+  const { toast } = useToast();
+  const [isLoading, setIsLoading] = useState(false);
   const [isLoadingProfile, setIsLoadingProfile] = useState(true);
+  const [profile, setProfile] = useState<UserProfileData | null>(null);
+  const [isInputFormCollapsed, setIsInputFormCollapsed] = useState(false);
+  const [recommendations, setRecommendations] = useState<PersonalizedRecommendationsOutput | null>(null);
   const [isLoadingRecommendations, setIsLoadingRecommendations] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showOnboardingModal, setShowOnboardingModal] = useState(false);
@@ -136,37 +140,26 @@ export default function AiRecommendationsPage() {
     if (currentUser?.uid) {
       setIsLoadingProfile(true);
       const profileDocRef = doc(db, 'users', currentUser.uid, 'userProfile', 'profile');
-
       unsubscribeProfile = onSnapshot(profileDocRef, (profileSnap) => {
         if (profileSnap.exists()) {
-          const userProfileData = profileSnap.data() as UserProfileData;
-          setProfile(userProfileData);
-          if (!userProfileData.onboardingCompleted) {
-            setShowOnboardingModal(true);
-          } else {
-            setShowOnboardingModal(false);
-            if (!recommendations && !isLoadingRecommendations && !error) {
-              fetchRecommendations(userProfileData);
-            }
-          }
+          const data = profileSnap.data() as UserProfileData;
+          setProfile(data);
         } else {
           setProfile(null);
-          setShowOnboardingModal(true);
         }
         setIsLoadingProfile(false);
       }, (err) => {
         console.error("Error fetching profile:", err);
-        setError("Could not load your profile.");
+        toast({ title: "Error", description: "Could not load your profile.", variant: "destructive" });
         setIsLoadingProfile(false);
       });
     } else {
-        setIsLoadingProfile(false);
-        setShowOnboardingModal(false); 
+      setIsLoadingProfile(false);
     }
-
-    return () => unsubscribeProfile?.();
-  }, [currentUser?.uid, fetchRecommendations, recommendations, isLoadingRecommendations, error]);
-
+    return () => {
+      if (unsubscribeProfile) unsubscribeProfile();
+    };
+  }, [currentUser?.uid, toast]);
 
   const handleOnboardingComplete = async () => { 
     setShowOnboardingModal(false);
@@ -188,41 +181,23 @@ export default function AiRecommendationsPage() {
     }
   };
 
-
   if (isLoadingProfile) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[calc(100vh-200px)] text-center p-6">
         <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
-        <p className="text-muted-foreground">Loading Your Profile...</p>
+        <p className="text-muted-foreground">Loading AI Recommendations...</p>
       </div>
     );
   }
 
-  if (showOnboardingModal && currentUser) {
-    return (
-      <Dialog open={showOnboardingModal} onOpenChange={(isOpen) => {
-          if (!currentUser) return; 
-          if (!isOpen && profile && !profile.onboardingCompleted) {
-             setShowOnboardingModal(true); return;
-          }
-          setShowOnboardingModal(isOpen);
-        }}>
-        <DialogContent className="max-w-2xl w-[95vw] max-h-[90vh] p-0">
-          <DialogHeader className="p-4 sm:p-6 border-b text-center shrink-0">
-            <DialogTitle className="text-xl sm:text-2xl">Complete Your Profile</DialogTitle>
-            <DialogDescription className="text-xs sm:text-sm">
-              Please provide your details to personalize your StudyTrack experience and unlock AI features.
-            </DialogDescription>
-          </DialogHeader>
-          <ScrollArea className="h-[calc(90vh-8rem)] p-4 sm:p-6">
-            <Suspense fallback={<OnboardingFormFallback />}>
-              <OnboardingForm userId={currentUser.uid} onComplete={handleOnboardingComplete} />
-            </Suspense>
-          </ScrollArea>
-        </DialogContent>
-      </Dialog>
-    );
+  if (!profile?.hasCompletedOnboarding) {
+    return <OnboardingGate featureName="AI Recommendations" hasPaid={profile?.hasPaid || false} />;
   }
+
+  const inputFormVariants = {
+    expanded: { opacity: 1, height: 'auto', scaleY: 1, marginTop: '0rem', marginBottom: '0rem' },
+    collapsed: { opacity: 0, height: 0, scaleY: 0.95, marginTop: '0rem', marginBottom: '0rem' }
+  };
 
   return (
     <div className="w-full space-y-6 sm:space-y-8 max-w-4xl mx-auto">

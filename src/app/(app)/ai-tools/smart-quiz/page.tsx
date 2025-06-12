@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useEffect, useRef, Suspense, useCallback } from 'react';
@@ -25,6 +24,7 @@ import type { UserProfileData } from '@/lib/profile-types';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import OnboardingForm from '@/components/onboarding/onboarding-form';
 import { Skeleton } from '@/components/ui/skeleton';
+import OnboardingGate from '@/components/onboarding/onboarding-gate';
 
 const QuizInProgressDisplay = React.lazy(() => import('@/components/ai-tools/smart-quiz/QuizInProgressDisplay'));
 const QuizResultsDisplay = React.lazy(() => import('@/components/ai-tools/smart-quiz/QuizResultsDisplay'));
@@ -110,21 +110,15 @@ export default function SmartQuizPage() {
         if (profileSnap.exists()) {
           const data = profileSnap.data() as UserProfileData;
           setUserProfile(data);
-          if (!data.onboardingCompleted) {
-            setShowOnboardingModal(true);
-          } else {
-            setShowOnboardingModal(false);
-            if (data.targetExams && data.targetExams.length > 0) {
-              const primaryExam = data.targetExams[0] === 'other' && data.otherExamName ? data.otherExamName.toLowerCase() : data.targetExams[0];
-              const matchingExamOption = examTypeOptions.find(opt => primaryExam?.includes(opt.value) || opt.value.includes(primaryExam || ''));
-              if (matchingExamOption) {
-                form.setValue('examType', matchingExamOption.value as QuizFormData['examType']);
-              }
+          if (data.targetExams && data.targetExams.length > 0) {
+            const primaryExam = data.targetExams[0] === 'other' && data.otherExamName ? data.otherExamName.toLowerCase() : data.targetExams[0];
+            const matchingExamOption = examTypeOptions.find(opt => primaryExam?.includes(opt.value) || opt.value.includes(primaryExam || ''));
+            if (matchingExamOption) {
+              form.setValue('examType', matchingExamOption.value as QuizFormData['examType']);
             }
           }
         } else {
           setUserProfile(null);
-          setShowOnboardingModal(true);
         }
         setIsLoadingProfile(false);
       }, (err) => {
@@ -133,9 +127,9 @@ export default function SmartQuizPage() {
         setIsLoadingProfile(false);
       });
     } else {
-       setIsLoadingProfile(false);
+      setIsLoadingProfile(false);
     }
-     return () => {
+    return () => {
       if (unsubscribeProfile) unsubscribeProfile();
     };
   }, [currentUser?.uid, form, toast]);
@@ -284,35 +278,13 @@ export default function SmartQuizPage() {
     return (
       <div className="flex flex-col items-center justify-center min-h-[calc(100vh-200px)] text-center p-6">
         <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
-        <p className="text-muted-foreground">Loading SmartQuiz...</p>
+        <p className="text-muted-foreground">Loading Your Profile...</p>
       </div>
     );
   }
 
-  if (showOnboardingModal && currentUser) {
-    return (
-       <Dialog open={showOnboardingModal} onOpenChange={(isOpen) => {
-          if (!currentUser) return;
-          if (!isOpen && userProfile && !userProfile.onboardingCompleted) {
-             setShowOnboardingModal(true); return;
-          }
-          setShowOnboardingModal(isOpen);
-        }}>
-        <DialogContent className="max-w-2xl w-[95vw] max-h-[90vh] p-0">
-          <DialogHeader className="p-4 sm:p-6 border-b text-center shrink-0">
-            <DialogTitle className="text-xl sm:text-2xl">Complete Your Profile</DialogTitle>
-            <DialogDescription className="text-xs sm:text-sm">
-              Please provide your details to personalize your StudyTrack experience and unlock AI features.
-            </DialogDescription>
-          </DialogHeader>
-           <ScrollArea className="h-[calc(90vh-8rem)] p-4 sm:p-6">
-             <Suspense fallback={<OnboardingFormFallback />}>
-                <OnboardingForm userId={currentUser.uid} onComplete={handleOnboardingSuccess} />
-             </Suspense>
-          </ScrollArea>
-        </DialogContent>
-      </Dialog>
-    );
+  if (!userProfile?.hasCompletedOnboarding) {
+    return <OnboardingGate featureName="Smart Quiz" hasPaid={userProfile?.hasPaid || false} />;
   }
 
   const inputFormVariants = {

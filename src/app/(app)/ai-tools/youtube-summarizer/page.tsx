@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useEffect, useRef, Suspense } from 'react';
@@ -31,6 +30,7 @@ import OnboardingForm from '@/components/onboarding/onboarding-form';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/ui/skeleton';
 import { motion } from 'framer-motion'; // Added framer-motion
+import OnboardingGate from '@/components/onboarding/onboarding-gate';
 
 const YouTubeSummarizerResultsDisplay = React.lazy(() => import('@/components/ai-tools/youtube-summarizer/YouTubeSummarizerResultsDisplay'));
 const YouTubeSummarizerResultsDisplayFallback = React.lazy(() => import('@/components/ai-tools/youtube-summarizer/YouTubeSummarizerResultsDisplayFallback'));
@@ -80,7 +80,6 @@ export default function YouTubeSummarizerPage() {
 
   const [isLoadingProfile, setIsLoadingProfile] = useState(true);
   const [userFullProfile, setUserFullProfile] = useState<UserProfileData | null>(null);
-  const [showOnboardingModal, setShowOnboardingModal] = useState(false);
   const [isInputFormCollapsed, setIsInputFormCollapsed] = useState(false);
 
   useEffect(() => {
@@ -98,14 +97,8 @@ export default function YouTubeSummarizerPage() {
         if (profileSnap.exists()) {
           const data = profileSnap.data() as UserProfileData;
           setUserFullProfile(data);
-          if (!data.onboardingCompleted) {
-            setShowOnboardingModal(true);
-          } else {
-            setShowOnboardingModal(false);
-          }
         } else {
           setUserFullProfile(null);
-          setShowOnboardingModal(true);
         }
         setIsLoadingProfile(false);
       }, (err) => {
@@ -120,18 +113,6 @@ export default function YouTubeSummarizerPage() {
       if (unsubscribeProfile) unsubscribeProfile();
     };
   }, [currentUser?.uid, toast]);
-
-  const handleOnboardingSuccess = () => {
-    setShowOnboardingModal(false);
-    if (currentUser?.uid) {
-      const profileDocRef = doc(db, 'users', currentUser.uid, 'userProfile', 'profile');
-      getDoc(profileDocRef).then(profileSnap => {
-        if (profileSnap.exists()) {
-          setUserFullProfile(profileSnap.data() as UserProfileData);
-        }
-      });
-    }
-  };
 
   const form = useForm<YouTubeSummarizerFormData>({
     resolver: zodResolver(youtubeSummarizerFormSchema),
@@ -277,45 +258,17 @@ export default function YouTubeSummarizerPage() {
     return () => subscription.unsubscribe();
   }, [form, fetchTranscriptError]);
 
-  if (isLoadingProfile && currentUser) {
+  if (isLoadingProfile) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[calc(100vh-200px)] text-center p-6">
         <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
-        <p className="text-muted-foreground">Loading Video Summarizer...</p>
+        <p className="text-muted-foreground">Loading YouTube Summarizer...</p>
       </div>
     );
   }
 
-  if (currentUser && !userFullProfile?.onboardingCompleted && !isLoadingProfile) {
-    return (
-      <Dialog open={true} onOpenChange={(isOpen) => {
-          if (!isOpen) {
-             toast({ title: "Profile Setup Required", description: "Please complete your profile to use AI tools.", variant: "default"});
-          }
-        }}>
-        <DialogContent className="max-w-2xl w-[95vw] max-h-[90vh] p-0">
-          <DialogHeader className="p-4 sm:p-6 border-b text-center shrink-0">
-            <DialogTitle className="text-xl sm:text-2xl">Complete Your Profile</DialogTitle>
-            <DialogDescription className="text-xs sm:text-sm">
-              Unlock full AI capabilities by telling us a bit about your study goals.
-            </DialogDescription>
-          </DialogHeader>
-           <ScrollArea className="h-[calc(90vh-8rem)] p-4 sm:p-6">
-             <Suspense fallback={<OnboardingFormFallback />}>
-                <OnboardingForm userId={currentUser.uid} onComplete={handleOnboardingSuccess} />
-             </Suspense>
-          </ScrollArea>
-        </DialogContent>
-      </Dialog>
-    );
-  }
-
-  if (currentUser && userFullProfile && !userFullProfile.onboardingCompleted) {
-    return (
-        <div className="flex flex-col items-center justify-center min-h-[calc(100vh-200px)] text-center p-6">
-            <p className="text-lg text-muted-foreground">Please complete your profile through the modal to use AI tools.</p>
-        </div>
-    );
+  if (!userFullProfile?.hasCompletedOnboarding) {
+    return <OnboardingGate featureName="YouTube Summarizer" hasPaid={userFullProfile?.hasPaid || false} />;
   }
 
   const inputFormVariants = {

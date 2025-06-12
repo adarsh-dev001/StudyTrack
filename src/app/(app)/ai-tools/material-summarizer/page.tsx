@@ -18,12 +18,10 @@ import { recordPlatformInteraction } from '@/lib/activity-utils';
 import { db } from '@/lib/firebase';
 import { doc, getDoc, onSnapshot, Unsubscribe } from 'firebase/firestore';
 import type { UserProfileData } from '@/lib/profile-types';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
-import OnboardingForm from '@/components/onboarding/onboarding-form';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Skeleton } from '@/components/ui/skeleton';
 import { motion, AnimatePresence } from 'framer-motion'; 
 import * as pdfjsLib from 'pdfjs-dist';
+import OnboardingGate from '@/components/onboarding/onboarding-gate';
+import { Skeleton } from '@/components/ui/skeleton'; // Re-added for fallbacks
 
 const SummarizerResultsDisplay = React.lazy(() => import('@/components/ai-tools/material-summarizer/SummarizerResultsDisplay'));
 const SummarizerResultsDisplayFallback = React.lazy(() => import('@/components/ai-tools/material-summarizer/SummarizerResultsDisplayFallback'));
@@ -47,25 +45,6 @@ interface MCQWithUserAnswer extends MCQ {
   answerRevealed?: boolean;
 }
 
-function OnboardingFormFallback() {
-  return (
-    <div className="p-6 space-y-6">
-      <Skeleton className="h-8 w-3/4 mx-auto mb-2" />
-      <Skeleton className="h-4 w-full mb-6" />
-      {[...Array(3)].map((_, i) => (
-        <div key={i} className="space-y-2">
-          <Skeleton className="h-5 w-1/3" />
-          <Skeleton className="h-10 w-full" />
-        </div>
-      ))}
-      <div className="flex justify-end gap-2 pt-4">
-        <Skeleton className="h-10 w-24" />
-        <Skeleton className="h-10 w-24" />
-      </div>
-    </div>
-  );
-}
-
 export default function MaterialSummarizerPage() {
   const { currentUser } = useAuth();
   const [analysisResult, setAnalysisResult] = useState<SummarizeStudyMaterialOutput | null>(null);
@@ -79,7 +58,6 @@ export default function MaterialSummarizerPage() {
   
   const [isLoadingProfile, setIsLoadingProfile] = useState(true);
   const [userFullProfile, setUserFullProfile] = useState<UserProfileData | null>(null);
-  const [showOnboardingModal, setShowOnboardingModal] = useState(false);
   const [isInputFormCollapsed, setIsInputFormCollapsed] = useState(false);
 
   useEffect(() => {
@@ -103,14 +81,8 @@ export default function MaterialSummarizerPage() {
         if (profileSnap.exists()) {
           const data = profileSnap.data() as UserProfileData;
           setUserFullProfile(data);
-          if (!data.onboardingCompleted) {
-            setShowOnboardingModal(true);
-          } else {
-            setShowOnboardingModal(false);
-          }
         } else {
           setUserFullProfile(null);
-          setShowOnboardingModal(true); 
         }
         setIsLoadingProfile(false);
       }, (err) => {
@@ -126,9 +98,6 @@ export default function MaterialSummarizerPage() {
     };
   }, [currentUser?.uid, toast]);
 
-  const handleOnboardingSuccess = () => {
-    setShowOnboardingModal(false);
-  };
 
   const form = useForm<SummarizerFormData>({
     resolver: zodResolver(summarizerFormSchema),
@@ -151,7 +120,7 @@ export default function MaterialSummarizerPage() {
     if (file.type !== 'application/pdf') {
       toast({ title: 'Invalid File Type', description: 'Please upload a PDF file.', variant: 'destructive' });
       setPdfFileName(null);
-      if(fileInputRef.current) fileInputRef.current.value = ""; // Reset file input
+      if(fileInputRef.current) fileInputRef.current.value = ""; 
       return;
     }
     if (file.size > 10 * 1024 * 1024) {
@@ -175,7 +144,7 @@ export default function MaterialSummarizerPage() {
           for (let i = 1; i <= pdf.numPages; i++) {
             const page = await pdf.getPage(i);
             const text = await page.getTextContent();
-            textContent += text.items.map((s: any) => s.str).join(' ') + '\n'; // Use \n for newlines
+            textContent += text.items.map((s: any) => s.str).join(' ') + '\n'; 
           }
           const extractedText = textContent.trim();
           if (extractedText.length > MAX_TEXT_LENGTH) {
@@ -299,30 +268,8 @@ export default function MaterialSummarizerPage() {
     );
   }
 
-  if (showOnboardingModal && currentUser) {
-    return (
-      <Dialog open={showOnboardingModal} onOpenChange={(isOpen) => {
-          if (!currentUser) return;
-          if (!isOpen && userFullProfile && !userFullProfile.onboardingCompleted) {
-             setShowOnboardingModal(true); return;
-          }
-          setShowOnboardingModal(isOpen);
-        }}>
-        <DialogContent className="max-w-2xl w-[95vw] max-h-[90vh] p-0">
-          <DialogHeader className="p-4 sm:p-6 border-b text-center shrink-0">
-            <DialogTitle className="text-xl sm:text-2xl">Complete Your Profile</DialogTitle>
-            <DialogDescription className="text-xs sm:text-sm">
-              Please provide your details to personalize your StudyTrack experience and unlock AI features.
-            </DialogDescription>
-          </DialogHeader>
-           <ScrollArea className="h-[calc(90vh-8rem)] p-4 sm:p-6">
-             <Suspense fallback={<OnboardingFormFallback />}>
-                <OnboardingForm userId={currentUser.uid} onComplete={handleOnboardingSuccess} />
-             </Suspense>
-          </ScrollArea>
-        </DialogContent>
-      </Dialog>
-    );
+  if (!userFullProfile?.hasCompletedOnboarding) {
+    return <OnboardingGate featureName="Material Processor" hasPaid={userFullProfile?.hasPaid || false} />;
   }
 
   const inputFormVariants = {
@@ -358,7 +305,7 @@ export default function MaterialSummarizerPage() {
               if (fileInputRef.current) fileInputRef.current.value = "";
               form.reset(); 
             }}
-            variant="default" // Changed variant to default for primary color
+            variant="default" 
             size="lg"
             className="w-full sm:w-auto text-base py-3 px-6 bg-gradient-to-r from-primary to-teal-500 hover:from-primary/90 hover:to-teal-500/90 text-primary-foreground rounded-lg shadow-md hover:shadow-lg transition-all duration-300 ease-in-out transform hover:scale-105"
           >

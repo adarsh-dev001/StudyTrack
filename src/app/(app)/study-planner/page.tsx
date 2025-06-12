@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useEffect, Suspense, useCallback } from 'react';
@@ -14,6 +13,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import OnboardingForm from '@/components/onboarding/onboarding-form';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast'; // Added useToast
+import OnboardingGate from '@/components/onboarding/onboarding-gate';
 
 const PlannerView = React.lazy(() => import('@/components/planner/planner-view').then(module => ({ default: module.PlannerView })));
 const DayView = React.lazy(() => import('@/components/planner/day-view'));
@@ -82,8 +82,7 @@ export default function StudyPlannerPage() {
 
   const [userProfile, setUserProfile] = useState<UserProfileData | null>(null);
   const [isLoadingProfile, setIsLoadingProfile] = useState(true);
-  const [showOnboardingModal, setShowOnboardingModal] = useState(false);
-  const { toast } = useToast(); // Added useToast
+  const { toast } = useToast();
 
   useEffect(() => {
     let unsubscribeProfile: Unsubscribe | undefined;
@@ -94,14 +93,8 @@ export default function StudyPlannerPage() {
         if (profileSnap.exists()) {
           const userProfileData = profileSnap.data() as UserProfileData;
           setUserProfile(userProfileData);
-          if (!userProfileData.onboardingCompleted) {
-            setShowOnboardingModal(true);
-          } else {
-            setShowOnboardingModal(false);
-          }
         } else {
           setUserProfile(null);
-          setShowOnboardingModal(true); 
         }
         setIsLoadingProfile(false);
       }, (err) => {
@@ -116,11 +109,6 @@ export default function StudyPlannerPage() {
     };
   }, [currentUser?.uid]);
 
-  const handleOnboardingSuccess = () => {
-    setShowOnboardingModal(false);
-    // Optionally refetch profile or rely on onSnapshot
-  };
-
   const handleDateChange = (date: Date | undefined) => {
     if (date instanceof Date) {
       setSelectedDate(date);
@@ -128,8 +116,6 @@ export default function StudyPlannerPage() {
   };
   
   const handleAddTaskFromSidebar = useCallback(() => {
-    // This function would ideally open the same modal as the PlannerView's "Add Task"
-    // For now, let's just log it or show a toast
     toast({ title: "Add Event", description: "This would open the new event/task dialog." });
     console.log("Add Event/Task from sidebar clicked");
   }, [toast]);
@@ -148,31 +134,8 @@ export default function StudyPlannerPage() {
     );
   }
 
-  if (showOnboardingModal && currentUser) {
-    return (
-      <Dialog open={showOnboardingModal} onOpenChange={(isOpen) => {
-        if (!currentUser) return;
-        if (!isOpen && userProfile && !userProfile.onboardingCompleted) {
-           setShowOnboardingModal(true); 
-           return;
-        }
-        setShowOnboardingModal(isOpen);
-      }}>
-        <DialogContent className="max-w-2xl w-[95vw] max-h-[90vh] p-0">
-          <DialogHeader className="p-4 sm:p-6 border-b text-center shrink-0">
-            <DialogTitle className="text-xl sm:text-2xl">Complete Your Profile</DialogTitle>
-            <DialogDescription className="text-xs sm:text-sm">
-              Please provide your details to personalize your StudyTrack experience and unlock AI features.
-            </DialogDescription>
-          </DialogHeader>
-          <ScrollArea className="h-[calc(90vh-8rem)] p-4 sm:p-6">
-              <Suspense fallback={<OnboardingFormFallback />}>
-                <OnboardingForm userId={currentUser.uid} onComplete={handleOnboardingSuccess} />
-              </Suspense>
-          </ScrollArea>
-        </DialogContent>
-      </Dialog>
-    );
+  if (!userProfile?.hasCompletedOnboarding) {
+    return <OnboardingGate featureName="Study Planner" hasPaid={userProfile?.hasPaid || false} />;
   }
 
   return (
@@ -190,15 +153,7 @@ export default function StudyPlannerPage() {
           />
         </div>
         <div className="flex-grow overflow-auto p-4 md:p-6 lg:p-8">
-          {(!currentUser || (userProfile && !userProfile.onboardingCompleted)) && !showOnboardingModal && (
-               <div className="flex flex-col items-center justify-center h-full text-center">
-                  <p className="text-lg text-muted-foreground">
-                      {currentUser ? "Please complete your profile setup to use the Study Planner effectively." : "Please log in to use the Study Planner."}
-                  </p>
-                  {!currentUser && <Button onClick={() => { if (typeof window !== 'undefined') window.location.href = '/login'; }} className="mt-4">Log In</Button>}
-               </div>
-          )}
-          {currentUser && userProfile?.onboardingCompleted && currentView === 'week' && (
+          {currentView === 'week' && (
             <Suspense fallback={<PlannerViewFallback />}>
               <PlannerView
                 selectedDate={selectedDate}
@@ -208,7 +163,7 @@ export default function StudyPlannerPage() {
               />
             </Suspense>
           )}
-          {currentUser && userProfile?.onboardingCompleted && currentView === 'day' && (
+          {currentView === 'day' && (
              <Suspense fallback={<DayViewFallback />}>
               <DayView
                 selectedDate={selectedDate}
@@ -216,7 +171,7 @@ export default function StudyPlannerPage() {
               />
             </Suspense>
           )}
-          {currentUser && userProfile?.onboardingCompleted && currentView === 'month' && (
+          {currentView === 'month' && (
             <Suspense fallback={<MonthViewFallback />}>
               <MonthView
                   selectedDate={selectedDate}

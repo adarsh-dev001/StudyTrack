@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useEffect, Suspense } from 'react';
@@ -23,6 +22,7 @@ import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/ui/skeleton';
 import { motion } from 'framer-motion'; // Added framer-motion
+import OnboardingGate from '@/components/onboarding/onboarding-gate';
 
 
 const doubtSolverFormSchema = z.object({
@@ -53,14 +53,12 @@ function OnboardingFormFallback() {
 
 export default function DoubtSolverPage() {
   const { currentUser } = useAuth();
+  const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [aiResponse, setAiResponse] = useState<SolveAcademicDoubtOutput | null>(null);
-  const { toast } = useToast();
-  
   const [isLoadingProfile, setIsLoadingProfile] = useState(true);
   const [userProfile, setUserProfile] = useState<UserProfileData | null>(null);
-  const [showOnboardingModal, setShowOnboardingModal] = useState(false);
-  const [isInputCollapsed, setIsInputCollapsed] = useState(false); // New state for collapsing input
+  const [isInputFormCollapsed, setIsInputFormCollapsed] = useState(false);
 
   const form = useForm<DoubtSolverFormData>({
     resolver: zodResolver(doubtSolverFormSchema),
@@ -79,19 +77,13 @@ export default function DoubtSolverPage() {
         if (profileSnap.exists()) {
           const data = profileSnap.data() as UserProfileData;
           setUserProfile(data);
-          if (!data.onboardingCompleted) {
-            setShowOnboardingModal(true);
-          } else {
-            setShowOnboardingModal(false);
-            if (data.subjectDetails && data.subjectDetails.length > 0) {
-              form.setValue('subjectContext', data.subjectDetails[0].subjectName);
-            } else if (data.targetExams && data.targetExams.length > 0) {
-              const primaryExam = data.targetExams[0] === 'other' && data.otherExamName ? data.otherExamName : data.targetExams[0];
-            }
+          if (data.subjectDetails && data.subjectDetails.length > 0) {
+            form.setValue('subjectContext', data.subjectDetails[0].subjectName);
+          } else if (data.targetExams && data.targetExams.length > 0) {
+            const primaryExam = data.targetExams[0] === 'other' && data.otherExamName ? data.otherExamName : data.targetExams[0];
           }
         } else {
           setUserProfile(null);
-          setShowOnboardingModal(true); 
         }
         setIsLoadingProfile(false);
       }, (err) => {
@@ -106,19 +98,6 @@ export default function DoubtSolverPage() {
       if (unsubscribeProfile) unsubscribeProfile();
     };
   }, [currentUser?.uid, form, toast]);
-
-  const handleOnboardingComplete = () => {
-    setShowOnboardingModal(false);
-    if(currentUser?.uid) {
-        const profileDocRef = doc(db, 'users', currentUser.uid, 'userProfile', 'profile');
-        getDoc(profileDocRef).then((profileSnap) => { 
-            if (profileSnap.exists()) {
-                setUserProfile(profileSnap.data() as UserProfileData);
-            }
-        });
-    }
-  };
-
 
   const onSubmit: SubmitHandler<DoubtSolverFormData> = async (data) => {
     setIsLoading(true);
@@ -140,14 +119,14 @@ export default function DoubtSolverPage() {
     try {
       const result = await solveAcademicDoubt(aiInput);
       setAiResponse(result);
-      setIsInputCollapsed(true); // Collapse input after successful response
+      setIsInputFormCollapsed(true); // Collapse input after successful response
       toast({
         title: '💡 Answer Generated!',
         description: "The AI has provided an explanation for your doubt.",
       });
     } catch (error: any) {
       console.error('Error solving academic doubt:', error);
-      setIsInputCollapsed(false); // Keep input open on error
+      setIsInputFormCollapsed(false); // Keep input open on error
       toast({
         title: 'Error Getting Answer 😥',
         description: error.message || 'An unexpected error occurred.',
@@ -162,35 +141,13 @@ export default function DoubtSolverPage() {
     return (
       <div className="flex flex-col items-center justify-center min-h-[calc(100vh-200px)] text-center p-6">
         <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
-        <p className="text-muted-foreground">Loading AI Doubt Solver...</p>
+        <p className="text-muted-foreground">Loading Doubt Solver...</p>
       </div>
     );
   }
 
-  if (showOnboardingModal && currentUser) {
-    return (
-      <Dialog open={showOnboardingModal} onOpenChange={(isOpen) => {
-          if (!currentUser) return;
-          if (!isOpen && userProfile && !userProfile.onboardingCompleted) {
-             setShowOnboardingModal(true); return;
-          }
-          setShowOnboardingModal(isOpen);
-        }}>
-        <DialogContent className="max-w-2xl w-[95vw] max-h-[90vh] p-0">
-          <DialogHeader className="p-4 sm:p-6 border-b text-center shrink-0">
-            <DialogTitle className="text-xl sm:text-2xl">Complete Your Profile</DialogTitle>
-            <DialogDescription className="text-xs sm:text-sm">
-              Please provide your details to personalize your StudyTrack experience and unlock AI features.
-            </DialogDescription>
-          </DialogHeader>
-          <ScrollArea className="h-[calc(90vh-8rem)] p-4 sm:p-6">
-             <Suspense fallback={<OnboardingFormFallback />}>
-                <OnboardingForm userId={currentUser.uid} onComplete={handleOnboardingComplete} />
-             </Suspense>
-          </ScrollArea>
-        </DialogContent>
-      </Dialog>
-    );
+  if (!userProfile?.hasCompletedOnboarding) {
+    return <OnboardingGate featureName="Doubt Solver" hasPaid={userProfile?.hasPaid || false} />;
   }
 
   const inputFormVariants = {
@@ -209,7 +166,7 @@ export default function DoubtSolverPage() {
         </p>
       </div>
 
-      {isInputCollapsed && (
+      {isInputFormCollapsed && (
         <motion.div
           className="flex justify-center pt-2" // Added pt-2 for spacing when collapsed
           initial={{ opacity: 0, y: -10 }}
@@ -218,7 +175,7 @@ export default function DoubtSolverPage() {
         >
           <Button
             onClick={() => {
-              setIsInputCollapsed(false);
+              setIsInputFormCollapsed(false);
               setAiResponse(null); 
               form.reset({ userQuery: '', subjectContext: userProfile?.subjectDetails?.[0]?.subjectName || '' });
             }}
@@ -232,11 +189,11 @@ export default function DoubtSolverPage() {
       )}
 
       <motion.div
-        animate={isInputCollapsed ? "collapsed" : "expanded"}
+        animate={isInputFormCollapsed ? "collapsed" : "expanded"}
         variants={inputFormVariants}
         transition={{ duration: 0.4, ease: "easeInOut" }}
         style={{ overflow: 'hidden', transformOrigin: 'top' }}
-        className={isInputCollapsed ? "mt-0" : ""} // Ensure no double margin when expanded
+        className={isInputFormCollapsed ? "mt-0" : ""} // Ensure no double margin when expanded
       >
         <Card className="shadow-lg">
           <Form {...form}>

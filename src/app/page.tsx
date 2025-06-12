@@ -1,11 +1,9 @@
-
 // Removed 'use client';
 
 import React, { Suspense } from 'react';
 import { Header } from '@/components/landing/header';
 import { Footer } from '@/components/landing/footer';
 import { Skeleton } from '@/components/ui/skeleton';
-import type { Metadata } from 'next';
 
 // Direct imports for sections instead of React.lazy
 import HeroSection from '@/components/landing/hero-section';
@@ -15,11 +13,6 @@ import KeyFeaturesSummary from '@/components/landing/key-features-summary';
 import TestimonialsSection from '@/components/landing/testimonials-section';
 import FinalCtaSection from '@/components/landing/final-cta-section';
 import BlogPreviewSection from '@/components/landing/blog-preview-section'; 
-
-export const metadata: Metadata = {
-  title: 'StudyTrack AI - Smart Study Planner & AI Learning Assistant',
-  description: 'Supercharge your exam prep for NEET, UPSC, JEE & more with StudyTrack AI. Get personalized study plans, AI notes, instant doubt solving, and gamified motivation. Start free!',
-};
 
 function LandingPageFallback() {
   return (

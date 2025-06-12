@@ -1,8 +1,7 @@
-
 'use client';
 
 import React, { useState, useEffect, useRef, Suspense } from 'react';
-import { useForm, type SubmitHandler, useWatch } from 'react-hook-form';
+import { useForm, type SubmitHandler, useWatch } from 'react-hook-form'; // Added useWatch
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Button } from '@/components/ui/button';
@@ -10,22 +9,27 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Label } from '@/components/ui/label';
+import { Label } from '@/components/ui/label'; // Import the basic Label component
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from "@/components/ui/checkbox";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import { format, addDays } from "date-fns";
-import { Loader2, ListTree, CalendarIcon, Sparkles, BookOpen, CalendarDays, Target, Lightbulb, Brain, Users, FileText, Goal, Edit } from 'lucide-react';
+import { Loader2, ListTree, CalendarIcon, Sparkles, BookOpen, CalendarDays, Target, Lightbulb, Brain, Users, FileText, Goal, Edit } from 'lucide-react'; // Added Edit icon
 import { suggestStudyTopics, type SuggestStudyTopicsInput, type SuggestStudyTopicsOutput } from '@/ai/flows/suggest-study-topics';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/auth-context';
 import { db } from '@/lib/firebase';
 import { doc, getDoc, onSnapshot, Unsubscribe } from 'firebase/firestore';
 import type { UserProfileData } from '@/lib/profile-types';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import OnboardingForm from '@/components/onboarding/onboarding-form';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Skeleton } from '@/components/ui/skeleton';
 import { TARGET_EXAMS as PREDEFINED_EXAMS_CONST, PREPARATION_LEVELS, DAILY_STUDY_HOURS_OPTIONS, LANGUAGE_MEDIUMS, STUDY_MODES, EXAM_SUBJECT_MAP } from '@/lib/constants';
-import { motion } from 'framer-motion';
+import { motion } from 'framer-motion'; // Added framer-motion
+import OnboardingGate from '@/components/onboarding/onboarding-gate';
 
 
 // Lazy load result display
@@ -51,14 +55,33 @@ const syllabusFormSchema = z.object({
 
 type SyllabusFormData = z.infer<typeof syllabusFormSchema>;
 
+function OnboardingFormFallback() {
+  return (
+    <div className="p-6 space-y-6">
+      <Skeleton className="h-8 w-3/4 mx-auto mb-2" />
+      <Skeleton className="h-4 w-full mb-6" />
+      {[...Array(3)].map((_, i) => (
+        <div key={i} className="space-y-2">
+          <Skeleton className="h-5 w-1/3" />
+          <Skeleton className="h-10 w-full" />
+        </div>
+      ))}
+      <div className="flex justify-end gap-2 pt-4">
+        <Skeleton className="h-10 w-24" />
+        <Skeleton className="h-10 w-24" />
+      </div>
+    </div>
+  );
+}
+
 export default function SyllabusSuggesterPage() {
   const { currentUser } = useAuth();
   const [generatedSyllabus, setGeneratedSyllabus] = useState<SuggestStudyTopicsOutput['generatedSyllabus'] | null>(null);
   const [overallFeedback, setOverallFeedback] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
-  const syllabusResultRef = useRef<HTMLDivElement>(null);
-
+  const syllabusResultRef = useRef<HTMLDivElement>(null); 
+  
   const [isLoadingProfile, setIsLoadingProfile] = useState(true);
   const [userProfile, setUserProfile] = useState<UserProfileData | null>(null);
   const [isInputFormCollapsed, setIsInputFormCollapsed] = useState(false);
@@ -69,7 +92,7 @@ export default function SyllabusSuggesterPage() {
       examType: '',
       subjects: [],
       timeAvailablePerDay: 4,
-      targetDate: addDays(new Date(), 90),
+      targetDate: addDays(new Date(), 90), 
       preparationLevel: 'intermediate',
       studyMode: 'self_study',
       weakTopics: [],
@@ -77,7 +100,7 @@ export default function SyllabusSuggesterPage() {
       goals: '',
     },
   });
-
+  
   const watchedExamType = useWatch({ control: form.control, name: 'examType' });
 
   const availableSubjectsForForm = React.useMemo(() => {
@@ -86,71 +109,63 @@ export default function SyllabusSuggesterPage() {
   }, [watchedExamType]);
 
   useEffect(() => {
-    const currentSelectedSubjects = form.getValues('subjects') || [];
-    const newRelevantSelectedSubjects = currentSelectedSubjects.filter(subjectId =>
-      availableSubjectsForForm.some(availSub => availSub.id === subjectId)
-    );
-
-    if (newRelevantSelectedSubjects.length !== currentSelectedSubjects.length || (availableSubjectsForForm.length > 0 && newRelevantSelectedSubjects.length === 0 && currentSelectedSubjects.length > 0)) {
-      form.setValue('subjects', newRelevantSelectedSubjects, { shouldValidate: true, shouldDirty: true });
-    } else if (availableSubjectsForForm.length > 0 && currentSelectedSubjects.length === 0) {
-        form.setValue('subjects', [], { shouldValidate: true, shouldDirty: true });
-    } else if (availableSubjectsForForm.length === 0) {
-        form.setValue('subjects', [], { shouldValidate: true, shouldDirty: true });
-    }
-  }, [availableSubjectsForForm, form]);
-
-
-  useEffect(() => {
     let unsubscribeProfile: Unsubscribe | undefined;
     if (currentUser?.uid) {
-        setIsLoadingProfile(true);
-        const profileDocRef = doc(db, 'users', currentUser.uid, 'userProfile', 'profile');
-        unsubscribeProfile = onSnapshot(profileDocRef, (profileSnap) => {
-            if (profileSnap.exists()) {
-                const data = profileSnap.data() as UserProfileData;
-                setUserProfile(data);
-                  if (!form.formState.isDirty) {
-                     const dailyHoursMatch = DAILY_STUDY_HOURS_OPTIONS.find(opt => data.dailyStudyHours?.includes(opt.value.split('-')[0]));
-                     const prepLevelMatch = PREPARATION_LEVELS.find(pl => data.subjectDetails?.[0]?.preparationLevel === pl.value || data.preparationLevel === pl.value);
+      setIsLoadingProfile(true);
+      const profileDocRef = doc(db, 'users', currentUser.uid, 'userProfile', 'profile');
+      unsubscribeProfile = onSnapshot(profileDocRef, (profileSnap) => {
+        if (profileSnap.exists()) {
+          const data = profileSnap.data() as UserProfileData;
+          setUserProfile(data);
+          if (!form.formState.isDirty) {
+            const dailyHoursMatch = DAILY_STUDY_HOURS_OPTIONS.find(opt => data.dailyStudyHours?.includes(opt.value.split('-')[0]));
+            const prepLevelMatch = PREPARATION_LEVELS.find(pl => data.subjectDetails?.[0]?.preparationLevel === pl.value || data.preparationLevel === pl.value);
 
-                     const initialExamType = data.targetExams && data.targetExams.length > 0
-                                    ? (data.targetExams[0] === 'other' && data.otherExamName ? data.otherExamName : data.targetExams[0])
-                                    : '';
-
-                     const subjectsForInitialExam = initialExamType ? (EXAM_SUBJECT_MAP[initialExamType.toLowerCase()] || EXAM_SUBJECT_MAP['other']) : [];
-                     const initialSubjects = data.subjectDetails?.map(sd => sd.subjectId).filter(id => subjectsForInitialExam.some(sfe => sfe.id === id)) || [];
-
-
-                     form.reset({
-                        examType: initialExamType,
-                        subjects: initialSubjects,
-                        timeAvailablePerDay: dailyHoursMatch ? parseFloat(dailyHoursMatch.value.split('-')[0]) : 4,
-                        targetDate: data.examAttemptYear ? new Date(parseInt(data.examAttemptYear), 5, 1) : addDays(new Date(), 90),
-                        preparationLevel: (prepLevelMatch?.value || 'intermediate') as 'beginner' | 'intermediate' | 'advanced',
-                        studyMode: data.studyMode || 'self_study',
-                        weakTopics: data.weakSubjects || [],
-                        preferredLanguage: data.languageMedium || 'english',
-                        goals: '',
-                    });
-                  }
-            } else {
-              setUserProfile(null);
-            }
-            setIsLoadingProfile(false);
-        }, (err) => {
-            console.error("Error fetching profile:", err);
-            toast({ title: "Error", description: "Could not load your profile.", variant: "destructive" });
-            setIsLoadingProfile(false);
-        });
-    } else {
+            const initialExamType = data.targetExams && data.targetExams.length > 0 
+              ? (data.targetExams[0] === 'other' && data.otherExamName ? data.otherExamName : data.targetExams[0]) 
+              : '';
+            
+            const subjectsForInitialExam = initialExamType ? (EXAM_SUBJECT_MAP[initialExamType.toLowerCase()] || EXAM_SUBJECT_MAP['other']) : [];
+            const initialSubjects = data.subjectDetails?.map(sd => sd.subjectId).filter(id => subjectsForInitialExam.some(sfe => sfe.id === id)) || [];
+          }
+        } else {
+          setUserProfile(null);
+        }
         setIsLoadingProfile(false);
+      }, (err) => {
+        console.error("Error fetching profile:", err);
+        toast({ title: "Error", description: "Could not load your profile.", variant: "destructive" });
+        setIsLoadingProfile(false);
+      });
+    } else {
+      setIsLoadingProfile(false);
     }
-     return () => {
+    return () => {
       if (unsubscribeProfile) unsubscribeProfile();
     };
   }, [currentUser?.uid, form, toast]);
 
+  if (isLoadingProfile) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[calc(100vh-200px)] text-center p-6">
+        <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
+        <p className="text-muted-foreground">Loading Syllabus Suggester...</p>
+      </div>
+    );
+  }
+
+  if (!userProfile?.hasCompletedOnboarding) {
+    return <OnboardingGate featureName="Syllabus Suggester" hasPaid={userProfile?.hasPaid || false} />;
+  }
+
+  const inputFormVariants = {
+    expanded: { opacity: 1, height: 'auto', scaleY: 1, marginTop: '0rem', marginBottom: '0rem', transition: { duration: 0.4, ease: "easeInOut" } },
+    collapsed: { opacity: 0, height: 0, scaleY: 0.95, marginTop: '0rem', marginBottom: '0rem', transition: { duration: 0.4, ease: "easeInOut" } }
+  };
+
+  const handleOnboardingSuccess = () => {
+    setUserProfile(prev => ({ ...prev, hasCompletedOnboarding: true }));
+  };
 
   useEffect(() => {
     if (generatedSyllabus && generatedSyllabus.length > 0 && syllabusResultRef.current) {
@@ -173,7 +188,7 @@ export default function SyllabusSuggesterPage() {
       const result: SuggestStudyTopicsOutput = await suggestStudyTopics(inputForAI);
       setGeneratedSyllabus(result.generatedSyllabus);
       setOverallFeedback(result.overallFeedback || null);
-      setIsInputFormCollapsed(true);
+      setIsInputFormCollapsed(true); // Collapse form on success
       toast({
         title: 'Syllabus Suggested! 🚀',
         description: `Your personalized syllabus for ${data.examType} has been generated.`,
@@ -182,7 +197,7 @@ export default function SyllabusSuggesterPage() {
       console.error('Error suggesting topics:', error);
       setGeneratedSyllabus(null);
       setOverallFeedback(null);
-      setIsInputFormCollapsed(false);
+      setIsInputFormCollapsed(false); // Keep form open on error
       toast({
         title: 'Error Generating Suggestions 😥',
         description: error.message || 'An unexpected error occurred.',
@@ -193,25 +208,10 @@ export default function SyllabusSuggesterPage() {
     }
   };
 
-  if (isLoadingProfile) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[calc(100vh-200px)] text-center p-6">
-        <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
-        <p className="text-muted-foreground">Loading Syllabus Suggester...</p>
-      </div>
-    );
-  }
-
   const predefinedExams = PREDEFINED_EXAMS_CONST.map(exam => ({
-    value: exam.value,
-    label: exam.label
+    value: exam.value, 
+    label: exam.label 
   }));
-
-  const inputFormVariants = {
-    expanded: { opacity: 1, height: 'auto', scaleY: 1, marginTop: '0rem', marginBottom: '0rem', transition: { duration: 0.4, ease: "easeInOut" } },
-    collapsed: { opacity: 0, height: 0, scaleY: 0.95, marginTop: '0rem', marginBottom: '0rem', transition: { duration: 0.4, ease: "easeInOut" } }
-  };
-
 
   return (
     <div className="w-full space-y-6 max-w-3xl mx-auto">
@@ -236,6 +236,8 @@ export default function SyllabusSuggesterPage() {
               setIsInputFormCollapsed(false);
               setGeneratedSyllabus(null);
               setOverallFeedback(null);
+              // Optionally reset form if desired, or keep previous inputs for tweaking
+              // form.reset(); // Uncomment to fully reset form
             }}
             variant="outline"
             size="lg"
@@ -266,11 +268,11 @@ export default function SyllabusSuggesterPage() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel className="text-sm sm:text-base">Exam Type <span className="text-destructive">*</span></FormLabel>
-                      <Select
+                      <Select 
                           onValueChange={(value) => {
                               field.onChange(value);
-                              form.setValue('subjects', [], { shouldValidate: true });
-                          }}
+                              form.setValue('subjects', [], { shouldValidate: true }); 
+                          }} 
                           value={field.value || ''}
                       >
                         <FormControl>
@@ -286,10 +288,10 @@ export default function SyllabusSuggesterPage() {
                           ))}
                         </SelectContent>
                       </Select>
-                      {watchedExamType === 'other' && (
+                      {watchedExamType === 'other' && ( 
                           <Input
                               placeholder="Specify other exam type"
-                              onChange={(e) => field.onChange(e.target.value)}
+                              onChange={(e) => field.onChange(e.target.value)} 
                               className="mt-2 text-sm sm:text-base"
                           />
                       )}
@@ -446,7 +448,7 @@ export default function SyllabusSuggesterPage() {
                     )}
                   />
                 </div>
-
+                
                 <FormField
                   control={form.control}
                   name="weakTopics"
@@ -529,14 +531,14 @@ export default function SyllabusSuggesterPage() {
 
       <div ref={syllabusResultRef}>
         {(isLoading && form.formState.isSubmitted) && (
-           <Suspense fallback={null}>
+           <Suspense fallback={null}> 
             <SyllabusResultDisplayFallback />
           </Suspense>
         )}
         {generatedSyllabus && generatedSyllabus.length > 0 && !isLoading && (
           <Suspense fallback={<SyllabusResultDisplayFallback />}>
-            <SyllabusResultDisplay
-              generatedSyllabus={generatedSyllabus}
+            <SyllabusResultDisplay 
+              generatedSyllabus={generatedSyllabus} 
               overallFeedback={overallFeedback}
               formValues={{
                 examType: form.getValues('examType'),
@@ -556,3 +558,5 @@ export default function SyllabusSuggesterPage() {
     </div>
   );
 }
+
+    

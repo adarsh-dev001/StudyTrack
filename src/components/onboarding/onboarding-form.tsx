@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useEffect, Suspense } from 'react';
@@ -322,7 +321,7 @@ function OnboardingFormComponent({ userId, onComplete }: OnboardingFormProps) {
     const profilePayload: UserProfileData = {
       ...existingProfileData, // Start with existing data
       ...finalData,           // Override with new form data
-      onboardingCompleted: true,
+      hasCompletedOnboarding: true,
       email: auth.currentUser?.email || existingProfileData.email || '', // Ensure email is preserved
       coins: existingProfileData.coins || 0, // Preserve existing coins
       xp: existingProfileData.xp || 0,       // Preserve existing XP
