@@ -21,8 +21,8 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Loader2, Wand2, Brain, ListChecks, CalendarClock, Flag, Target as TargetIcon, Goal, Lightbulb, Zap, ShieldCheck, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import OnboardingGate from '@/components/onboarding/onboarding-gate';
-import { useToast } from '@/components/ui/use-toast';
+import OnboardingGate from '@/components/onboarding/OnboardingRequiredGate';
+import { useToast } from '@/hooks/use-toast';
 
 function OnboardingFormFallback() {
   return (

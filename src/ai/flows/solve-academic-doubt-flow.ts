@@ -22,6 +22,7 @@ const SolveAcademicDoubtInputSchema = z.object({
 export type SolveAcademicDoubtInput = z.infer<typeof SolveAcademicDoubtInputSchema>;
 
 const SolveAcademicDoubtOutputSchema = z.object({
+  keyTakeaway: z.string().optional().describe("A concise (1-2 sentences) key takeaway or summary of the explanation, placed at the beginning."),
   explanation: z.string().describe("A clear, step-by-step explanation addressing the user's academic doubt, personalized to their context. This explanation should follow specific markdown formatting guidelines, including emojis, bold headings for steps, and a conversational, encouraging tone."),
   relatedTopics: z.array(z.string()).optional().describe("A few related topics or concepts the user might want to explore next."),
   confidenceScore: z.number().min(0).max(1).optional().describe("AI's confidence in the provided explanation (0.0 to 1.0).")
@@ -49,7 +50,9 @@ User's Question: "{{userQuery}}"
 
 Format your solution as follows:
 
-1.  **Greeting**: Start with a friendly greeting. If a userName is provided, use it (e.g., "Hi {{userName}}! 👋 Let's dive into this problem together!"). If not, use a general greeting like "Hey there! 👋 Let's break this down step-by-step!"
+0.  **Key Takeaway**: Start with a very concise (1-2 sentences) \`keyTakeaway\` or summary of the main point or answer. This should be brief and to the point.
+
+1.  **Greeting**: Start the main \`explanation\` field with a friendly greeting. If a userName is provided, use it (e.g., "Hi {{userName}}! 👋 Let's dive into this problem together!"). If not, use a general greeting like "Hey there! 👋 Let's break this down step-by-step!"
 
 2.  **Understanding the Question**:
     *   **Step 1: What Are We Solving?** 🎯
@@ -70,24 +73,25 @@ Format your solution as follows:
     *   Use emojis like ✅ (correct), 🎉 (progress/milestone), 💡 (tip/insight), 🤔 (thinking point), 📖 (reference/concept) appropriately to make it engaging.
     *   Break down complex problems into smaller, manageable sub-steps. Each sub-step should build on the previous one.
 
-4.  **Final Answer and Summary**:
+4.  **Final Answer and Summary (within explanation)**:
     *   Clearly state the final answer. Example: "**Step X: The Final Answer!** 🏆 The value of 'a' is 4."
     *   End with a positive and encouraging summary. Example: "And that’s your answer! 🎯 You nailed it! Keep up the great work and don't hesitate to ask if anything else pops up. Happy learning! 🚀"
 
-5.  **Related Topics (Optional but good if relevant)**:
-    *   If applicable, suggest 1-2 related topics. (This will be part of the structured output).
+5.  **Related Topics (Output Field)**:
+    *   If applicable, suggest 1-2 related topics for the \`relatedTopics\` output field.
 
 General Guidelines for Your Response:
 -   **Tone**: Educational, cheerful, encouraging, and conversational. Avoid a dry, textbook style.
 -   **Clarity**: Explain concepts and steps as if you're talking to a student who needs help.
--   **Step-by-Step**: NEVER just give the final answer. The process is key.
--   **Markdown**: Use markdown for bolding, italics, inline code/math (\\\`), and lists.
+-   **Step-by-Step**: NEVER just give the final answer in the main explanation. The process is key. The \`keyTakeaway\` can be direct.
+-   **Markdown**: Use markdown for bolding, italics, inline code/math (\\\`), and lists. Ensure headings are H2 (##) or H3 (###) for clear sectioning.
 -   **Emojis**: Use them thoughtfully to add visual appeal and convey emotion.
 -   **Personalization**: Adapt complexity based on \\\`preparationLevel\\\` and \\\`examType\\\` if provided. For a 'beginner', be more elaborate. For 'advanced', you can be more concise on basics.
 
 Output a JSON object strictly conforming to the SolveAcademicDoubtOutputSchema.
-The \\\`explanation\\\` field should contain your entire formatted response as a single markdown string.
-If you are unsure or the question is outside academic scope, set a low \\\`confidenceScore\\\` and explain kindly within the \\\`explanation\\\` field (still try to be friendly, e.g., "Hmm, that's an interesting question! While I'm best at academic topics like math and science, for that one you might want to check...").
+The \`explanation\` field should contain your entire formatted response (steps 1-4) as a single markdown string.
+The \`keyTakeaway\` field should contain the concise summary (step 0).
+If you are unsure or the question is outside academic scope, set a low \`confidenceScore\` and explain kindly within the \`explanation\` field (still try to be friendly, e.g., "Hmm, that's an interesting question! While I'm best at academic topics like math and science, for that one you might want to check..."). In such cases, keyTakeaway can be "This question is outside my expertise."
 `,
 });
 
@@ -100,17 +104,16 @@ const solveAcademicDoubtFlow = ai.defineFlow(
   async (input) => {
     const { output } = await doubtSolverPrompt(input);
     if (!output) {
-      // Fallback or error handling if AI doesn't return expected output
       return {
+        keyTakeaway: "Apologies, I couldn't generate a key takeaway for this.",
         explanation: "I'm sorry, I couldn't process that request at the moment. Please try rephrasing or ask another question.",
         relatedTopics: [],
         confidenceScore: 0.1
       };
     }
-    // Ensure the explanation is a single string, which the prompt now guides towards.
     if (typeof output.explanation !== 'string') {
-        // This case should be rare if the LLM adheres to the output schema and prompt.
         return {
+            keyTakeaway: output.keyTakeaway || "Could not generate a key takeaway.",
             explanation: "There was an issue formatting the explanation. Please try again.",
             relatedTopics: output.relatedTopics || [],
             confidenceScore: output.confidenceScore || 0.2
