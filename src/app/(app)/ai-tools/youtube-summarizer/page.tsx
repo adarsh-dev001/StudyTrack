@@ -268,7 +268,7 @@ export default function YouTubeSummarizerPage() {
   }
 
   if (!userFullProfile?.hasCompletedOnboarding) {
-    return <OnboardingGate featureName="YouTube Summarizer" hasPaid={userFullProfile?.hasPaid || false} />;
+    return <OnboardingGate featureName="YouTube Summarizer" hasPaid={true} />;
   }
 
   const inputFormVariants = {

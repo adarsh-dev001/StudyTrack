@@ -269,7 +269,7 @@ export default function MaterialSummarizerPage() {
   }
 
   if (!userFullProfile?.hasCompletedOnboarding) {
-    return <OnboardingGate featureName="Material Processor" hasPaid={userFullProfile?.hasPaid || false} />;
+    return <OnboardingGate featureName="Material Processor" hasPaid={true} />;
   }
 
   const inputFormVariants = {

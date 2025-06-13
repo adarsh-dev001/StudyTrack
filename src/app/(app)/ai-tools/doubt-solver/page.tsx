@@ -147,7 +147,7 @@ export default function DoubtSolverPage() {
   }
 
   if (!userProfile?.hasCompletedOnboarding) {
-    return <OnboardingGate featureName="Doubt Solver" hasPaid={userProfile?.hasPaid || false} />;
+    return <OnboardingGate featureName="Doubt Solver" hasPaid={true} />;
   }
 
   const inputFormVariants = {

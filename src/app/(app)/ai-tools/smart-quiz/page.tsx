@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect, useRef, Suspense, useCallback } from 'react';
@@ -21,10 +22,10 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { db } from '@/lib/firebase';
 import { doc, getDoc, onSnapshot, Unsubscribe } from 'firebase/firestore';
 import type { UserProfileData } from '@/lib/profile-types';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
-import OnboardingForm from '@/components/onboarding/onboarding-form';
+// import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'; // Removed as per previous refactor
+// import OnboardingForm from '@/components/onboarding/onboarding-form'; // Removed as per previous refactor
 import { Skeleton } from '@/components/ui/skeleton';
-import OnboardingGate from '@/components/onboarding/onboarding-gate';
+import OnboardingGate from '@/components/onboarding/OnboardingRequiredGate'; // Corrected import path
 
 const QuizInProgressDisplay = React.lazy(() => import('@/components/ai-tools/smart-quiz/QuizInProgressDisplay'));
 const QuizResultsDisplay = React.lazy(() => import('@/components/ai-tools/smart-quiz/QuizResultsDisplay'));
@@ -57,24 +58,7 @@ const difficultyLevels = [
   { value: 'advanced', label: 'Advanced', icon: '🔥' },
 ];
 
-function OnboardingFormFallback() {
-  return (
-    <div className="p-6 space-y-6">
-      <Skeleton className="h-8 w-3/4 mx-auto mb-2" />
-      <Skeleton className="h-4 w-full mb-6" />
-      {[...Array(3)].map((_, i) => (
-        <div key={i} className="space-y-2">
-          <Skeleton className="h-5 w-1/3" />
-          <Skeleton className="h-10 w-full" />
-        </div>
-      ))}
-      <div className="flex justify-end gap-2 pt-4">
-        <Skeleton className="h-10 w-24" />
-        <Skeleton className="h-10 w-24" />
-      </div>
-    </div>
-  );
-}
+// Removed OnboardingFormFallback as OnboardingForm is no longer used here
 
 export default function SmartQuizPage() {
   const { currentUser } = useAuth();
@@ -89,7 +73,7 @@ export default function SmartQuizPage() {
 
   const [isLoadingProfile, setIsLoadingProfile] = useState(true);
   const [userProfile, setUserProfile] = useState<UserProfileData | null>(null);
-  const [showOnboardingModal, setShowOnboardingModal] = useState(false);
+  // const [showOnboardingModal, setShowOnboardingModal] = useState(false); // Removed
 
   const form = useForm<QuizFormData>({
     resolver: zodResolver(quizFormSchema),
@@ -117,8 +101,10 @@ export default function SmartQuizPage() {
               form.setValue('examType', matchingExamOption.value as QuizFormData['examType']);
             }
           }
+          // Removed logic for setShowOnboardingModal
         } else {
           setUserProfile(null);
+          // Removed logic for setShowOnboardingModal
         }
         setIsLoadingProfile(false);
       }, (err) => {
@@ -134,9 +120,7 @@ export default function SmartQuizPage() {
     };
   }, [currentUser?.uid, form, toast]);
 
-  const handleOnboardingSuccess = () => {
-    setShowOnboardingModal(false);
-  };
+  // Removed handleOnboardingSuccess
 
   useEffect(() => {
     if ((quizState === 'inProgress' || quizState === 'submitted') && quizAreaRef.current) {
@@ -283,9 +267,11 @@ export default function SmartQuizPage() {
     );
   }
 
+  // Onboarding Gate Logic
   if (!userProfile?.hasCompletedOnboarding) {
-    return <OnboardingGate featureName="Smart Quiz" hasPaid={userProfile?.hasPaid || false} />;
+    return <OnboardingGate featureName="Smart Quiz" hasPaid={true} />; // Assuming SmartQuiz is a paid feature or general access after onboarding
   }
+
 
   const inputFormVariants = {
     expanded: { opacity: 1, height: 'auto', scaleY: 1, marginTop: '0rem', marginBottom: '0rem' },
