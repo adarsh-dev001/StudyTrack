@@ -104,7 +104,7 @@ function HeroSectionComponent() {
                 className="font-headline text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl lg:text-7xl leading-tight md:leading-snug lg:leading-snug"
                 variants={itemVariants}
               >
-                <span className="block text-white">Ace Your Exams.</span>
+                <span className="block text-slate-700 dark:text-white">Ace Your Exams.</span>
                 <span className="block text-primary">
                   Get AI Generated&nbsp;
                   <AnimatePresence mode="wait">
@@ -181,3 +181,4 @@ function HeroSectionComponent() {
 }
 
 export default React.memo(HeroSectionComponent);
+
