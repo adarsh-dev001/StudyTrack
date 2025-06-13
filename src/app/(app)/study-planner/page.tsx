@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect, Suspense, useCallback } from 'react';
@@ -13,7 +14,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import OnboardingForm from '@/components/onboarding/onboarding-form';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast'; // Added useToast
-import OnboardingGate from '@/components/onboarding/onboarding-gate';
+import OnboardingGate from '@/components/onboarding/OnboardingRequiredGate';
 
 const PlannerView = React.lazy(() => import('@/components/planner/planner-view').then(module => ({ default: module.PlannerView })));
 const DayView = React.lazy(() => import('@/components/planner/day-view'));
