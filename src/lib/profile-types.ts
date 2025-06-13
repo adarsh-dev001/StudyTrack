@@ -1,5 +1,6 @@
+
 import type { Timestamp } from 'firebase/firestore';
-import { z } from 'zod'; // Added Zod import
+import { z } from 'zod';
 
 // Definition for subject-specific details
 export const subjectDetailSchema = z.object({
@@ -22,8 +23,9 @@ export interface UserProfileData {
   activeThemeId?: string | null;
   dailyChallengeStatus?: { [challengeId: string]: { completedOn: Timestamp } };
   lastInteractionDates?: string[];
-  hasPaid: boolean;
-  hasCompletedOnboarding: boolean;
+  hasPaid?: boolean; // Added optional hasPaid
+  hasCompletedOnboarding?: boolean; // For full onboarding
+  quickOnboardingCompleted?: boolean; // For this new quick onboarding
 
   // Onboarding / Profile Fields - Step 1 (Personal & General Academic)
   age?: number | null;
@@ -38,21 +40,24 @@ export interface UserProfileData {
   otherExamName?: string;
   examAttemptYear?: string;
 
-  // Onboarding / Profile Fields - Step 3 (Subject Details)
+  // General Preparation Level from Quick Onboarding
+  preparationLevel?: 'beginner' | 'intermediate' | 'advanced' | 'expert' | string; // General level
+
+  // Onboarding / Profile Fields - Step 3 (Subject Details - Now Optional/Progressive)
   subjectDetails?: SubjectDetail[];
 
-  // Onboarding / Profile Fields - Step 4 (Study Habits & Preferences)
+  // Onboarding / Profile Fields - Step 4 (Study Habits & Preferences - Now Optional/Progressive)
   dailyStudyHours?: string;
   preferredStudyTime?: string[]; // Stores IDs like 'morning', 'evening'
   distractionStruggles?: string;
   motivationType?: string;
-  weakSubjects?: string[]; // Added
-  strongSubjects?: string[]; // Added
-  preferredLearningStyles?: string[]; // Added
+  weakSubjects?: string[]; 
+  strongSubjects?: string[]; 
+  preferredLearningStyles?: string[]; 
   
   // General
   socialVisibilityPublic?: boolean;
-  onboardingCompleted?: boolean;
+  onboardingCompleted?: boolean; // Retained for full onboarding status
 }
 
 export interface StreakData {
@@ -61,3 +66,12 @@ export interface StreakData {
   lastCheckInDate: Timestamp | null;
 }
 
+// Quick Onboarding Data to store temporarily for anonymous users
+export interface QuickOnboardingDataToStore {
+  targetExam?: string[]; // Changed to array to match UserProfileData
+  otherExamName?: string; 
+  preparationLevel?: string; // General level
+  quickOnboardingCompleted: true;
+  createdAt: Timestamp;
+  // Removed strugglingSubject and studyTimePerDay as they are not in the new 3-step form
+}

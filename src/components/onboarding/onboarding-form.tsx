@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect, Suspense } from 'react';
@@ -10,122 +11,64 @@ import { Progress } from '@/components/ui/progress';
 import { Loader2, Sparkles, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { db, auth } from '@/lib/firebase';
-import { doc, setDoc, getDoc } from 'firebase/firestore'; // Added getDoc
+import { doc, setDoc, getDoc } from 'firebase/firestore';
 import { updateProfile } from 'firebase/auth';
 import type { UserProfileData } from '@/lib/profile-types';
-import { subjectDetailSchema } from '@/lib/profile-types';
+import { DEFAULT_THEME_ID } from '@/lib/themes';
 import { Skeleton } from '@/components/ui/skeleton';
-import { EXAM_SUBJECT_MAP } from '@/lib/constants';
 import { useAuth } from '@/contexts/auth-context';
-import { DEFAULT_THEME_ID } from '@/lib/themes'; // Added DEFAULT_THEME_ID
-
 
 const Step1PersonalInfo = React.lazy(() => import('./Step1PersonalInfo'));
 const Step2TargetExam = React.lazy(() => import('./Step2TargetExam'));
-const Step3SubjectDetails = React.lazy(() => import('./Step3SubjectDetails'));
-const Step4StudyPreferences = React.lazy(() => import('./Step4StudyPreferences'));
-const Step5Review = React.lazy(() => import('./Step5Review'));
+const Step3QuickSetup = React.lazy(() => import('./Step3QuickSetup')); // New Step 3
 
 // --- Zod Schemas for each step and the full form ---
-const step1BaseSchema = z.object({
+const step1Schema = z.object({
   fullName: z.string().min(2, 'Full name must be at least 2 characters.').max(100, 'Full name too long.'),
-  age: z.coerce.number().positive("Age must be positive.").min(10, "Age seems too low").max(100, "Age seems too high.").optional().nullable(),
-  location: z.string().max(100, "Location too long.").optional(),
   languageMedium: z.string().min(1, "Please select your language medium."),
-  studyMode: z.string().optional(),
-  examPhase: z.string().optional(),
-  previousAttempts: z.string().optional(),
 });
 
-const step2BaseSchema = z.object({
+const step2Schema = z.object({
   targetExams: z.array(z.string()).min(1, "Select at least one target exam."),
   otherExamName: z.string().optional(),
-  examAttemptYear: z.string().min(1, "Select your attempt year."),
 });
 
-const step3BaseSchema = z.object({
-  subjectDetails: z.array(subjectDetailSchema).optional(),
+const step3Schema = z.object({
+  preparationLevel: z.string().min(1, "Please select your preparation level."), // Maps to general prep level
 });
 
-
-const step4BaseSchema = z.object({
-  dailyStudyHours: z.string().min(1, "Select daily study hours."),
-  preferredStudyTime: z.array(z.string()).min(1, "Select at least one preferred study time."),
-  distractionStruggles: z.string().max(500, "Response too long.").optional(),
-  motivationType: z.string().min(1, "Select your motivation type."),
-  socialVisibilityPublic: z.boolean().optional(),
-  weakSubjects: z.array(z.string()).optional(),
-  strongSubjects: z.array(z.string()).optional(),
-  preferredLearningStyles: z.array(z.string()).min(1, "Select at least one learning style."),
-});
-
-const mergedBaseSchema = step1BaseSchema
-  .merge(step2BaseSchema)
-  .merge(step3BaseSchema)
-  .merge(step4BaseSchema);
-
-const fullOnboardingSchema = mergedBaseSchema.refine(data => {
-  if (data.targetExams?.includes('other') && (!data.otherExamName || data.otherExamName.trim() === '')) {
-    return false;
-  }
-  return true;
-}, {
-  message: "Please specify the exam name if 'Other' is selected.",
-  path: ['otherExamName'],
-}).refine(data => {
-    if (data.targetExams && data.targetExams.length > 0) {
-      // If targetExams is selected, subjectDetails should not be empty.
-      if (!data.subjectDetails || data.subjectDetails.length === 0) {
-        return false; 
-      }
-      // Each subjectDetail must be valid
-      return data.subjectDetails.every(detail => {
-        // Check if preparationLevel and preferredLearningMethods are filled for each subject
-        return detail.preparationLevel && detail.preparationLevel.length > 0 &&
-               detail.preferredLearningMethods && detail.preferredLearningMethods.length > 0;
-      });
+const fullOnboardingSchema = step1Schema
+  .merge(step2Schema)
+  .merge(step3Schema)
+  .refine(data => {
+    if (data.targetExams?.includes('other') && (!data.otherExamName || data.otherExamName.trim() === '')) {
+      return false;
     }
-    return true; // If no targetExams, subjectDetails can be empty or undefined
-}, {
-    message: "Please complete all required fields (preparation level, learning methods) for each subject relevant to your chosen exam(s).",
-    path: ['subjectDetails'], 
-});
-
+    return true;
+  }, {
+    message: "Please specify the exam name if 'Other' is selected.",
+    path: ['otherExamName'],
+  });
 
 export type OnboardingFormData = z.infer<typeof fullOnboardingSchema>;
 
-const getBaseSchemaForStep = (step: number) => {
-  if (step === 1) return step1BaseSchema;
-  if (step === 2) return step2BaseSchema;
-  if (step === 3) return step3BaseSchema; 
-  if (step === 4) return step4BaseSchema;
-  return fullOnboardingSchema; 
-};
-
-const TOTAL_STEPS = 5;
+const TOTAL_STEPS = 3; // Updated to 3 steps
 
 const stepTitles = [
-  "Personal & Academic Basics",
-  "Your Exam Focus",
-  "Subject Deep Dive",
-  "Study Habits & Preferences",
-  "Review Your Profile"
+  "Welcome! Let's Start with Basics", // Step 1
+  "What's Your Goal?",               // Step 2
+  "Your Current Stage"               // Step 3
 ];
 
 function OnboardingStepSkeleton() {
   return (
     <div className="space-y-6 py-4">
-      {[...Array(3)].map((_, i) => (
+      {[...Array(2)].map((_, i) => (
         <div key={i} className="space-y-2">
           <Skeleton className="h-5 w-1/3" />
           <Skeleton className="h-10 w-full" />
-          {i % 2 === 0 && <Skeleton className="h-4 w-2/3" />}
         </div>
       ))}
-      <div className="grid grid-cols-2 gap-4 pt-2">
-        <Skeleton className="h-10 w-full" />
-        <Skeleton className="h-10 w-full" />
-      </div>
     </div>
   );
 }
@@ -148,59 +91,28 @@ function OnboardingFormComponent({ userId, onComplete }: OnboardingFormProps) {
     mode: 'onTouched', 
     defaultValues: {
       fullName: '',
-      age: null,
-      location: '',
       languageMedium: '',
-      studyMode: '',
-      examPhase: '',
-      previousAttempts: '',
       targetExams: [],
       otherExamName: '',
-      examAttemptYear: '',
-      subjectDetails: [], 
-      dailyStudyHours: '',
-      preferredStudyTime: [],
-      distractionStruggles: '',
-      motivationType: '',
-      socialVisibilityPublic: false,
-      weakSubjects: [],
-      strongSubjects: [],
-      preferredLearningStyles: [],
+      preparationLevel: '',
     },
   });
 
-  const { handleSubmit, trigger, getValues, control, setValue, formState: { errors, dirtyFields } } = methods;
-  const watchedTargetExams = useWatch({ control, name: 'targetExams' });
+  const { handleSubmit, trigger, getValues, formState: { errors, dirtyFields }, reset } = methods;
 
-  // Effect to load existing profile data on mount
   useEffect(() => {
     if (actualUserId) {
       const profileRef = doc(db, 'users', actualUserId, 'userProfile', 'profile');
       getDoc(profileRef).then(docSnap => {
         if (docSnap.exists()) {
           const profileData = docSnap.data() as UserProfileData;
-          // Only reset if no fields are dirty, to avoid overwriting user's current form input
           if (Object.keys(dirtyFields).length === 0) {
             methods.reset({
               fullName: profileData.fullName || auth.currentUser?.displayName || '',
-              age: profileData.age === undefined ? null : profileData.age,
-              location: profileData.location || '',
               languageMedium: profileData.languageMedium || '',
-              studyMode: profileData.studyMode || '',
-              examPhase: profileData.examPhase || '',
-              previousAttempts: profileData.previousAttempts || '',
               targetExams: profileData.targetExams || [],
               otherExamName: profileData.otherExamName || '',
-              examAttemptYear: profileData.examAttemptYear || '',
-              subjectDetails: profileData.subjectDetails || [],
-              dailyStudyHours: profileData.dailyStudyHours || '',
-              preferredStudyTime: profileData.preferredStudyTime || [],
-              distractionStruggles: profileData.distractionStruggles || '',
-              motivationType: profileData.motivationType || '',
-              socialVisibilityPublic: profileData.socialVisibilityPublic || false,
-              weakSubjects: profileData.weakSubjects || [],
-              strongSubjects: profileData.strongSubjects || [],
-              preferredLearningStyles: profileData.preferredLearningStyles || [],
+              preparationLevel: profileData.preparationLevel || '',
             });
           }
         }
@@ -211,73 +123,23 @@ function OnboardingFormComponent({ userId, onComplete }: OnboardingFormProps) {
     }
   }, [actualUserId, methods, dirtyFields, toast]);
 
-
-  useEffect(() => {
-    const primaryExam = watchedTargetExams?.[0]; 
-    const subjectsForExam = primaryExam ? (EXAM_SUBJECT_MAP[primaryExam] || EXAM_SUBJECT_MAP['other']) : [];
-    const currentSubjectDetailsArray = getValues('subjectDetails') || [];
-
-    const newSubjectDetails = subjectsForExam.map(examSubject => {
-      const existingDetail = currentSubjectDetailsArray.find(sd => sd.subjectId === examSubject.id);
-      return existingDetail || {
-        subjectId: examSubject.id,
-        subjectName: examSubject.name,
-        preparationLevel: '', 
-        targetScore: '',
-        preferredLearningMethods: [],
-      };
-    });
-
-    const currentSubjectIds = currentSubjectDetailsArray.map(sd => sd.subjectId).sort().join(',');
-    const newSubjectIds = newSubjectDetails.map(sd => sd.subjectId).sort().join(',');
-
-    if (currentSubjectIds !== newSubjectIds || currentSubjectDetailsArray.length !== newSubjectDetails.length) {
-      setValue('subjectDetails', newSubjectDetails, { shouldValidate: currentStep === 3, shouldDirty: true });
-    }
-  }, [watchedTargetExams, setValue, getValues, currentStep]);
-
+  const getBaseSchemaForStep = (step: number) => {
+    if (step === 1) return step1Schema;
+    if (step === 2) return step2Schema;
+    if (step === 3) return step3Schema;
+    return fullOnboardingSchema; 
+  };
 
   const handleNextStep = async () => {
-    if (currentStep === TOTAL_STEPS) {
-        await handleSubmit(onSubmit)();
-        return;
-    }
     const baseSchemaForCurrentStep = getBaseSchemaForStep(currentStep);
     const fieldsToValidate = Object.keys(baseSchemaForCurrentStep.shape) as Array<keyof OnboardingFormData>;
-    
-    let isValid = await trigger(fieldsToValidate);
-
-    if (currentStep === 3) {
-        const subjectDetailsValue = getValues('subjectDetails');
-        const targetExamsValue = getValues('targetExams');
-        if (targetExamsValue && targetExamsValue.length > 0) {
-            if (!subjectDetailsValue || subjectDetailsValue.length === 0) {
-                methods.setError("subjectDetails", { type: "manual", message: "Please provide details for the subjects relevant to your chosen exam(s)." });
-                isValid = false;
-            } else {
-                const subjectDetailsValid = await trigger(['subjectDetails']);
-                isValid = isValid && subjectDetailsValid;
-
-                // Check each subjectDetail for required fields
-                subjectDetailsValue.forEach((detail, index) => {
-                    if (!detail.preparationLevel || detail.preparationLevel.trim() === '') {
-                        methods.setError(`subjectDetails.${index}.preparationLevel`, { type: 'manual', message: 'Level is required.' });
-                        isValid = false;
-                    }
-                    if (!detail.preferredLearningMethods || detail.preferredLearningMethods.length === 0) {
-                        methods.setError(`subjectDetails.${index}.preferredLearningMethods`, { type: 'manual', message: 'Select at least one method.'});
-                        isValid = false;
-                    }
-                });
-            }
-        } else {
-            methods.clearErrors("subjectDetails");
-        }
-    }
+    const isValid = await trigger(fieldsToValidate);
 
     if (isValid) {
       if (currentStep < TOTAL_STEPS) {
         setCurrentStep(prev => prev + 1);
+      } else { // This is now the submit action on the last step
+        await handleSubmit(onSubmit)();
       }
     } else {
       toast({
@@ -306,26 +168,24 @@ function OnboardingFormComponent({ userId, onComplete }: OnboardingFormProps) {
     if (!finalData.targetExams?.includes('other')) {
       finalData.otherExamName = '';
     }
-    if (finalData.age === null || finalData.age === 0 || isNaN(Number(finalData.age))) {
-        finalData.age = null; 
-    } else {
-        finalData.age = Number(finalData.age);
-    }
-    finalData.subjectDetails = finalData.subjectDetails || [];
 
-    // Fetch existing profile to merge, ensuring coins, xp, etc., are not overwritten
     const existingProfileSnap = await getDoc(userProfileRef);
     const existingProfileData = existingProfileSnap.exists() ? existingProfileSnap.data() as UserProfileData : {};
 
-
-    const profilePayload: UserProfileData = {
-      ...existingProfileData, // Start with existing data
-      ...finalData,           // Override with new form data
-      hasCompletedOnboarding: true,
-      email: auth.currentUser?.email || existingProfileData.email || '', // Ensure email is preserved
-      coins: existingProfileData.coins || 0, // Preserve existing coins
-      xp: existingProfileData.xp || 0,       // Preserve existing XP
-      earnedBadgeIds: existingProfileData.earnedBadgeIds || [], // Preserve existing badges
+    const profilePayload: Partial<UserProfileData> = {
+      ...existingProfileData, // Preserve existing data
+      fullName: finalData.fullName,
+      languageMedium: finalData.languageMedium,
+      targetExams: finalData.targetExams,
+      otherExamName: finalData.otherExamName,
+      preparationLevel: finalData.preparationLevel,
+      quickOnboardingCompleted: true, // Mark quick onboarding as done
+      hasCompletedOnboarding: existingProfileData.hasCompletedOnboarding || false, // Preserve full onboarding status
+      // Ensure essential fields from UserProfileData are initialized if not present
+      email: auth.currentUser?.email || existingProfileData.email || '',
+      coins: existingProfileData.coins || 0,
+      xp: existingProfileData.xp || 0,
+      earnedBadgeIds: existingProfileData.earnedBadgeIds || [],
       purchasedItemIds: existingProfileData.purchasedItemIds || [],
       activeThemeId: existingProfileData.activeThemeId === undefined ? DEFAULT_THEME_ID : existingProfileData.activeThemeId,
       dailyChallengeStatus: existingProfileData.dailyChallengeStatus || {},
@@ -333,16 +193,11 @@ function OnboardingFormComponent({ userId, onComplete }: OnboardingFormProps) {
     };
 
     try {
-      await setDoc(userProfileRef, profilePayload, { merge: true }); // Use merge: true
+      await setDoc(userProfileRef, profilePayload, { merge: true });
       if (auth.currentUser && data.fullName && data.fullName !== auth.currentUser.displayName) {
         await updateProfile(auth.currentUser, { displayName: data.fullName });
       }
       onComplete(); 
-      toast({
-        title: 'Profile Setup Complete! 🎉',
-        description: "Your preferences have been saved. You're all set to explore StudyTrack!",
-        duration: 3000,
-      });
     } catch (error: any) {
       console.error('Error saving onboarding data:', error);
       toast({
@@ -361,18 +216,16 @@ function OnboardingFormComponent({ userId, onComplete }: OnboardingFormProps) {
     switch (currentStep) {
       case 1: return <Step1PersonalInfo />;
       case 2: return <Step2TargetExam />;
-      case 3: return <Step3SubjectDetails selectedExam={getValues('targetExams')?.[0]} />;
-      case 4: return <Step4StudyPreferences />;
-      case 5: return <Step5Review formData={getValues()} />;
+      case 3: return <Step3QuickSetup />;
       default: return null;
     }
   };
 
   return (
-    <Card className="w-full max-w-2xl shadow-2xl border-0">
+    <Card className="w-full max-w-xl shadow-2xl border-0">
       <CardHeader className="text-center p-4 sm:p-6">
         <Sparkles className="mx-auto h-8 w-8 sm:h-10 sm:w-10 text-primary mb-1 sm:mb-2" />
-        <CardTitle className="text-xl sm:text-2xl md:text-3xl font-bold">
+        <CardTitle className="text-xl sm:text-2xl md:text-2xl font-bold">
           {stepTitles[currentStep -1]}
         </CardTitle>
         <CardDescription className="text-sm sm:text-base">
@@ -380,10 +233,10 @@ function OnboardingFormComponent({ userId, onComplete }: OnboardingFormProps) {
         </CardDescription>
       </CardHeader>
       <CardContent className="p-4 sm:p-6">
-        <Progress value={progressValue} className="mb-6 sm:mb-8 h-2.5 sm:h-3" />
+        <Progress value={progressValue} className="mb-6 sm:mb-8 h-2 sm:h-2.5" />
         <FormProvider {...methods}>
           <form onSubmit={handleSubmit(onSubmit)}>
-            <div className="space-y-5 sm:space-y-6"> 
+            <div className="space-y-5 sm:space-y-6 min-h-[200px] sm:min-h-[250px]"> 
               <Suspense fallback={<OnboardingStepSkeleton />}>
                 {renderStepContent()}
               </Suspense>
@@ -395,15 +248,14 @@ function OnboardingFormComponent({ userId, onComplete }: OnboardingFormProps) {
         <Button variant="outline" onClick={handlePrevStep} disabled={currentStep === 1 || isLoading} className="w-full sm:w-auto text-sm sm:text-base">
           <ChevronLeft className="mr-1.5 h-4 w-4"/> Previous
         </Button>
-        {currentStep < TOTAL_STEPS ? (
-          <Button onClick={handleNextStep} disabled={isLoading} className="w-full sm:w-auto text-sm sm:text-base">
-            Next <ChevronRight className="ml-1.5 h-4 w-4"/>
-          </Button>
-        ) : (
-          <Button onClick={handleSubmit(onSubmit)} disabled={isLoading} className="w-full sm:w-auto text-sm sm:text-base bg-green-600 hover:bg-green-700">
-            {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Confirm & Finish Setup'}
-          </Button>
-        )}
+        <Button onClick={handleNextStep} disabled={isLoading} className="w-full sm:w-auto text-sm sm:text-base">
+          {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+          {currentStep < TOTAL_STEPS ? (
+            <>Next <ChevronRight className="ml-1.5 h-4 w-4"/></>
+          ) : (
+            isLoading? 'Finishing Up...' : 'Finish Setup & Explore'
+          )}
+        </Button>
       </CardFooter>
     </Card>
   );

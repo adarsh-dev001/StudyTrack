@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect, useRef, Suspense } from 'react';
@@ -29,7 +30,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/ui/skeleton';
 import { TARGET_EXAMS as PREDEFINED_EXAMS_CONST, PREPARATION_LEVELS, DAILY_STUDY_HOURS_OPTIONS, LANGUAGE_MEDIUMS, STUDY_MODES, EXAM_SUBJECT_MAP } from '@/lib/constants';
 import { motion } from 'framer-motion'; // Added framer-motion
-import OnboardingGate from '@/components/onboarding/onboarding-gate';
+import OnboardingGate from '@/components/onboarding/OnboardingRequiredGate';
 
 
 // Lazy load result display
@@ -155,7 +156,7 @@ export default function SyllabusSuggesterPage() {
   }
 
   if (!userProfile?.hasCompletedOnboarding) {
-    return <OnboardingGate featureName="Syllabus Suggester" hasPaid={userProfile?.hasPaid || false} />;
+    return <OnboardingGate featureName="Syllabus Suggester" hasPaid={true} />;
   }
 
   const inputFormVariants = {
@@ -164,7 +165,7 @@ export default function SyllabusSuggesterPage() {
   };
 
   const handleOnboardingSuccess = () => {
-    setUserProfile(prev => ({ ...prev, hasCompletedOnboarding: true }));
+    setUserProfile(prev => ({ ...prev, hasCompletedOnboarding: true } as UserProfileData));
   };
 
   useEffect(() => {

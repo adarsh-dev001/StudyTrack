@@ -2,17 +2,16 @@
 'use client';
 
 import React from 'react';
-import { useFormContext } from 'react-hook-form';
+import { useFormContext, useWatch } from 'react-hook-form'; // Added useWatch
 import { FormField, FormItem, FormLabel, FormControl, FormMessage, FormDescription } from '@/components/ui/form';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
-import { TARGET_EXAMS, EXAM_ATTEMPT_YEARS } from '@/lib/constants';
+import { TARGET_EXAMS } from '@/lib/constants';
 import type { OnboardingFormData } from './onboarding-form';
 
 function Step2TargetExamComponent() {
-  const { control, watch } = useFormContext<OnboardingFormData>();
-  const selectedExams = watch('targetExams') || [];
+  const { control } = useFormContext<OnboardingFormData>();
+  const selectedExams = useWatch({ control, name: 'targetExams' }) || []; // Ensure selectedExams is always an array
 
   return (
     <div className="space-y-4 md:space-y-6">
@@ -22,7 +21,7 @@ function Step2TargetExamComponent() {
         render={({ field }) => (
           <FormItem>
             <FormLabel className="text-sm sm:text-base font-semibold">Target Exam(s) <span className="text-destructive">*</span></FormLabel>
-            <FormDescription className="text-xs sm:text-sm">Select the competitive exam(s) you are preparing for. You can select multiple.</FormDescription>
+            <FormDescription className="text-xs sm:text-sm">Select the competitive exam(s) you are preparing for. Choose one for now.</FormDescription>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-3 gap-y-2 sm:gap-x-4 sm:gap-y-3 pt-1 sm:pt-2">
               {(TARGET_EXAMS || []).map((exam) => (
                 <FormItem key={exam.value} className="flex flex-row items-center space-x-2 space-y-0">
@@ -30,10 +29,10 @@ function Step2TargetExamComponent() {
                     <Checkbox
                       checked={field.value?.includes(exam.value)}
                       onCheckedChange={(checked) => {
-                        const currentSelection = field.value || [];
+                        // For single select behavior with checkboxes (visually)
                         return checked
-                          ? field.onChange([...currentSelection, exam.value])
-                          : field.onChange(currentSelection.filter((value) => value !== exam.value));
+                          ? field.onChange([exam.value]) // Set as an array with single value
+                          : field.onChange([]); // Clear selection if unchecked
                       }}
                     />
                   </FormControl>
@@ -61,29 +60,6 @@ function Step2TargetExamComponent() {
             )}
         />
       )}
-
-      <FormField
-        control={control}
-        name="examAttemptYear"
-        render={({ field }) => (
-          <FormItem>
-            <FormLabel className="text-sm sm:text-base font-semibold">Primary Exam Attempt Year <span className="text-destructive">*</span></FormLabel>
-            <Select onValueChange={field.onChange} value={field.value || ''}>
-              <FormControl>
-                <SelectTrigger className="text-sm sm:text-base">
-                  <SelectValue placeholder="Select year" />
-                </SelectTrigger>
-              </FormControl>
-              <SelectContent>
-                {(EXAM_ATTEMPT_YEARS() || []).map(year => (
-                  <SelectItem key={year.value} value={year.value} className="text-sm sm:text-base">{year.label}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <FormMessage />
-          </FormItem>
-        )}
-      />
     </div>
   );
 }
