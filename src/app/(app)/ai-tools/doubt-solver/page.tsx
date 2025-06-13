@@ -22,7 +22,7 @@ import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/ui/skeleton';
 import { motion } from 'framer-motion'; // Added framer-motion
-import OnboardingGate from '@/components/onboarding/onboarding-gate';
+import OnboardingGate from '@/components/onboarding/OnboardingRequiredGate.tsx';
 
 
 const doubtSolverFormSchema = z.object({

@@ -50,13 +50,14 @@ export async function recordPlatformInteraction(userId: string): Promise<void> {
             xp: 0,
             earnedBadgeIds: [],
             purchasedItemIds: [],
-            onboardingCompleted: false, // Or true if this interaction implies some onboarding
+            onboardingCompleted: false, 
+            quickOnboardingCompleted: false, // Initialize quick onboarding flag
+            hasCompletedOnboarding: false, // Initialize this critical flag to false
             lastInteractionDates,
-            // Ensure other UserProfileData fields are initialized if necessary
             activeThemeId: currentProfileData.activeThemeId || null,
             dailyChallengeStatus: currentProfileData.dailyChallengeStatus || {},
-            // Add other fields from UserProfileData with default values
             fullName: currentProfileData.fullName || '',
+            email: currentProfileData.email || auth.currentUser?.email || '', // Get email from auth if available
             targetExams: currentProfileData.targetExams || [],
             otherExamName: currentProfileData.otherExamName || '',
             examAttemptYear: currentProfileData.examAttemptYear || '',
@@ -198,3 +199,5 @@ export async function getUnlockAndProgressStatus(userId: string): Promise<Unlock
   }
 }
 
+// Added auth import for initial profile creation
+import { auth } from '@/lib/firebase';
