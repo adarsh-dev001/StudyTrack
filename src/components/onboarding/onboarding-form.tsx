@@ -138,7 +138,7 @@ function OnboardingFormComponent({ userId, onComplete }: OnboardingFormProps) {
     if (isValid) {
       if (currentStep < TOTAL_STEPS) {
         setCurrentStep(prev => prev + 1);
-      } else { // This is now the submit action on the last step
+      } else { 
         await handleSubmit(onSubmit)();
       }
     } else {
@@ -173,14 +173,18 @@ function OnboardingFormComponent({ userId, onComplete }: OnboardingFormProps) {
     const existingProfileData = existingProfileSnap.exists() ? existingProfileSnap.data() as UserProfileData : {};
 
     const profilePayload: Partial<UserProfileData> = {
-      ...existingProfileData, // Preserve existing data
+      ...existingProfileData, 
       fullName: finalData.fullName,
       languageMedium: finalData.languageMedium,
       targetExams: finalData.targetExams,
       otherExamName: finalData.otherExamName,
       preparationLevel: finalData.preparationLevel,
-      quickOnboardingCompleted: true, // Mark quick onboarding as done
-      hasCompletedOnboarding: existingProfileData.hasCompletedOnboarding || false, // Preserve full onboarding status
+      
+      // Explicitly set completion flags
+      hasCompletedOnboarding: true, 
+      onboardingCompleted: true,      
+      quickOnboardingCompleted: true, 
+      
       // Ensure essential fields from UserProfileData are initialized if not present
       email: auth.currentUser?.email || existingProfileData.email || '',
       coins: existingProfileData.coins || 0,
@@ -197,6 +201,13 @@ function OnboardingFormComponent({ userId, onComplete }: OnboardingFormProps) {
       if (auth.currentUser && data.fullName && data.fullName !== auth.currentUser.displayName) {
         await updateProfile(auth.currentUser, { displayName: data.fullName });
       }
+      
+      // Store in localStorage for quicker client-side checks if needed immediately after this action,
+      // though Firestore onSnapshot should update the main app state.
+      if (typeof window !== "undefined") {
+        localStorage.setItem("hasCompletedOnboarding_studytrack", "true");
+      }
+      
       onComplete(); 
     } catch (error: any) {
       console.error('Error saving onboarding data:', error);
@@ -262,3 +273,5 @@ function OnboardingFormComponent({ userId, onComplete }: OnboardingFormProps) {
 }
 
 export default React.memo(OnboardingFormComponent);
+
+    
