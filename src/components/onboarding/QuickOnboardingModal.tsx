@@ -142,7 +142,7 @@ export default function QuickOnboardingModal({ isOpen, onOpenChange, onComplete 
           dailyChallengeStatus: currentData.dailyChallengeStatus || {},
           lastInteractionDates: currentData.lastInteractionDates || [],
           quickOnboardingCompleted: true,
-          onboardingCompleted: currentData.onboardingCompleted || false,
+          hasCompletedOnboarding: true, // Ensure this is set to true
         };
 
         if (actualTargetExamValue) {
@@ -150,9 +150,8 @@ export default function QuickOnboardingModal({ isOpen, onOpenChange, onComplete 
             if (actualTargetExamValue.toLowerCase() === 'other' && otherExamNameInput.trim()) {
                 profileUpdate.otherExamName = otherExamNameInput.trim();
             } else if (actualTargetExamValue.toLowerCase() !== 'other') {
-                profileUpdate.otherExamName = ''; // Clear if not 'Other'
+                profileUpdate.otherExamName = ''; 
             } else {
-                // If 'Other' but no name, keep existing or set to empty
                 profileUpdate.otherExamName = currentData.otherExamName || '';
             }
         } else {
@@ -183,7 +182,7 @@ export default function QuickOnboardingModal({ isOpen, onOpenChange, onComplete 
         console.error("Error saving quick onboarding for logged in user:", error);
         toast({ title: "Save Error", description: "Could not save preferences.", variant: "destructive" });
       }
-    } else { // Anonymous user
+    } else { 
       let anonId = localStorage.getItem(ANON_USER_ID_KEY);
       if (!anonId) {
         anonId = uuidv4();
@@ -195,11 +194,10 @@ export default function QuickOnboardingModal({ isOpen, onOpenChange, onComplete 
             createdAt: Timestamp.now(),
         };
         if (actualTargetExamValue) {
-            anonProfileData.targetExam = actualTargetExamValue;
+            anonProfileData.targetExam = actualTargetExamValue; // Store the value, not array for anon
             if (actualTargetExamValue.toLowerCase() === 'other' && otherExamNameInput.trim()) {
                 anonProfileData.otherExamName = otherExamNameInput.trim();
             }
-            // If targetExam is not 'other', or 'other' without name, otherExamName is omitted.
         }
         if (answers.strugglingSubject) anonProfileData.strugglingSubject = answers.strugglingSubject;
         if (answers.studyTimePerDay) anonProfileData.studyTimePerDay = answers.studyTimePerDay;
@@ -312,3 +310,4 @@ export default function QuickOnboardingModal({ isOpen, onOpenChange, onComplete 
     </Dialog>
   );
 }
+
