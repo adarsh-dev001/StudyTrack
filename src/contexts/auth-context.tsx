@@ -17,9 +17,9 @@ import { auth, db } from '@/lib/firebase';
 import { doc, setDoc, getDoc, updateDoc, deleteDoc, Timestamp } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { DEFAULT_THEME_ID } from '@/lib/themes'; 
-import type { UserProfileData } from '@/lib/profile-types'; 
+import type { UserProfileData, QuickOnboardingDataToStore } from '@/lib/profile-types'; 
 
-const ANON_USER_ID_KEY = 'anonUserId_studytrack';
+const ANON_USER_ID_KEY = 'anonUserId_studytrack_v2'; // Ensure this matches the key used in QuickOnboardingModal
 
 interface AuthContextType {
   currentUser: User | null;
@@ -31,14 +31,9 @@ interface AuthContextType {
   logOut: () => Promise<void>;
 }
 
-interface QuickOnboardingDataFromAnon {
-  targetExam?: string;
-  otherExamName?: string; 
-  strugglingSubject?: string;
-  studyTimePerDay?: string;
-  quickOnboardingCompleted?: boolean;
-  createdAt?: Timestamp;
-}
+// Note: QuickOnboardingDataFromAnon should match what QuickOnboardingModal saves for anonymous users.
+// It seems QuickOnboardingDataToStore already has the correct structure.
+// type QuickOnboardingDataFromAnon = QuickOnboardingDataToStore;
 
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -71,33 +66,41 @@ export function AuthProvider({ children }: AuthProviderProps) {
       const anonProfileSnap = await getDoc(anonProfileRef);
 
       if (anonProfileSnap.exists()) {
-        const anonData = anonProfileSnap.data() as QuickOnboardingDataFromAnon;
+        const anonData = anonProfileSnap.data() as QuickOnboardingDataToStore;
         const userProfileRef = doc(db, 'users', userId, 'userProfile', 'profile');
         const userProfileSnap = await getDoc(userProfileRef);
         let existingUserProfile = userProfileSnap.exists() ? userProfileSnap.data() as UserProfileData : null;
 
-        if (!existingUserProfile || !existingUserProfile.onboardingCompleted || !existingUserProfile.quickOnboardingCompleted) {
+        // Only migrate if full onboarding hasn't been completed OR if quick onboarding data from anon is more recent/relevant
+        // For simplicity here, if anon quick onboarding was done, we ensure its flags are set.
+        if (anonData.quickOnboardingCompleted && (!existingUserProfile || !existingUserProfile.hasCompletedOnboarding)) {
           const updatePayload: Partial<UserProfileData> = {
             email: existingUserProfile?.email || userEmail || '',
             quickOnboardingCompleted: true,
-            onboardingCompleted: existingUserProfile?.onboardingCompleted || false,
+            hasCompletedOnboarding: true, // Key: Set this to true
+            onboardingCompleted: existingUserProfile?.onboardingCompleted || true, // Also ensure this reflects general completion
           };
 
-          if (anonData.targetExam) {
-            updatePayload.targetExams = [anonData.targetExam.toLowerCase().replace(/\s+/g, '_')];
-            if (anonData.targetExam === "Other" && anonData.otherExamName) {
+          if (anonData.targetExam && anonData.targetExam.length > 0) {
+            updatePayload.targetExams = anonData.targetExam; // anonData.targetExam should be string[]
+            if (anonData.targetExam[0].toLowerCase() === 'other' && anonData.otherExamName) {
               updatePayload.otherExamName = anonData.otherExamName;
-            } else if (anonData.targetExam === "Other") {
-              updatePayload.otherExamName = "User Specified";
+            } else if (anonData.targetExam[0].toLowerCase() !== 'other') {
+              updatePayload.otherExamName = ''; 
             }
+          } else if (existingUserProfile?.targetExams) {
+             updatePayload.targetExams = existingUserProfile.targetExams;
+             updatePayload.otherExamName = existingUserProfile.otherExamName;
           }
-          if (anonData.strugglingSubject && anonData.strugglingSubject !== "None/Other") {
-            updatePayload.weakSubjects = [anonData.strugglingSubject];
-          }
-          if (anonData.studyTimePerDay) {
-            updatePayload.dailyStudyHours = anonData.studyTimePerDay;
+
+
+          if (anonData.preparationLevel) {
+            updatePayload.preparationLevel = anonData.preparationLevel;
+          } else if (existingUserProfile?.preparationLevel) {
+            updatePayload.preparationLevel = existingUserProfile.preparationLevel;
           }
           
+          // Initialize other fields if new profile, or merge with existing (which is handled by setDoc merge:true)
           if (!existingUserProfile) {
             updatePayload.xp = 0;
             updatePayload.coins = 0;
@@ -106,14 +109,29 @@ export function AuthProvider({ children }: AuthProviderProps) {
             updatePayload.activeThemeId = DEFAULT_THEME_ID;
             updatePayload.dailyChallengeStatus = {};
             updatePayload.lastInteractionDates = [];
-          }
-
-
-          if (userProfileSnap.exists()) {
-            await updateDoc(userProfileRef, updatePayload);
           } else {
-            await setDoc(userProfileRef, updatePayload); 
+            // Merge with existing, respecting fields already set during a potential full onboarding
+            updatePayload.fullName = existingUserProfile.fullName;
+            updatePayload.age = existingUserProfile.age;
+            updatePayload.location = existingUserProfile.location;
+            updatePayload.languageMedium = existingUserProfile.languageMedium;
+            updatePayload.studyMode = existingUserProfile.studyMode;
+            updatePayload.examPhase = existingUserProfile.examPhase;
+            updatePayload.previousAttempts = existingUserProfile.previousAttempts;
+            updatePayload.examAttemptYear = existingUserProfile.examAttemptYear;
+            updatePayload.subjectDetails = existingUserProfile.subjectDetails;
+            updatePayload.dailyStudyHours = anonData.studyTimePerDay || existingUserProfile.dailyStudyHours;
+            updatePayload.preferredStudyTime = existingUserProfile.preferredStudyTime;
+            updatePayload.distractionStruggles = existingUserProfile.distractionStruggles;
+            updatePayload.motivationType = existingUserProfile.motivationType;
+            updatePayload.preferredLearningStyles = existingUserProfile.preferredLearningStyles;
+            updatePayload.socialVisibilityPublic = existingUserProfile.socialVisibilityPublic;
+            updatePayload.weakSubjects = anonData.strugglingSubject && anonData.strugglingSubject !== "None/Other" ? [anonData.strugglingSubject] : existingUserProfile.weakSubjects;
+            updatePayload.strongSubjects = existingUserProfile.strongSubjects;
+
           }
+
+          await setDoc(userProfileRef, updatePayload, { merge: true });
           
           toast({ title: "Welcome!", description: "Your previous preferences have been linked to your account." });
         }
@@ -160,29 +178,35 @@ export function AuthProvider({ children }: AuthProviderProps) {
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email_param, password_param);
       
+      // Initial profile setup is deferred until migration or first feature access
+      // But we ensure a basic document exists if migrateAnonymousData doesn't create it.
       const userProfileRef = doc(db, 'users', userCredential.user.uid, 'userProfile', 'profile');
-      const initialProfileData: UserProfileData = {
-        email: email_param,
-        onboardingCompleted: false, 
-        quickOnboardingCompleted: false, 
-        xp: 0,
-        coins: 0,
-        earnedBadgeIds: [],
-        purchasedItemIds: [],
-        activeThemeId: DEFAULT_THEME_ID,
-        dailyChallengeStatus: {},
-        lastInteractionDates: [],
-      };
-      await setDoc(userProfileRef, initialProfileData, { merge: true }); 
-
+      const profileSnap = await getDoc(userProfileRef);
+      if (!profileSnap.exists()) {
+          const initialProfileData: UserProfileData = {
+            email: email_param,
+            onboardingCompleted: false, 
+            quickOnboardingCompleted: false, 
+            xp: 0,
+            coins: 0,
+            earnedBadgeIds: [],
+            purchasedItemIds: [],
+            activeThemeId: DEFAULT_THEME_ID,
+            dailyChallengeStatus: {},
+            lastInteractionDates: [],
+            hasCompletedOnboarding: false,
+          };
+          await setDoc(userProfileRef, initialProfileData, { merge: true }); 
+      }
+      
       setCurrentUser(userCredential.user); 
       await migrateAnonymousData(userCredential.user.uid, userCredential.user.email); 
 
       toast({
         title: 'Signup Successful!',
-        description: 'Welcome to StudyTrack! Explore your dashboard.',
+        description: 'Welcome to StudyTrack! You might be asked a few quick questions to personalize your AI tools.',
       });
-      router.push('/dashboard');
+      router.push('/dashboard'); // Or to quick onboarding if not done via migration
     } catch (err: any) {
       setError(err.message);
       if (err.code === 'auth/email-already-in-use') {
