@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useEffect, Suspense, useRef } from 'react';
@@ -216,7 +215,6 @@ export default function DoubtSolverPage() {
                       <FormLabel className="text-sm sm:text-base">Your Question <span className="text-destructive">*</span></FormLabel>
                       <FormControl>
                         <Textarea
-                          ref={userQueryInputRef}
                           placeholder="e.g., Explain Newton's third law with examples, or Why is the sky blue?"
                           className="min-h-[100px] sm:min-h-[120px] resize-y text-sm sm:text-base leading-relaxed"
                           {...field}

@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useEffect, useRef, Suspense, useCallback } from 'react';
@@ -248,7 +247,10 @@ export default function SmartQuizPage() {
 
   const handleCreateNewQuiz = useCallback(() => {
     form.reset();
-    form.setValue('examType', userProfile?.targetExams?.[0] || 'general'); // Pre-fill from profile if available
+    const defaultExamType = 'general';
+    const userExam = userProfile?.targetExams?.[0];
+    const validExamType = examTypeOptions.some(opt => opt.value === userExam) ? userExam : defaultExamType;
+    form.setValue('examType', validExamType as QuizFormData['examType']);
     setQuizData(null);
     setUserAnswers({});
     setCurrentQuestionIndex(0);

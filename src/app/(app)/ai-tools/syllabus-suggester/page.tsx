@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useEffect, useRef, Suspense, useCallback } from 'react';
@@ -169,7 +168,6 @@ export default function SyllabusSuggesterPage() {
             setValue('weakTopics', profileWeakTopics, { shouldDirty: false });
 
             setValue('preferredLanguage', data.languageMedium || 'english', { shouldDirty: false }); // Map languageMedium to preferredLanguage
-            setValue('goals', data.goals || '', { shouldDirty: false });
           }
         } else {
           setUserProfile(null);
@@ -215,24 +213,21 @@ export default function SyllabusSuggesterPage() {
     // Ensure weakTopics are string IDs/names based on `availableSubjectsForForm`
     const validWeakTopics = (data.weakTopics || []).map(topicOrId => {
         const foundSubject = availableSubjectsForForm.find(s => s.id === topicOrId || s.name === topicOrId);
-        return foundSubject ? foundSubject.name : topicOrId; // Send name to AI if available, else the raw input
+        return foundSubject ? foundSubject.name : topicOrId;
     }).filter(Boolean);
 
+    // Convert 'expert' to 'advanced' before creating inputForAI
+    const preparationLevel = data.preparationLevel === 'expert' ? 'advanced' : data.preparationLevel;
 
     const inputForAI: SuggestStudyTopicsInput = {
       ...data,
+      preparationLevel,
       userName: userProfile?.fullName || currentUser?.displayName || undefined,
       targetDate: format(data.targetDate, 'yyyy-MM-dd'),
-      subjects: data.subjects.map(id => availableSubjectsForForm.find(s => s.id === id)?.name || id), // Send subject names
+      subjects: data.subjects.map(id => availableSubjectsForForm.find(s => s.id === id)?.name || id),
       weakTopics: validWeakTopics,
     };
     
-    // Map 'expert' from form (if schema was updated) back to 'advanced' for the AI flow if flow expects only beginner/intermediate/advanced
-    if (inputForAI.preparationLevel === 'expert') {
-        inputForAI.preparationLevel = 'advanced';
-    }
-
-
     try {
       const result: SuggestStudyTopicsOutput = await suggestStudyTopics(inputForAI);
       setGeneratedSyllabus(result.generatedSyllabus);
@@ -536,25 +531,6 @@ export default function SyllabusSuggesterPage() {
                       </FormItem>
                     )}
                   />
-                  <FormField
-                    control={control}
-                    name="goals"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-sm sm:text-base">Overall Study Goals (Optional) <Goal className="inline h-4 w-4 text-muted-foreground" /></FormLabel>
-                        <FormControl>
-                          <Textarea
-                            placeholder="e.g., Cover 70% syllabus in 3 months, Achieve 95th percentile in mocks..."
-                            className="min-h-[70px] resize-y text-sm sm:text-base"
-                            {...field}
-                            value={field.value || ''}
-                          />
-                        </FormControl>
-                        <FormDescription className="text-xs sm:text-sm">What are your broader objectives for this preparation period?</FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
 
 
                 </CardContent>
@@ -593,14 +569,23 @@ export default function SyllabusSuggesterPage() {
                   examType: getValues('examType'),
                   targetDate: getValues('targetDate'),
                   timeAvailablePerDay: getValues('timeAvailablePerDay'),
-                  preparationLevel: getValues('preparationLevel')
+                  preparationLevel: (getValues('preparationLevel') === 'expert' ? 'advanced' : getValues('preparationLevel')) as 'beginner' | 'intermediate' | 'advanced'
                 }}
               />
             </Suspense>
           )}
            {generatedSyllabus === null && !isLoading && formState.isSubmitted && (
             <Suspense fallback={null}>
-              <SyllabusResultDisplay generatedSyllabus={null} overallFeedback={null} formValues={getValues()} />
+              <SyllabusResultDisplay 
+                generatedSyllabus={null} 
+                overallFeedback={null} 
+                formValues={{
+                  examType: getValues('examType'),
+                  targetDate: getValues('targetDate'),
+                  timeAvailablePerDay: getValues('timeAvailablePerDay'),
+                  preparationLevel: (getValues('preparationLevel') === 'expert' ? 'advanced' : getValues('preparationLevel')) as 'beginner' | 'intermediate' | 'advanced'
+                }} 
+              />
             </Suspense>
           )}
         </div>

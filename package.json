@@ -75,6 +75,7 @@
   },
   "devDependencies": {
     "@types/mdx": "^2.0.13",
+    "@types/next": "^8.0.7",
     "@types/next-pwa": "^5.6.9",
     "@types/node": "^20",
     "@types/pdfjs-dist": "^2.10.377",
