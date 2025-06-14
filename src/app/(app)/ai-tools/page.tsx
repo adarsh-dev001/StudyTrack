@@ -1,4 +1,3 @@
-
 "use client";
 
 import {
@@ -25,6 +24,10 @@ import {
 import type { LucideIcon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { useAuth } from '@/contexts/auth-context';
+import { db } from '@/lib/firebase';
+import { doc, getDoc } from 'firebase/firestore';
+import { useState, useEffect } from 'react';
 
 const iconMap: { [key: string]: LucideIcon } = {
   ListTree: ListTree,
@@ -47,6 +50,7 @@ interface AiTool {
   link: string;
   status: "Active" | "Coming Soon" | "Unlockable";
   actionText: string;
+  requiresStreak?: boolean;
 }
 
 const aiTools: AiTool[] = [
@@ -104,6 +108,7 @@ const aiTools: AiTool[] = [
     link: "/ai-tools/productivity-analyzer",
     status: "Unlockable",
     actionText: "Check Status",
+    requiresStreak: true
   },
   {
     id: "smart-quiz",
@@ -119,6 +124,38 @@ const aiTools: AiTool[] = [
 ];
 
 export default function AiToolsPage() {
+  const { currentUser } = useAuth();
+  const [userStreak, setUserStreak] = useState<number>(0);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchUserStreak = async () => {
+      if (currentUser?.uid) {
+        try {
+          const userDoc = await getDoc(doc(db, 'users', currentUser.uid));
+          if (userDoc.exists()) {
+            const userData = userDoc.data();
+            setUserStreak(userData.currentStreak || 0);
+          }
+        } catch (error) {
+          console.error('Error fetching user streak:', error);
+        }
+      }
+      setIsLoading(false);
+    };
+
+    fetchUserStreak();
+  }, [currentUser]);
+
+  const handleToolClick = (tool: AiTool) => {
+    if (tool.requiresStreak && userStreak < 7) {
+      // Show a toast or modal explaining the streak requirement
+      return;
+    }
+    // Navigate to the tool's page
+    window.location.href = tool.link;
+  };
+
   return (
     <div className="w-full space-y-6 sm:space-y-8">
       <header className="space-y-1.5">
@@ -130,8 +167,10 @@ export default function AiToolsPage() {
 
       <div className="grid gap-6 sm:gap-8 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
         {aiTools.map((tool) => {
-          const IconComponent = iconMap[tool.iconName] || BrainCircuit; // Fallback icon
+          const IconComponent = iconMap[tool.iconName] || BrainCircuit;
           const iconContainerBg = tool.iconColorClass ? tool.iconColorClass.replace('text-', 'bg-') + '/10' : 'bg-primary/10';
+          const isProductivityTool = tool.id === 'productivity-analyzer';
+          const canAccess = !isProductivityTool || (isProductivityTool && userStreak >= 7);
           
           return (
             <Card
@@ -154,7 +193,8 @@ export default function AiToolsPage() {
                   <CardTitle className="font-headline text-lg sm:text-xl leading-tight">{tool.title}</CardTitle>
                   {tool.status === "Unlockable" && (
                     <Badge className="mt-1.5 text-xs px-2 py-0.5 bg-purple-500/20 text-purple-700 dark:text-purple-300 border-purple-500/30 hover:bg-purple-500/30">
-                        <Lock className="mr-1.5 h-3 w-3"/>Unlockable
+                        <Lock className="mr-1.5 h-3 w-3"/>
+                        {isProductivityTool ? `Requires ${7 - userStreak} more days` : 'Unlockable'}
                     </Badge>
                   )}
                   {tool.status === "Coming Soon" && <Badge variant="secondary" className="mt-1.5 text-xs px-2 py-0.5">Coming Soon</Badge>}
@@ -166,19 +206,21 @@ export default function AiToolsPage() {
                 </div>
               </CardHeader>
               <CardContent className="flex-grow p-4 sm:p-5 pt-0">
-                <CardDescription className="text-sm sm:text-base leading-relaxed">{tool.description}</CardDescription>
+                <CardDescription className="text-sm sm:text-base leading-relaxed">
+                  {isProductivityTool && userStreak < 7 
+                    ? `Complete ${7 - userStreak} more days of activity to unlock this tool.`
+                    : tool.description}
+                </CardDescription>
               </CardContent>
               <CardFooter className="p-4 sm:p-5">
                 <Button
-                  asChild
-                  variant={tool.status === "Active" ? "default" : "outline"}
+                  onClick={() => handleToolClick(tool)}
+                  variant={tool.status === "Active" && canAccess ? "default" : "outline"}
                   className="w-full text-sm sm:text-base group py-2.5"
-                  disabled={tool.status === "Coming Soon"}
+                  disabled={tool.status === "Coming Soon" || (isProductivityTool && userStreak < 7)}
                 >
-                  <Link href={tool.link || "#"} className={cn(tool.status === "Active" && "bg-primary hover:bg-primary/90")}>
-                    {tool.actionText}
-                    {tool.status !== "Coming Soon" && <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />}
-                  </Link>
+                  {tool.actionText}
+                  {tool.status !== "Coming Soon" && canAccess && <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />}
                 </Button>
               </CardFooter>
             </Card>
